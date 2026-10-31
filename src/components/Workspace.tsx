@@ -12,6 +12,8 @@ import {
 } from '../state';
 import Stage, { templateLetter, type Mode, type SamPoint } from './Stage';
 import { NumField } from './fields';
+import PieceDialog, { type NewPiece } from './PieceDialog';
+import { buildPlanSvgCm, buildPrintHtml, PAPERS, pxPerCm, type PaperKey } from '../lib/print';
 import { KITS } from '../lib/kits';
 
 interface Props {
@@ -57,6 +59,9 @@ export default function Workspace({ p, setP, onReset }: Props) {
   const [calibPts, setCalibPts] = useState<Pt[]>([]);
   const [calibDist, setCalibDist] = useState('');
   const [calibUnit, setCalibUnit] = useState('cm');
+  const [widthCm, setWidthCm] = useState('');
+  const [paper, setPaper] = useState<PaperKey>('A4');
+  const [pieceDialog, setPieceDialog] = useState<'draw' | 'svg' | null>(null);
   const [samPoints, setSamPoints] = useState<SamPoint[]>([]);
   const [concept, setConcept] = useState(img.exampleId === 'cuero' ? 'brown shape' : img.exampleId === 'fieltro' ? 'teal shape' : 'fabric');
   const [proposal, setProposal] = useState<Proposal | null>(null);
@@ -193,6 +198,14 @@ export default function Workspace({ p, setP, onReset }: Props) {
       spacing: Math.round((q.spacing * old / nu) * 100) / 100,
     }));
   };
+  /** Calibración rápida: el ancho del material (caja del contorno) mide `widthCm` cm. */
+  const calibByWidth = () => {
+    const d = Number(widthCm);
+    if (!(d > 0)) { setErr('Escribe el ancho real del material en cm (mayor que 0).'); return; }
+    const b = bbox(p.contour), y = b.y0 + b.h / 2;
+    applyCalib({ a: [b.x0, y], b: [b.x1, y], dist: d, unit: 'cm' });
+    setErr(null); setFlash(`Calibrado: el ancho del material (${fmt(b.w)} px) mide ${fmt(d)} cm. Si el material es irregular, mide su parte más ancha.`);
+  };
   const confirmCalib = () => {
     const d = Number(calibDist);
     if (calibPts.length !== 2 || !(d > 0)) { setErr('Marca dos puntos y escribe una distancia real mayor que 0.'); return; }
@@ -209,6 +222,20 @@ export default function Workspace({ p, setP, onReset }: Props) {
     let n = 0; while (q.defs.some((d) => d.id === `t${n}`)) n++;
     return { ...q, defs: [...q.defs, { id: `t${n}`, name: `Pieza ${templateLetter(q.defs.length)}`, color: PALETTE[n % PALETTE.length], kind: 'rect' as TemplateKind, w: 15, h: 10, qty: 1, rotations: [0, 180] }] };
   });
+  const addCustom = (np: NewPiece) => {
+    setP((q) => {
+      if (q.defs.length >= 6) return q;
+      let n = 0; while (q.defs.some((d) => d.id === `t${n}`)) n++;
+      return { ...q, defs: [...q.defs, { id: `t${n}`, name: np.name, color: PALETTE[n % PALETTE.length], kind: 'custom' as TemplateKind, w: np.w, h: np.h, qty: 1, rotations: [0, 180], custom: np.shape }] };
+    });
+    setPieceDialog(null);
+    setFlash(`Pieza «${np.name}» añadida con cantidad 1. Ajusta la cantidad y los giros permitidos.`);
+  };
+  /** Milímetros → unidad actual, si la foto está calibrada en cm o mm. */
+  const mmToCurrent = (mm: number) => {
+    const unitName = p.calib?.unit.trim().toLowerCase();
+    return unitName === 'cm' ? mm / 10 : unitName === 'mm' ? mm : null;
+  };
   const applyKit = (id: string) => {
     const kit = KITS.find((k) => k.id === id);
     if (!kit) return;
@@ -251,6 +278,20 @@ export default function Workspace({ p, setP, onReset }: Props) {
     try {
       if (kind === 'svg') download('cutsense-plano.svg', new Blob([svg], { type: 'image/svg+xml' }));
       else download('cutsense-plano.png', await svgToPng(svg, w, h));
+    } catch (e) { setErr((e as Error).message); }
+  };
+  const physical = !!result && pxPerCm(result) !== null;
+  const exportReal = () => {
+    if (!exportable || !result) return;
+    try { const { svg } = buildPlanSvgCm(p, result); download('cutsense-plano-1a1.svg', new Blob([svg], { type: 'image/svg+xml' })); }
+    catch (e) { setErr((e as Error).message); }
+  };
+  const printReal = () => {
+    if (!exportable || !result) return;
+    try {
+      const url = URL.createObjectURL(new Blob([buildPrintHtml(p, result, paper)], { type: 'text/html' }));
+      if (!window.open(url, '_blank')) setErr('El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes para este sitio e inténtalo de nuevo.');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (e) { setErr((e as Error).message); }
   };
   const downloadJson = () => result && download('cutsense-problema.json', new Blob([JSON.stringify({ problem: result.problem, solution: result.solution, verify: result.verify }, null, 2)], { type: 'application/json' }));
@@ -321,12 +362,14 @@ export default function Workspace({ p, setP, onReset }: Props) {
                       {mode === 'points' ? 'Terminar de marcar puntos' : `Marcar puntos de guía (${samPoints.length})`}
                     </button>
                     {samPoints.length > 0 && <button className="link" onClick={() => setSamPoints([])}>Quitar puntos de guía</button>}
-                    <div className="alt-box">
+                    {samFailed && (
+                      <div className="alt-box">
                       <p className="caption">Alternativas (no usan Meta AI):</p>
                       {img.exampleId && <button className="btn ghost sm" disabled={!!busy} onClick={useCached}>Cargar máscara guardada del ejemplo</button>}
                       <button className="btn ghost sm" disabled={!!busy} onClick={runLocal}>{busy === 'local' ? 'Calculando…' : 'Segmentar por contraste (local)'}</button>
                       <button className="btn ghost sm" disabled={!!busy} onClick={startManualTrace}>Trazar a mano</button>
                     </div>
+                    )}
                   </div>
                 )}
 
@@ -372,6 +415,13 @@ export default function Workspace({ p, setP, onReset }: Props) {
                   ) : (
                     <div className="stack">
                       <p className="caption"><b>Sin calibración.</b> Medidas relativas: 1 u = 1 % del ancho de la imagen. No son centímetros.</p>
+                      {mode !== 'calib' && (
+                        <div className="row">
+                          <input aria-label="Ancho real del material en cm" className="mini" inputMode="decimal" placeholder="Ancho cm" value={widthCm} onChange={(e) => setWidthCm(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') calibByWidth(); }} />
+                          <button className="btn dark sm" onClick={calibByWidth}>Calibrar por ancho</button>
+                        </div>
+                      )}
+                      {mode !== 'calib' && img.exampleId && <button className="btn ghost sm" onClick={() => applyCalib(EXAMPLES.find((x) => x.id === img.exampleId)?.calib ?? { a: [100, 565], b: [240, 565], dist: 10, unit: 'cm' })}>Usar escala de demostración (14 px = 1 cm)</button>}
                       {mode !== 'calib'
                         ? <button className="btn ghost sm" onClick={() => { setMode('calib'); setCalibPts([]); setDraft(null); }}>Calibrar con una referencia</button>
                         : (
@@ -408,7 +458,7 @@ export default function Workspace({ p, setP, onReset }: Props) {
                         <button className="link" aria-label={`Eliminar ${d.name}`} onClick={() => setP((q) => ({ ...q, defs: q.defs.filter((x) => x.id !== d.id) }))}>Quitar</button>
                       </div>
                       <select aria-label="Forma" value={d.kind} onChange={(e) => setDef(d.id, { kind: e.target.value as TemplateKind })}>
-                        {(Object.keys(KIND_LABEL) as TemplateKind[]).map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
+                        {(Object.keys(KIND_LABEL) as TemplateKind[]).filter((k) => k !== 'custom' || d.kind === 'custom').map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
                       </select>
                       <div className="row3">
                         <NumField label="Ancho" value={d.w} min={0} exclusive suffix={unit} onCommit={(n) => setDef(d.id, { w: n })} />
@@ -420,7 +470,11 @@ export default function Workspace({ p, setP, onReset }: Props) {
                       </div>
                     </div>
                   ))}
-                  <button className="btn ghost sm" disabled={p.defs.length >= 6} onClick={addDef}>+ Añadir pieza</button>
+                  <div className="row wrap">
+                    <button className="btn ghost sm" disabled={p.defs.length >= 6} onClick={addDef}>+ Añadir pieza</button>
+                    <button className="btn ghost sm" disabled={p.defs.length >= 6} onClick={() => setPieceDialog('draw')}>✎ Dibujar pieza</button>
+                    <button className="btn ghost sm" disabled={p.defs.length >= 6} onClick={() => setPieceDialog('svg')}>⇪ Importar SVG</button>
+                  </div>
                   <NumField label="Separación mínima" value={p.spacing} min={0} suffix={unit} onCommit={(n) => setP((q) => ({ ...q, spacing: n }))} />
                 </section>
 
@@ -521,6 +575,17 @@ export default function Workspace({ p, setP, onReset }: Props) {
                       <button className="btn dark sm" disabled={!exportable} onClick={() => doExport('svg')}>Exportar SVG</button>
                       <button className="btn dark sm" disabled={!exportable} onClick={() => doExport('png')}>Exportar PNG</button>
                     </div>
+                    <div className="real-export">
+                      <p className="h5">A escala real (1:1)</p>
+                      <div className="row wrap">
+                        <select aria-label="Tamaño de papel" className="paper" value={paper} onChange={(e) => setPaper(e.target.value as PaperKey)}>
+                          {(Object.keys(PAPERS) as PaperKey[]).map((k) => <option key={k} value={k}>{PAPERS[k].label}</option>)}
+                        </select>
+                        <button className="btn dark sm" disabled={!exportable || !physical} onClick={printReal}>Imprimir 1:1</button>
+                        <button className="btn ghost sm" disabled={!exportable || !physical} onClick={exportReal}>SVG en cm</button>
+                      </div>
+                      <p className="caption">{physical ? 'Reparte el plano en hojas con marcas de ensamblaje e incluye una plantilla de cada pieza. Imprime al 100 % y comprueba el cuadro de 5 cm.' : 'Calibra la foto en cm o mm (paso 2) para exportar a escala real.'}</p>
+                    </div>
                     {!exportable && <p className="caption">{stale ? 'Reoptimiza para poder exportar un plano vigente.' : 'Se exporta solo un plano verificado y vigente.'}</p>}
                     {result && <button className="link" onClick={downloadJson}>Descargar problema + solución (JSON) · semilla {result.solution.seed} · {fmt(result.solution.elapsedMs, 0)} ms</button>}
                     <p className="caption">Los archivos son planos referenciales, no instrucciones certificadas para maquinaria.</p>
@@ -533,9 +598,14 @@ export default function Workspace({ p, setP, onReset }: Props) {
           </aside>
         </div>
       </div>
+      {pieceDialog && (
+        <PieceDialog
+          mode={pieceDialog} unit={unit} defaultWidth={p.calib ? 8 : 15}
+          mmToCurrent={mmToCurrent} onCancel={() => setPieceDialog(null)} onSave={addCustom}
+        />
+      )}
     </section>
   );
-
 }
 
 interface DTProps {
