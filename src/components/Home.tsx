@@ -32,12 +32,6 @@ export default function Home({ onFile, onExample, error }: Props) {
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }} />
             </div>
             {error && <p className="alert error" role="alert">{error}</p>}
-            <div className="provenance" aria-label="Quién hace qué">
-              <span className="chip ai">La IA propone</span>
-              <span className="chip human">Tú corriges</span>
-              <span className="chip computed">El motor calcula</span>
-              <span className="chip verified">La geometría verifica</span>
-            </div>
             <p className="caption">JPG, PNG o WebP · hasta 10 MB · material plano, fondo contrastante, luz uniforme y cámara cenital.</p>
           </div>
           <div className="video-card" aria-hidden="true">
