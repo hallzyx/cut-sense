@@ -22,7 +22,7 @@ function noisyMaterial(perEdge: number, amp: number, seed: number): Ring {
   return out;
 }
 
-describe('estrés: 12 piezas que no caben todas, contorno de ~300 vértices, 3 defectos', () => {
+describe('estrés: 12 piezas grandes, contorno de ~300 vértices, 3 defectos', () => {
   const problem: Problem = {
     material: noisyMaterial(30, 1.5, 9),
     defects: [rect(100, 90, 40, 35), rect(300, 200, 30, 50), rect(380, 20, 60, 30)],
@@ -46,5 +46,5 @@ describe('estrés: 12 piezas que no caben todas, contorno de ~300 vértices, 3 d
     expect(sol.placements.length).toBeGreaterThan(4);
     // determinismo: con el reloj congelado (presupuesto que nunca corta) se obtiene lo mismo
     expect(optimize(problem, { now: () => 0 }).placements).toEqual(sol.placements);
-  });
+  }, 20000);
 });

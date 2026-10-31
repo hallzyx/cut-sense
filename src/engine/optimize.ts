@@ -37,6 +37,8 @@ export const DEFAULT_SEED = 1;
 /** Margen extra (relativo a la escala) que el optimizador añade a la separación para no rozar la tolerancia del verificador. */
 export const OPT_MARGIN_REL = 1e-7;
 const MAX_INSTANCES = 400;
+/** Paso mínimo de la rejilla refinada: S / REFINE_MIN_DIV. */
+const REFINE_MIN_DIV = 100;
 
 export interface OptimizeProgress {
   /** Avance estimado 0..1: max(pasadas hechas / maxIterations, tiempo / timeLimitMs); 1 al terminar. */
@@ -234,7 +236,7 @@ class Nester {
     return Math.min(this.S / 8, Math.max(this.S / 60, Math.min(o.w, o.h) / 2));
   }
 
-  private coords(axis: 'x' | 'y', size: number, g: number): number[] {
+  private coords(axis: 'x' | 'y', size: number, g: number, fine = false): number[] {
     const d = this.d;
     const lo = (axis === 'x' ? this.mb.minX : this.mb.minY) + d;
     const hi = (axis === 'x' ? this.mb.maxX : this.mb.maxY) - d - size;
@@ -249,7 +251,7 @@ class Nester {
       if (axis === 'x') { push(p.bb.minX); push(p.bb.maxX); } else { push(p.bb.minY); push(p.bb.maxY); }
     }
     const vals = raw.filter((v) => v >= lo && v <= hi).sort((a, b) => a - b);
-    const q = Math.max(g / 8, this.S / 160);
+    const q = fine ? g / 4 : Math.max(g / 8, this.S / 160);
     const out: number[] = [];
     let last = -Infinity;
     for (const v of vals) if (v - last > q) { out.push(v); last = v; }
@@ -281,9 +283,21 @@ class Nester {
     return [x, y];
   }
 
+  /**
+   * Busca la primera posición válida en orden de gravedad. Si la rejilla gruesa no encuentra
+   * ninguna, la refina (paso/2) hasta `minStep`: las piezas grandes en materiales convexos
+   * irregulares suelen tener regiones factibles más pequeñas que el paso inicial.
+   */
   *find(o: Orient, g: Gravity, bound: Score | null): Generator<void, { x: number; y: number; score: Score } | null, void> {
-    const step = this.step(o);
-    const xs = this.coords('x', o.w, step), ys = this.coords('y', o.h, step);
+    const minStep = this.S / REFINE_MIN_DIV;
+    for (let step = this.step(o), level = 0; ; step /= 2, level++) {
+      const r: { x: number; y: number; score: Score } | null = yield* this.scan(o, g, bound, step, level > 0);
+      if (r || this.aborted || bound || step / 2 < minStep) return r;
+    }
+  }
+
+  private *scan(o: Orient, g: Gravity, bound: Score | null, step: number, fine: boolean): Generator<void, { x: number; y: number; score: Score } | null, void> {
+    const xs = this.coords('x', o.w, step, fine), ys = this.coords('y', o.h, step, fine);
     if (!xs.length || !ys.length) return null;
     let P = g.primary === 'y' ? ys : xs, Sx = g.primary === 'y' ? xs : ys;
     if (g.dirP === -1) P = P.slice().reverse();
