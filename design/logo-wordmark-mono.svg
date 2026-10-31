@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 274 56" width="548" height="112" role="img" aria-label="CutSense">
+  <title>CutSense</title>
+  <g transform="scale(1.17)">
+    <path d="M9.2 5.4L29.6 4.2Q33.4 4 33.6 7.6L33.8 10.4Q34 13.4 31 13.4L17.6 13.4L17.6 34.6L39.8 34.6Q43.6 34.6 43 38.2L42.5 41.2Q42 44.2 38.9 44.3L12.2 44.9Q7.9 45 6.7 40.9L4.2 32.4Q3.6 30.3 4.3 28.3L5.6 24.4Q6.2 22.6 5.8 20.8L4.9 12.1Q4.4 6 9.2 5.4Z" fill="currentColor"/>
+  <rect x="24.6" y="16.4" width="15.6" height="15.6" rx="1.6" transform="rotate(-10 32.4 24.2)" fill="none" stroke="currentColor" stroke-width="3"/>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M99.51 15.22A17.2 17.2 0 1 0 99.51 40.78M108.61 24.8V37.7A7.5 7.5 0 0 0 123.61 37.7V24.8M123.61 37.7V45.2M135.71 15.8V39.2A6 6 0 0 0 141.71 45.2H143.71M169.59 14.47A9.5 8.6 0 1 0 161.81 28A9.5 8.6 0 1 1 154.03 41.53M180.41 35H196.41A8 10.2 0 1 0 194.71 41.28M205.51 24.8V45.2M205.51 32.3A7.5 7.5 0 0 1 220.51 32.3V45.2M241.89 26.97A6.75 5.1 0 1 0 236.36 35A6.75 5.1 0 1 1 230.83 43.03M252.21 35H268.21A8 10.2 0 1 0 266.51 41.28"/>
+  </g>
+  <path d="M132.21 24.8H144.21" fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round"/>
+</svg>
