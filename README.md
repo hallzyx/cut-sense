@@ -70,6 +70,8 @@ server/        Segmentation proxy for the Meta Model API
 src/engine/    Geometry, verifier, metrics, optimizer (+ tests)
 src/lib/       Mask → polygon, kits, export, examples
 src/components Wizard UI (Home, Workspace, Stage)
+src/brand/    Brand tokens used by the app
+design/        Brand book, logos, tokens, components and preview (see design/DESIGN.md)
 ```
 
 ## Roadmap
