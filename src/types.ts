@@ -3,7 +3,7 @@ export type Pt = [number, number];
 /** Anillo simple, sin repetir el primer punto al final, sin agujeros. */
 export type Ring = Pt[];
 
-export type TemplateKind = 'rect' | 'rrect' | 'circle' | 'trapezoid' | 'irregular';
+export type TemplateKind = 'rect' | 'rrect' | 'circle' | 'trapezoid' | 'irregular' | 'custom';
 
 export interface Template {
   id: string;

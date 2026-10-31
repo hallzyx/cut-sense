@@ -1,8 +1,11 @@
 import type { Ring, Template, TemplateKind } from '../types';
 
 /** Construye la forma base de una plantilla (bbox con esquina mínima en 0,0). */
-export function buildShape(kind: TemplateKind, w: number, h: number): Ring {
+/** `custom` es una forma normalizada a [0,1]² que se escala a w×h. */
+export function buildShape(kind: TemplateKind, w: number, h: number, custom?: Ring): Ring {
   switch (kind) {
+    case 'custom':
+      return (custom ?? [[0, 0], [1, 0], [1, 1], [0, 1]]).map(([x, y]) => [x * w, y * h] as [number, number]);
     case 'rect':
       return [[0, 0], [w, 0], [w, h], [0, h]];
     case 'rrect': {
@@ -32,7 +35,7 @@ export function buildShape(kind: TemplateKind, w: number, h: number): Ring {
 }
 
 export const KIND_LABEL: Record<TemplateKind, string> = {
-  rect: 'Rectángulo', rrect: 'Rectángulo redondeado', circle: 'Círculo (polígono)', trapezoid: 'Trapezoide', irregular: 'Silueta en L',
+  rect: 'Rectángulo', rrect: 'Rectángulo redondeado', circle: 'Círculo (polígono)', trapezoid: 'Trapezoide', irregular: 'Silueta en L', custom: 'Personalizada',
 };
 
 /** Piece colours A–F from the CutSense brand system (design/tokens.css), paired with PATTERNS by index. */

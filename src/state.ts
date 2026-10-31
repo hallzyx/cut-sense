@@ -12,6 +12,8 @@ export interface TemplateDef {
   h: number;
   qty: number;
   rotations: number[];
+  /** Forma propia normalizada a [0,1]² (solo kind === 'custom'). */
+  custom?: Ring;
 }
 
 export interface Calib { a: Pt; b: Pt; dist: number; unit: string }
@@ -54,7 +56,7 @@ export const unitLabel = (c: Calib | null) => (c ? c.unit : 'u');
 
 export function toTemplate(d: TemplateDef, ppu: number): Template {
   const w = d.w * ppu, h = d.h * ppu;
-  return { id: d.id, name: d.name, color: d.color, kind: d.kind, w, h, qty: d.qty, rotations: d.rotations, shape: buildShape(d.kind, w, h) };
+  return { id: d.id, name: d.name, color: d.color, kind: d.kind, w, h, qty: d.qty, rotations: d.rotations, shape: buildShape(d.kind, w, h, d.custom) };
 }
 
 export function defaultDefs(): TemplateDef[] {
