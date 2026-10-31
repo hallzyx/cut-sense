@@ -35,7 +35,8 @@ export const KIND_LABEL: Record<TemplateKind, string> = {
   rect: 'Rectángulo', rrect: 'Rectángulo redondeado', circle: 'Círculo (polígono)', trapezoid: 'Trapezoide', irregular: 'Silueta en L',
 };
 
-export const PALETTE = ['#00c887', '#ff7a59', '#4c8dff', '#c26bff', '#ffb400', '#ff4d8d'];
+/** Piece colours A–F from the CutSense brand system (design/tokens.css), paired with PATTERNS by index. */
+export const PALETTE = ['#F5B800', '#4FC3F7', '#F2609E', '#1FB5A0', '#A07CFF', '#B5E61D'];
 // patrones SVG para no depender solo del color
 export const PATTERNS = ['solid', 'diag', 'dots', 'cross', 'horiz', 'vert'] as const;
 

@@ -1,0 +1,249 @@
+/* =====================================================================
+   CutSense — design tokens
+   "Pattern paper by day, cutting mat by night."
+   Light theme = :root. Dark theme = [data-theme="dark"], and the OS
+   preference when no explicit theme is set (prefers-color-scheme).
+   All names are prefixed --cs- to avoid collisions in the app.
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  color-scheme: light;
+
+  /* ---------- Raw brand palette (theme-independent names) ---------- */
+  --cs-mat-900: #0F1A15;   /* cutting mat, night */
+  --cs-mat-800: #16241D;
+  --cs-mat-700: #17483A;   /* primary hover/pressed (light) */
+  --cs-mat-600: #1E5A43;   /* CUTTING-MAT GREEN — brand primary */
+  --cs-mat-300: #5BD69A;   /* mat grid green — primary on dark, "verified" on canvas */
+  --cs-mat-100: #DCEADF;
+  --cs-paper-50: #FBF8F2;  /* card stock */
+  --cs-paper-100: #F4EFE6; /* PATTERN PAPER — light background */
+  --cs-paper-200: #EBE4D6;
+  --cs-paper-300: #D9D0BF;
+  --cs-paper-500: #8C8273;
+  --cs-ink-900: #1B1F1C;   /* graphite ink */
+  --cs-ink-600: #5A615B;
+  --cs-thread-700: #B23A12; /* thread text on paper */
+  --cs-thread-500: #D9481C; /* WAXED-THREAD VERMILION — the human hand */
+  --cs-thread-300: #FF7A4D; /* thread on dark */
+  --cs-chalk-700: #2A4FB8;  /* TAILOR'S-CHALK BLUE — the AI proposal */
+  --cs-chalk-300: #8FB0FF;
+
+  /* ---------- Semantic: surfaces & text (LIGHT) ---------- */
+  --cs-bg: var(--cs-paper-100);
+  --cs-surface: var(--cs-paper-50);
+  --cs-surface-sunk: var(--cs-paper-200);
+  --cs-surface-inverse: var(--cs-ink-900);
+  --cs-line: var(--cs-paper-300);          /* decorative hairline */
+  --cs-line-strong: var(--cs-paper-500);   /* control borders, >= 3:1 */
+  --cs-grid-minor: rgba(30, 90, 67, .07);  /* pattern-paper grid */
+  --cs-grid-major: rgba(30, 90, 67, .14);
+  --cs-text: var(--cs-ink-900);
+  --cs-text-muted: var(--cs-ink-600);
+  --cs-text-inverse: var(--cs-paper-100);
+
+  --cs-primary: var(--cs-mat-600);
+  --cs-primary-hover: var(--cs-mat-700);
+  --cs-on-primary: var(--cs-paper-100);
+  --cs-accent: var(--cs-thread-500);       /* decorative / large only */
+  --cs-accent-text: var(--cs-thread-700);
+  --cs-focus: var(--cs-chalk-700);
+
+  /* ---------- Semantic: provenance + status (LIGHT) ----------
+     fg = text/icon on its tint, tint = soft background, solid = fills/borders */
+  --cs-ai-fg: #2A4FB8;        --cs-ai-tint: #E1E7F7;        --cs-ai-solid: #2A4FB8;
+  --cs-human-fg: #B23A12;     --cs-human-tint: #FBE3D6;     --cs-human-solid: #D9481C;
+  --cs-computed-fg: #3A3F3C;  --cs-computed-tint: #E6E2DA;  --cs-computed-solid: #3A3F3C;
+  --cs-verified-fg: #1E5A43;  --cs-verified-tint: #DCEADF;  --cs-verified-solid: #1E5A43;
+  --cs-stale-fg: #7A4E00;     --cs-stale-tint: #F6E7C4;     --cs-stale-solid: #E3A21A;
+  --cs-danger-fg: #A1221B;    --cs-danger-tint: #F8DEDA;    --cs-danger-solid: #B3261E;
+  --cs-on-danger: #FFFFFF;
+
+  /* ---------- Canvas overlay (theme-INDEPENDENT: sits on user photos) ----------
+     Every stroke is a "tri-stroke": light halo > dark casing > colour core,
+     so it reads on white felt and on black leather alike. */
+  --cs-ov-halo: rgba(255, 255, 255, .78);
+  --cs-ov-casing: #0B0F0D;
+  --cs-ov-ai: #4D7CFF;          /* AI proposal outline, dashed 8/5 */
+  --cs-ov-human: #FF5A1F;       /* human-corrected outline + selected handle */
+  --cs-ov-verified: #5BD69A;    /* verified material outline */
+  --cs-ov-defect: #FF3B30;      /* exclusion zone stripes + dashed border */
+  --cs-ov-defect-alt: #FFFFFF;  /* second stripe of the barrier-tape hatch */
+  --cs-ov-stale: #F2B544;
+  --cs-ov-handle: #FFFFFF;
+  --cs-ov-label-bg: rgba(11, 15, 13, .82);
+  --cs-ov-label-fg: #FFFFFF;
+  --cs-ov-pattern-ink: rgba(11, 15, 13, .55);
+  /* Piece fills (A–F). Each is ALWAYS paired with its own pattern + letter. */
+  --cs-piece-a: #F5B800;  /* saffron  — plain           */
+  --cs-piece-b: #4FC3F7;  /* sky      — diagonal lines   */
+  --cs-piece-c: #F2609E;  /* rose     — dots             */
+  --cs-piece-d: #1FB5A0;  /* teal     — cross-hatch      */
+  --cs-piece-e: #A07CFF;  /* violet   — horizontal lines */
+  --cs-piece-f: #B5E61D;  /* lime     — vertical lines   */
+
+  /* ---------- Typography ---------- */
+  --cs-font-display: 'Bricolage Grotesque', 'Instrument Sans', system-ui, sans-serif;
+  --cs-font-ui: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --cs-font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  /* Type scale — mobile values, fluid up to desktop (ratio ~1.2 / 1.25) */
+  --cs-text-2xs: 0.6875rem;  /* 11 — canvas labels, legal */
+  --cs-text-xs: 0.75rem;     /* 12 — captions, eyebrows */
+  --cs-text-sm: 0.875rem;    /* 14 — panel body (dense tool) */
+  --cs-text-md: 1rem;        /* 16 — body */
+  --cs-text-lg: 1.125rem;    /* 18 — lead */
+  --cs-text-xl: 1.375rem;    /* 22 — panel title */
+  --cs-text-2xl: clamp(1.625rem, 1.3rem + 1.4vw, 2.25rem);   /* 26–36 section */
+  --cs-text-3xl: clamp(2.25rem, 1.6rem + 3.2vw, 4rem);      /* 36–64 hero */
+  --cs-leading-tight: 1.05;
+  --cs-leading-snug: 1.25;
+  --cs-leading-normal: 1.5;
+  --cs-tracking-tight: -0.025em;
+  --cs-tracking-caps: 0.08em;
+  --cs-weight-regular: 400;
+  --cs-weight-medium: 500;
+  --cs-weight-semibold: 600;
+  --cs-weight-bold: 700;
+  --cs-weight-black: 800;
+
+  /* ---------- Spacing (4px base) ---------- */
+  --cs-space-0: 0;
+  --cs-space-1: 0.25rem;  /* 4 */
+  --cs-space-2: 0.5rem;   /* 8 */
+  --cs-space-3: 0.75rem;  /* 12 */
+  --cs-space-4: 1rem;     /* 16 — mobile gutter */
+  --cs-space-5: 1.25rem;  /* 20 */
+  --cs-space-6: 1.5rem;   /* 24 — desktop gutter */
+  --cs-space-8: 2rem;     /* 32 */
+  --cs-space-10: 2.5rem;  /* 40 */
+  --cs-space-12: 3rem;    /* 48 */
+  --cs-space-16: 4rem;    /* 64 */
+  --cs-space-24: 6rem;    /* 96 */
+  --cs-gutter: var(--cs-space-4);
+  --cs-panel-width: 380px;
+  --cs-container: 1200px;
+  --cs-tap: 44px;         /* minimum touch target */
+
+  /* ---------- Radii — cut, not poured: small and squarish ---------- */
+  --cs-radius-xs: 3px;
+  --cs-radius-sm: 6px;
+  --cs-radius-md: 10px;
+  --cs-radius-lg: 14px;
+  --cs-radius-pill: 999px; /* status pills only */
+
+  /* ---------- Borders & shadows ---------- */
+  --cs-border: 1px solid var(--cs-line);
+  --cs-border-strong: 1.5px solid var(--cs-line-strong);
+  --cs-stitch: 1.5px dashed color-mix(in srgb, var(--cs-text) 32%, transparent);
+  --cs-edge: inset 0 -3px 0 rgba(0, 0, 0, .22);   /* "slab thickness" on buttons */
+  --cs-shadow-1: 0 1px 0 rgba(27, 31, 28, .06), 0 1px 3px rgba(27, 31, 28, .08);
+  --cs-shadow-2: 0 1px 0 rgba(27, 31, 28, .05), 0 8px 24px -8px rgba(27, 31, 28, .18);
+  --cs-shadow-3: 0 24px 48px -16px rgba(27, 31, 28, .28);
+  --cs-focus-ring: 0 0 0 2px var(--cs-bg), 0 0 0 4px var(--cs-focus);
+
+  /* ---------- Motion ---------- */
+  --cs-dur-instant: 80ms;
+  --cs-dur-fast: 140ms;
+  --cs-dur-base: 220ms;
+  --cs-dur-slow: 420ms;
+  --cs-dur-snap: 640ms;     /* AI outline snap */
+  --cs-dur-settle: 900ms;   /* verified-plan reveal */
+  --cs-dur-changed: 2400ms; /* "what changed" highlight */
+  --cs-ease-out: cubic-bezier(.2, .8, .2, 1);
+  --cs-ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --cs-ease-snap: cubic-bezier(.34, 1.56, .64, 1);   /* slight overshoot */
+  --cs-ease-stamp: cubic-bezier(.2, 1.4, .4, 1);
+
+  /* ---------- Z-index ---------- */
+  --cs-z-canvas-ui: 10;
+  --cs-z-sticky: 20;
+  --cs-z-sheet: 40;
+  --cs-z-toast: 60;
+}
+
+/* ---------- DARK: the cutting mat ---------- */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --cs-bg: var(--cs-mat-900);
+  --cs-surface: var(--cs-mat-800);
+  --cs-surface-sunk: #0B130F;
+  --cs-surface-inverse: var(--cs-paper-100);
+  --cs-line: #2A3B32;
+  --cs-line-strong: #5E7A6B;
+  --cs-grid-minor: rgba(91, 214, 154, .06);
+  --cs-grid-major: rgba(91, 214, 154, .13);
+  --cs-text: #ECE6D8;
+  --cs-text-muted: #A8B0A6;
+  --cs-text-inverse: var(--cs-ink-900);
+  --cs-primary: var(--cs-mat-300);
+  --cs-primary-hover: #7BE3B0;
+  --cs-on-primary: var(--cs-mat-900);
+  --cs-accent: var(--cs-thread-300);
+  --cs-accent-text: var(--cs-thread-300);
+  --cs-focus: var(--cs-chalk-300);
+  --cs-ai-fg: #AFC4FF;        --cs-ai-tint: #1B2747;        --cs-ai-solid: #8FB0FF;
+  --cs-human-fg: #FFA27F;     --cs-human-tint: #3D2116;     --cs-human-solid: #FF7A4D;
+  --cs-computed-fg: #D7D2C6;  --cs-computed-tint: #2A302C;  --cs-computed-solid: #D7D2C6;
+  --cs-verified-fg: #9BE8C0;  --cs-verified-tint: #173A2A;  --cs-verified-solid: #5BD69A;
+  --cs-stale-fg: #F5C76A;     --cs-stale-tint: #3A2C10;     --cs-stale-solid: #F2B544;
+  --cs-danger-fg: #FFADA6;    --cs-danger-tint: #3D1A18;    --cs-danger-solid: #FF8A80;
+  --cs-on-danger: var(--cs-mat-900);
+  --cs-stitch: 1.5px dashed rgba(236, 230, 216, .3);
+  --cs-edge: inset 0 -3px 0 rgba(0, 0, 0, .28);
+  --cs-shadow-1: 0 1px 0 rgba(0, 0, 0, .3);
+  --cs-shadow-2: 0 10px 28px -10px rgba(0, 0, 0, .6);
+  --cs-shadow-3: 0 28px 56px -18px rgba(0, 0, 0, .7);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --cs-bg: var(--cs-mat-900);
+    --cs-surface: var(--cs-mat-800);
+    --cs-surface-sunk: #0B130F;
+    --cs-surface-inverse: var(--cs-paper-100);
+    --cs-line: #2A3B32;
+    --cs-line-strong: #5E7A6B;
+    --cs-grid-minor: rgba(91, 214, 154, .06);
+    --cs-grid-major: rgba(91, 214, 154, .13);
+    --cs-text: #ECE6D8;
+    --cs-text-muted: #A8B0A6;
+    --cs-text-inverse: var(--cs-ink-900);
+    --cs-primary: var(--cs-mat-300);
+    --cs-primary-hover: #7BE3B0;
+    --cs-on-primary: var(--cs-mat-900);
+    --cs-accent: var(--cs-thread-300);
+    --cs-accent-text: var(--cs-thread-300);
+    --cs-focus: var(--cs-chalk-300);
+    --cs-ai-fg: #AFC4FF;        --cs-ai-tint: #1B2747;        --cs-ai-solid: #8FB0FF;
+    --cs-human-fg: #FFA27F;     --cs-human-tint: #3D2116;     --cs-human-solid: #FF7A4D;
+    --cs-computed-fg: #D7D2C6;  --cs-computed-tint: #2A302C;  --cs-computed-solid: #D7D2C6;
+    --cs-verified-fg: #9BE8C0;  --cs-verified-tint: #173A2A;  --cs-verified-solid: #5BD69A;
+    --cs-stale-fg: #F5C76A;     --cs-stale-tint: #3A2C10;     --cs-stale-solid: #F2B544;
+    --cs-danger-fg: #FFADA6;    --cs-danger-tint: #3D1A18;    --cs-danger-solid: #FF8A80;
+    --cs-on-danger: var(--cs-mat-900);
+    --cs-stitch: 1.5px dashed rgba(236, 230, 216, .3);
+    --cs-edge: inset 0 -3px 0 rgba(0, 0, 0, .28);
+    --cs-shadow-1: 0 1px 0 rgba(0, 0, 0, .3);
+    --cs-shadow-2: 0 10px 28px -10px rgba(0, 0, 0, .6);
+    --cs-shadow-3: 0 28px 56px -18px rgba(0, 0, 0, .7);
+  }
+}
+
+@media (min-width: 768px) {
+  :root { --cs-gutter: var(--cs-space-6); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --cs-dur-fast: 0ms;
+    --cs-dur-base: 0ms;
+    --cs-dur-slow: 0ms;
+    --cs-dur-snap: 0ms;
+    --cs-dur-settle: 0ms;
+    /* the changed-pieces highlight stays visible, it just does not animate */
+  }
+}
