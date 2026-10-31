@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Logo } from './components/Logo';
 import Home from './components/Home';
 import Workspace from './components/Workspace';
 import { EXAMPLES } from './lib/examples';
@@ -22,6 +23,14 @@ export default function App() {
   const [p, setP] = useState<Project>(emptyProject());
   const [error, setError] = useState<string | null>(null);
   const [key, setKey] = useState(0);
+  const [theme, setTheme] = useState<'light' | 'dark' | null>(() => {
+    try { const t = localStorage.getItem('cs-theme'); return t === 'light' || t === 'dark' ? t : null; } catch { return null; }
+  });
+  useEffect(() => {
+    if (theme) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme;
+    try { if (theme) localStorage.setItem('cs-theme', theme); } catch { /* storage unavailable */ }
+  }, [theme]);
+  const isDark = theme ? theme === 'dark' : window.matchMedia?.('(prefers-color-scheme: dark)').matches;
 
   const start = (image: NonNullable<Project['image']>, calib: Project['calib'] = null, kitId?: string) => {
     const kit = KITS.find((k) => k.id === kitId);
@@ -57,9 +66,10 @@ export default function App() {
       <header className="nav">
         <div className="container nav-in">
           <a className="logo" href="/" onClick={(e) => { if (p.image) { e.preventDefault(); if (confirm('¿Volver al inicio? Se perderán los cambios no guardados.')) setP(emptyProject()); } }}>
-            <span className="logo-mark" aria-hidden="true" />CutSense
+            <Logo height={30} />
           </a>
-          <span className="nav-note">Asistente de preparación de cortes</span>
+          <span className="nav-note">Dale sentido a cada retazo</span>
+          <button className="theme-toggle" aria-label={isDark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'} onClick={() => setTheme(isDark ? 'light' : 'dark')}>{isDark ? '☀' : '☾'}</button>
           {p.image && <button className="btn primary xs" onClick={() => { if (confirm('¿Descartar el proyecto actual?')) setP(emptyProject()); }}>Nuevo proyecto</button>}
         </div>
       </header>

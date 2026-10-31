@@ -30,6 +30,8 @@ interface Props {
   placements: Placement[];
   templates: Template[];
   stale: boolean;
+  /** Provenance of the material outline: AI proposal, human-corrected, or verified plan. */
+  outlineKind: 'ai' | 'human' | 'verified';
   selPlacement: number | null;
   onSelPlacement: (i: number | null) => void;
 }
@@ -42,6 +44,19 @@ const PATTERN_SHAPES = [
   (c: string) => <path d="M0,4 H8" stroke={c} strokeWidth="1.6" />,
   (c: string) => <path d="M4,0 V8" stroke={c} strokeWidth="1.6" />,
 ];
+
+const OV = { halo: 'rgba(255,255,255,.78)', casing: '#0B0F0D', ai: '#4D7CFF', human: '#FF5A1F', verified: '#5BD69A', defect: '#FF3B30' };
+
+/** Tri-stroke: light halo > dark casing > colour core, legible on any photo. */
+function Tri({ d, color, sw, dash, fill, fillOpacity, onPointerDown, cursor }: { d: string; color: string; sw: number; dash?: string; fill?: string; fillOpacity?: number; onPointerDown?: (e: React.PointerEvent) => void; cursor?: string }) {
+  return (
+    <g onPointerDown={onPointerDown} style={{ cursor }}>
+      <path d={d} fill="none" stroke={OV.halo} strokeWidth={sw * 3.4} strokeLinejoin="round" strokeDasharray={dash} />
+      <path d={d} fill="none" stroke={OV.casing} strokeWidth={sw * 2.3} strokeLinejoin="round" strokeDasharray={dash} />
+      <path d={d} fill={fill ?? 'none'} fillOpacity={fillOpacity} stroke={color} strokeWidth={sw} strokeLinejoin="round" strokeDasharray={dash} />
+    </g>
+  );
+}
 
 export const templateLetter = (i: number) => String.fromCharCode(65 + i);
 
@@ -136,24 +151,24 @@ export default function Stage(p: Props) {
       <defs>
         {p.templates.map((t, i) => (
           <pattern key={t.id} id={`pat-${t.id}`} width="8" height="8" patternUnits="userSpaceOnUse">
-            <rect width="8" height="8" fill={t.color} fillOpacity=".62" />
-            {PATTERN_SHAPES[i % PATTERN_SHAPES.length]?.('#000000a8')}
+            <rect width="8" height="8" fill={t.color} fillOpacity=".92" />
+            {PATTERN_SHAPES[i % PATTERN_SHAPES.length]?.('rgba(11,15,13,.55)')}
           </pattern>
         ))}
         <pattern id="pat-defect" width="8" height="8" patternUnits="userSpaceOnUse">
-          <rect width="8" height="8" fill="#ff3b30" fillOpacity=".28" />
-          <path d="M0,8 L8,0" stroke="#c4140b" strokeWidth="1.6" />
+          <rect width="8" height="8" fill="#ffffff" fillOpacity=".55" />
+          <path d="M-1,5 L5,-1 M3,9 L9,3" stroke="#FF3B30" strokeWidth="3" />
         </pattern>
       </defs>
 
       {p.showImage ? <image href={p.src} width={p.w} height={p.h} /> : <rect width={p.w} height={p.h} fill="#f2f4f5" />}
 
       {p.contour.length > 2 && (
-        <path d={ringPath(p.contour)} fill="#00f0a0" fillOpacity={p.mode === 'contour' ? 0.22 : 0.1} stroke="#00a86b" strokeWidth={sw * 1.5} strokeLinejoin="round" />
+        <Tri d={ringPath(p.contour)} color={OV[p.outlineKind]} sw={sw * (p.outlineKind === 'verified' ? 2 : 1.4)} dash={p.outlineKind === 'ai' ? `${8 / k()} ${5 / k()}` : undefined} fill={OV[p.outlineKind]} fillOpacity={p.mode === 'contour' ? 0.16 : 0.07} />
       )}
 
       {p.proposal && p.proposal.length > 2 && (
-        <path d={ringPath(p.proposal)} fill="#00f0a0" fillOpacity=".3" stroke="#000" strokeWidth={sw * 1.5} strokeDasharray={`${8 / k()} ${5 / k()}`} />
+        <Tri d={ringPath(p.proposal)} color={OV.ai} sw={sw * 1.5} dash={`${8 / k()} ${5 / k()}`} fill={OV.ai} fillOpacity={0.2} />
       )}
 
       {p.defects.map((d, i) => (
@@ -161,8 +176,8 @@ export default function Stage(p: Props) {
           key={i}
           d={ringPath(d)}
           fill="url(#pat-defect)"
-          stroke="#c4140b"
-          strokeWidth={p.selDefect === i ? sw * 2 : sw}
+          stroke={OV.defect}
+          strokeWidth={p.selDefect === i ? sw * 2.4 : sw * 1.3}
           strokeDasharray={`${6 / k()} ${3 / k()}`}
           style={{ cursor: p.mode === 'defects' ? 'pointer' : undefined }}
           onPointerDown={(e) => { if (p.mode === 'defects' && !drawing) { e.stopPropagation(); p.onSelDefect(i); } }}
@@ -210,20 +225,20 @@ export default function Stage(p: Props) {
       {p.draft && (
         <g>
           <polyline points={[...p.draft, ...(hover ? [hover] : [])].map((v) => v.join(',')).join(' ')} fill="none" stroke="#000" strokeWidth={sw * 1.5} strokeDasharray={`${5 / k()} ${4 / k()}`} />
-          {p.draft.map((v, i) => <circle key={i} cx={v[0]} cy={v[1]} r={i === 0 ? r * 1.4 : r * 0.8} fill={i === 0 ? '#00f0a0' : '#fff'} stroke="#000" strokeWidth={sw} />)}
+          {p.draft.map((v, i) => <circle key={i} cx={v[0]} cy={v[1]} r={i === 0 ? r * 1.4 : r * 0.8} fill={i === 0 ? OV.human : '#fff'} stroke="#000" strokeWidth={sw} />)}
         </g>
       )}
 
       {p.calibPts.length > 0 && (
         <g>
           {p.calibPts.length === 2 && <line x1={p.calibPts[0][0]} y1={p.calibPts[0][1]} x2={p.calibPts[1][0]} y2={p.calibPts[1][1]} stroke="#000" strokeWidth={sw * 1.5} />}
-          {p.calibPts.map((v, i) => <circle key={i} cx={v[0]} cy={v[1]} r={r} fill="#00f0a0" stroke="#000" strokeWidth={sw} />)}
+          {p.calibPts.map((v, i) => <circle key={i} cx={v[0]} cy={v[1]} r={r} fill={OV.human} stroke="#0B0F0D" strokeWidth={sw} />)}
         </g>
       )}
 
       {p.samPoints.map((s, i) => (
         <g key={i}>
-          <circle cx={s.p[0]} cy={s.p[1]} r={r * 1.2} fill={s.label ? '#00f0a0' : '#ff3b30'} stroke="#000" strokeWidth={sw} />
+          <circle cx={s.p[0]} cy={s.p[1]} r={r * 1.2} fill={s.label ? OV.verified : OV.defect} stroke="#000" strokeWidth={sw} />
           <text x={s.p[0]} y={s.p[1]} textAnchor="middle" dominantBaseline="central" fontSize={r * 1.6} fontWeight="700">{s.label ? '+' : '−'}</text>
         </g>
       ))}

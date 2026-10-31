@@ -7,8 +7,6 @@ interface Props {
   error: string | null;
 }
 
-const TICKER = ['La geometría manda', 'Humano en control', 'Resultados honestos', 'SAM propone · tú corriges', 'Verificador independiente', 'Plano referencial, no certificado', 'Sin cuenta, sin fricción'];
-
 const FAQ = [
   ['¿Garantiza el óptimo matemático?', 'No. Mostramos la mejor solución encontrada por una búsqueda heurística, verificada geométricamente. No es un óptimo demostrado.'],
   ['¿Las medidas son físicas?', 'Solo si calibras con una longitud de referencia. Sin calibración trabajamos en unidades relativas (1 u = 1 % del ancho de la foto) y lo indicamos en pantalla y en el archivo exportado.'],
@@ -24,9 +22,9 @@ export default function Home({ onFile, onExample, error }: Props) {
       <section className="band mint hero">
         <div className="container hero-grid">
           <div>
-            <p className="eyebrow">Asistente de preparación de cortes</p>
-            <h1 className="display">De una foto a un <span className="hl">plan de corte</span> revisable</h1>
-            <p className="lead">Fotografía tu retazo irregular. CutSense propone su contorno con IA, tú lo corriges y marcas defectos, y un optimizador verificable distribuye tus piezas.</p>
+            <p className="eyebrow">Sentido de corte</p>
+            <h1 className="display">Dale sentido a cada <span className="hl">retazo</span>.</h1>
+            <p className="lead">Fotografía tu retazo. La IA propone el contorno, tú lo corriges, y la geometría verifica cada plano antes de mostrártelo.</p>
             <div className="cta-row">
               <button className="btn primary" onClick={() => input.current?.click()}>Subir fotografía</button>
               <button className="btn green" onClick={() => onExample(EXAMPLES[0].id)}>Probar con un ejemplo</button>
@@ -34,6 +32,12 @@ export default function Home({ onFile, onExample, error }: Props) {
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }} />
             </div>
             {error && <p className="alert error" role="alert">{error}</p>}
+            <div className="provenance" aria-label="Quién hace qué">
+              <span className="chip ai">La IA propone</span>
+              <span className="chip human">Tú corriges</span>
+              <span className="chip computed">El motor calcula</span>
+              <span className="chip verified">La geometría verifica</span>
+            </div>
             <p className="caption">JPG, PNG o WebP · hasta 10 MB · material plano, fondo contrastante, luz uniforme y cámara cenital.</p>
           </div>
           <div className="video-card" aria-hidden="true">
@@ -42,10 +46,6 @@ export default function Home({ onFile, onExample, error }: Props) {
           </div>
         </div>
       </section>
-
-      <div className="ticker" aria-hidden="true">
-        <div className="ticker-track">{[...TICKER, ...TICKER, ...TICKER].map((t, i) => <span key={i}>{t} <b>●</b> </span>)}</div>
-      </div>
 
       <section className="band white">
         <div className="container">

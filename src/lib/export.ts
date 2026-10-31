@@ -20,7 +20,7 @@ export function buildSvg(p: Project, r: Result, includePhoto: boolean): { svg: s
     ? `Calibrado: ${fmt(r.ppu, 3)} px = 1 ${r.unit} (referencia ${fmt(p.calib!.dist)} ${r.unit} = ${fmt(calibPx(p.calib!))} px)`
     : 'Sin calibración: unidades relativas (1 u = 1 % del ancho de la imagen). Medidas no físicas.';
   const defs = p.defs.map((d, i) =>
-    `<pattern id="p${i}" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${d.color}" fill-opacity=".62"/>${PAT[i % PAT.length]}</pattern>`).join('');
+    `<pattern id="p${i}" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${d.color}" fill-opacity=".92"/>${PAT[i % PAT.length]}</pattern>`).join('');
   const pieces = r.solution.placements.map((pl) => {
     const ti = p.defs.findIndex((d) => d.id === pl.templateId);
     const cx = pl.polygon.reduce((s, q) => s + q[0], 0) / pl.polygon.length;
@@ -33,12 +33,12 @@ export function buildSvg(p: Project, r: Result, includePhoto: boolean): { svg: s
     return `<rect x="16" y="${y - 12}" width="18" height="14" fill="url(#p${i})" stroke="#000"/><text x="42" y="${y}" font-size="13">${templateLetter(i)} — ${esc(d.name)}: ${m.placed[d.id] ?? 0}/${m.requested[d.id] ?? d.qty} colocadas (${fmt(d.w)}×${fmt(d.h)} ${esc(r.unit)})</text>`;
   }).join('');
   const photo = includePhoto ? `<image href="${img.src}" width="${img.w}" height="${img.h}"/>` : `<rect width="${img.w}" height="${img.h}" fill="#f2f4f5"/>`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Inter, Arial, sans-serif">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Instrument Sans, Arial, sans-serif">
 <title>CutSense — plano referencial</title>
-<defs>${defs}<pattern id="pd" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#ff3b30" fill-opacity=".28"/><path d="M0,8 L8,0" stroke="#c4140b" stroke-width="1.6"/></pattern></defs>
+<defs>${defs}<pattern id="pd" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#fff" fill-opacity=".55"/><path d="M-1,5 L5,-1 M3,9 L9,3" stroke="#FF3B30" stroke-width="3"/></pattern></defs>
 <rect width="${W}" height="${H}" fill="#fff"/>
 ${photo}
-<path d="${ringPath(p.contour)}" fill="#00f0a0" fill-opacity=".12" stroke="#00a86b" stroke-width="2.5"/>
+<path d="${ringPath(p.contour)}" fill="#5BD69A" fill-opacity=".1" stroke="#fff" stroke-opacity=".8" stroke-width="5"/><path d="${ringPath(p.contour)}" fill="none" stroke="#0B0F0D" stroke-width="3.5"/><path d="${ringPath(p.contour)}" fill="none" stroke="#5BD69A" stroke-width="2"/>
 ${p.defects.map((d) => `<path d="${ringPath(d)}" fill="url(#pd)" stroke="#c4140b" stroke-width="1.5" stroke-dasharray="6 3"/>`).join('')}
 ${pieces}
 <rect y="${img.h}" width="${W}" height="${legendH}" fill="#fff"/>

@@ -291,7 +291,7 @@ export default function Workspace({ p, setP, onReset }: Props) {
               defects={p.defects} onDefects={(d) => setP((q) => ({ ...q, defects: d }))} selDefect={selDefect} onSelDefect={setSelDefect}
               draft={draft} onDraft={setDraft} onCloseDraft={closeDraft}
               calibPts={calibPts} onCalibPts={setCalibPts} samPoints={samPoints} onSamPoints={setSamPoints}
-              placements={step === 3 && result ? result.solution.placements : []} templates={result ? result.problem.templates : []} stale={stale}
+              placements={step === 3 && result ? result.solution.placements : []} templates={result ? result.problem.templates : []} stale={stale} outlineKind={step === 3 && result?.verify.valid && !stale ? 'verified' : p.edited || p.source === 'manual' ? 'human' : 'ai'}
               selPlacement={selPlacement} onSelPlacement={setSelPlacement}
             />
             {step === 3 && result && result.problem.templates.length > 0 && (
