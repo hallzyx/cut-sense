@@ -9,7 +9,7 @@ CutSense turns a photo of an irregular flat offcut — leather, felt, foam, card
 ## How it works
 
 1. **Digitize** — SAM 3.1 proposes a mask of your material. Accept it, reject it, or edit the outline point by point. Holes found in the mask are suggested as exclusion zones.
-2. **Prepare** — Calibrate the scale with a known length, mark areas that must not be cut, and define your pieces. Start from a ready-made product kit (leather cardholder, bifold wallet) with real measurements in cm.
+2. **Prepare** — Calibrate the scale with a known length, mark areas that must not be cut, and define your pieces. Start from a ready-made product kit (leather cardholder, bifold wallet) with real measurements in cm. Need a shape that is not in the list? Draw it on the canvas or import it from an SVG; curves become polygons and the piece scales to the size you set.
 3. **Optimize** — A deterministic nesting engine places the pieces. An independent verifier validates every plan before it is shown as valid.
 4. **Iterate and export** — Add a defect or change the order and re-optimize. The result view tells you what changed. Export the verified plan as SVG or PNG.
 
@@ -78,6 +78,5 @@ design/        Brand book, logos, tokens, components and preview (see design/DES
 
 - Natural-language order entry that turns requests into structured, confirmed constraints
 - Automatic defect suggestions with user confirmation
-- Custom piece import from SVG
 - Saved projects and share links
 - Multi-sheet nesting and cutting-machine export
