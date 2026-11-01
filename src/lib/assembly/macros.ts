@@ -1,5 +1,6 @@
 import type { AgentPiece } from '../agentSchema';
 import { blankNode, type MacroType, type Role, type SceneNode, type SceneSpec } from './dsl';
+import { seamPlacement } from './kinematics';
 import { DEFAULT_THICKNESS, findPiece, normName } from './pieces';
 
 /**
@@ -10,6 +11,12 @@ import { DEFAULT_THICKNESS, findPiece, normName } from './pieces';
 export interface Inst { name: string; instance: number; w: number; h: number; kind: AgentPiece['kind']; role: Role }
 
 const RULES: [Role, RegExp][] = [
+  // Garment parts first: "Manga delantera" is a sleeve, "Cuello trasero" a collar.
+  ['sleeve', /\bmanga|sleeve/],
+  ['cuff', /\bpuno|cuff/],
+  ['hood', /capucha|hood/],
+  ['collar', /cuello|collar|\bsolapa de cuello|lapel/],
+  ['waistband', /pretina|cinturilla|waistband|\bhem\b|dobladillo|bajo de la prenda/],
   ['card_pocket', /tarjet|card|ranura|slot/],
   ['bill_pocket', /billete|bill|cash|dinero/],
   ['coin_pocket', /moneda|monedero|coin/],
@@ -28,11 +35,14 @@ const RULES: [Role, RegExp][] = [
   ['body', /cuerpo|exterior|body|principal|cubierta|carcasa|funda|panel|pieza/],
 ];
 
-export function guessRole(pieceName: string): Role {
+const GARMENT_ROLES: Role[] = ['sleeve', 'cuff', 'hood', 'collar', 'waistband'];
+
+/** Role from the piece name. Garment roles are only guessed for garments (a "Sleeve" of a phone case is its body). */
+export function guessRole(pieceName: string, garment = true): Role {
   const n = normName(pieceName);
   // "Bolsillo frontal" is a pocket, not the front panel.
   if (/bolsillo|pocket/.test(n) && !/tarjet|card|billete|bill|moneda|coin/.test(n)) return 'pocket';
-  for (const [role, re] of RULES) if (re.test(n)) return role;
+  for (const [role, re] of RULES) if ((garment || !GARMENT_ROLES.includes(role)) && re.test(n)) return role;
   return 'other';
 }
 
@@ -55,7 +65,7 @@ function instances(spec: SceneSpec, pieces: AgentPiece[]): Inst[] {
   const used = new Set(spec.nodes.filter((n) => n.type !== 'hardware').map((n) => `${normName(n.piece)}#${n.instance}`));
   const out: Inst[] = [];
   for (const p of pieces) {
-    const role = bound.get(p.name) ?? guessRole(p.name);
+    const role = bound.get(p.name) ?? guessRole(p.name, spec.macro.type === 'garment_top');
     for (let k = 0; k < p.qty_per_set; k++) {
       if (used.has(`${normName(p.name)}#${k}`)) continue; // the model placed this instance explicitly
       out.push({ name: p.name, instance: k, w: p.width_cm, h: p.height_cm, kind: p.kind, role });
@@ -362,6 +372,132 @@ function coasters(ctx: Ctx) {
   });
 }
 
+/** Sleeves hang this many degrees out from the vertical (a technical flat drawing of a jacket). */
+const SLEEVE_SPLAY = 12;
+
+/**
+ * Garment top (jacket, coat, shirt, vest) laid flat, face up, as in a technical flat: the back is
+ * the root, the fronts lie on it and meet (or cross over) at the centre, the sleeves are sewn to
+ * the armholes just below the shoulder line and hang down, the collar folds over the neckline,
+ * a hood or waistband is sewn to the top or bottom edge and cuffs to the end of the sleeves.
+ */
+function garmentTop(ctx: Ctx) {
+  const largest = (a: Inst, b: Inst) => area(b) - area(a);
+  const backs = take(ctx, ['back']).sort(largest);
+  const fronts = take(ctx, ['front']).sort(largest);
+  const bodies = () => ctx.pool.filter((i) => i.role === 'body').sort(largest);
+  let back = backs.shift() ?? bodies()[0];
+  if (back && ctx.pool.includes(back)) ctx.pool.splice(ctx.pool.indexOf(back), 1);
+  if (!back) back = fronts.shift() ?? takeLargest(ctx, ['other', 'lining', 'item'])!;
+  if (!fronts.length) {
+    // A second body piece of about the same height is the front.
+    const same = bodies().sort((a, b) => Math.abs(a.h - back!.h) - Math.abs(b.h - back!.h))[0];
+    if (same) { fronts.push(same); ctx.pool.splice(ctx.pool.indexOf(same), 1); }
+  }
+  const W = back.w, H = back.h;
+  const topY = (h: number) => (h <= H ? (H / 2 - h / 2) / H : 0);
+  const r = root(ctx, back, { stitch: 'sides' });
+
+  // Linings and any extra back piece lie inside, under the fronts.
+  [...take(ctx, ['lining']), ...backs].forEach((l) => add(ctx, l, { parent: r.id, joint: 'stack', side: 'top', layer: 0, anchor_y: topY(l.h), stitch: 'none' }));
+
+  // Fronts: aligned with the shoulder line; two halves meet at the centre or, if wider, cross over.
+  const fr: { node: SceneNode; inst: Inst; inner: 'left' | 'right' }[] = [];
+  if (fronts.length === 1) {
+    const f = fronts[0];
+    fr.push({ node: add(ctx, f, { parent: r.id, joint: 'stack', side: 'top', layer: 1, anchor_y: topY(f.h), stitch: 'sides' }), inst: f, inner: 'left' });
+  } else if (fronts.length >= 2) {
+    const [a, b] = fronts;
+    const meet = a.w + b.w < W * 0.98;
+    const ax = meet ? -a.w / 2 : -W / 2 + a.w / 2, bx = meet ? b.w / 2 : W / 2 - b.w / 2;
+    fr.push({ node: add(ctx, a, { parent: r.id, joint: 'stack', side: 'top', layer: 1, anchor_x: ax / W, anchor_y: topY(a.h), stitch: 'sides' }), inst: a, inner: 'right' });
+    fr.push({ node: add(ctx, b, { parent: r.id, joint: 'stack', side: 'top', layer: 2, anchor_x: bx / W, anchor_y: topY(b.h), stitch: 'sides' }), inst: b, inner: 'left' });
+    fronts.slice(2).forEach((f, k) => add(ctx, f, { parent: r.id, joint: 'stack', side: 'top', layer: 3 + k, anchor_y: topY(f.h), stitch: 'sides' }));
+  }
+
+  // Pockets low on the fronts (or on the back when there is no front); flaps cover them, or become lapels.
+  const hosts = fr.length ? fr.map((f) => ({ node: f.node, w: f.inst.w, h: f.inst.h, x: 0, inner: f.inner })) : [
+    { node: r, w: W, h: H, x: -W / 4, inner: 'right' as const }, { node: r, w: W, h: H, x: W / 4, inner: 'left' as const },
+  ];
+  const pockets = take(ctx, ['pocket', 'card_pocket', 'bill_pocket', 'coin_pocket']);
+  const pocketTops: { host: (typeof hosts)[number]; top: number }[] = [];
+  pockets.forEach((pk, k) => {
+    const host = hosts[k % hosts.length], round = Math.floor(k / hosts.length);
+    const margin = Math.min(host.h * 0.12 + round * (pk.h + 2), Math.max(0, host.h - pk.h - 1));
+    stackBottom(ctx, pk, host.node, host.w, host.h, host.x, margin, { layer: 0 });
+    pocketTops.push({ host, top: -host.h / 2 + margin + pk.h });
+  });
+  take(ctx, ['flap', 'tab']).forEach((f, k) => {
+    const pt = pocketTops[k];
+    if (pt) {
+      add(ctx, f, { parent: pt.host.node.id, joint: 'stack', side: 'top', layer: 1, anchor_x: pt.host.x / pt.host.w, anchor_y: (pt.top + 0.6 - f.h / 2) / pt.host.h, stitch: 'top' });
+      return;
+    }
+    const host = hosts[k % hosts.length];
+    const dir = host.inner === 'right' ? 1 : -1;
+    add(ctx, f, {
+      parent: host.node.id, joint: 'stack', side: 'top', layer: 1, stitch: 'sides',
+      anchor_x: Math.max(-0.5, Math.min(0.5, (dir * Math.max(0, host.w / 2 - f.w / 2)) / host.w)), anchor_y: (host.h / 2 - f.h / 2) / host.h,
+    });
+  });
+
+  // Sleeves: tucked under the back at the armhole (the side edge hides the cap from the shoulder down to
+  // the underarm) and hanging down, splayed a little; the cap stays below the shoulder line.
+  const a = SLEEVE_SPLAY;
+  const sleeves = take(ctx, ['sleeve']);
+  const sleeveNodes: { node: SceneNode; inst: Inst; far: SceneNode['hinge_edge'] }[] = [];
+  sleeves.forEach((s, k) => {
+    const left = k % 2 === 0;
+    const portrait = s.h >= s.w;
+    const cap = portrait ? s.w : s.h;
+    const tuck = Math.max(1, Math.min(5, cap * 0.2));
+    const al = Math.min(1.2, s.h * 0.15);
+    // Portrait: the cap is the bottom edge and the sleeve runs along +v. Landscape: the cap is the left edge, it runs along +u.
+    const patch: Partial<SceneNode> = portrait
+      ? { self_x: left ? -0.5 + tuck / s.w : 0.5 - tuck / s.w, self_y: 0, rotation_deg: left ? 90 - a : -(90 - a) }
+      : { self_x: -0.5 + Math.min(1.2, s.w * 0.15) / s.w, self_y: left ? (s.h - al - tuck) / s.h : (tuck - al) / s.h, rotation_deg: left ? 180 - a : a };
+    const spec = blankNode('tmp', { joint: 'seam', hinge_edge: left ? 'left' : 'right', ...patch });
+    const pl = seamPlacement(spec, W, H, s.w, s.h);
+    const phi = (pl.rot * Math.PI) / 180;
+    const hy = Math.abs(Math.sin(phi)) * s.w / 2 + Math.abs(Math.cos(phi)) * s.h / 2;
+    const anchorY = Math.min(0.5, Math.max(-0.45, (H / 2 - 0.3 - (pl.cy + hy)) / H));
+    const node = add(ctx, s, { ...patch, parent: r.id, joint: 'seam', side: 'bottom', hinge_edge: left ? 'left' : 'right', anchor_y: anchorY, stitch: 'sides' });
+    sleeveNodes.push({ node, inst: s, far: portrait ? 'top' : 'right' });
+  });
+  take(ctx, ['cuff']).forEach((c, k) => {
+    const sl = sleeveNodes[k % Math.max(1, sleeveNodes.length)];
+    if (!sl || k >= sleeveNodes.length) { ctx.pool.push(c); return; }
+    add(ctx, c, { parent: sl.node.id, joint: 'seam', side: 'top', hinge_edge: sl.far, rotation_deg: c.w >= c.h ? 0 : 90, stitch: 'bottom' });
+  });
+
+  // Collar folded down over the neckline; a hood stands up from it; waistbands below the hem.
+  take(ctx, ['collar']).forEach((c, k) => {
+    const rot = c.w >= c.h ? 0 : 90;
+    const len = rot ? c.h : c.w;
+    if (k === 0 && len <= W * 1.1) add(ctx, c, { parent: r.id, joint: 'hinge', hinge_edge: 'top', hinge_angle_deg: 180, rotation_deg: rot, stitch: 'all' });
+    else add(ctx, c, { parent: r.id, joint: 'seam', side: 'top', hinge_edge: 'top', rotation_deg: rot, stitch: 'bottom' });
+  });
+  take(ctx, ['hood']).forEach((h) => add(ctx, h, { parent: r.id, joint: 'seam', side: 'top', hinge_edge: 'top', stitch: 'bottom' }));
+  take(ctx, ['waistband']).forEach((b, k) => {
+    const host = k === 0 || !fr[k - 1] ? { node: r, w: W } : { node: fr[k - 1].node, w: fr[k - 1].inst.w };
+    add(ctx, b, { parent: host.node.id, joint: 'seam', side: 'top', hinge_edge: 'bottom', rotation_deg: b.w >= b.h ? 0 : 90, stitch: 'bottom' });
+  });
+
+  // Closure along the centre front.
+  const top = fr.length >= 2 ? fr[1] : fr[0];
+  if (top && ctx.closure === 'zipper') add(ctx, null, { parent: top.node.id, hardware: 'zipper', hinge_edge: top.inner, side: 'top' });
+  else if (top && ctx.closure !== 'none') {
+    const ax = (top.inner === 'left' ? -1 : 1) * (0.5 - Math.min(0.2, 1.5 / top.inst.w));
+    for (const y of [0.32, 0.1, -0.12, -0.34]) snap(ctx, top.node, ax, y, 'top', ctx.closure === 'stud' ? 'stud' : ctx.closure === 'buckle' ? 'buckle' : 'snap');
+  }
+
+  // Anything else that fits lies on the back, under the fronts (a yoke, an inner pocket…).
+  ctx.pool.splice(0).forEach((p) => {
+    if (p.role === 'handle' || p.w > W * 1.02 || p.h > H * 1.02) { ctx.pool.push(p); return; }
+    add(ctx, p, { parent: r.id, joint: 'stack', side: 'top', layer: 0, anchor_y: topY(p.h), stitch: 'none' });
+  });
+}
+
 function generic(ctx: Ctx) {
   const body = takeLargest(ctx, ['body', 'back', 'base', 'front'])!;
   const b = root(ctx, body);
@@ -388,6 +524,7 @@ const MACRO_FNS: Record<Exclude<MacroType, 'none'>, (ctx: Ctx) => void> = {
   tote,
   keychain_loop: keychain,
   coaster_stack: coasters,
+  garment_top: garmentTop,
   generic_stack: generic,
 };
 

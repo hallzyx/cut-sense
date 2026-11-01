@@ -27,6 +27,7 @@ export function describeRig(rig: Rig, sanity?: Sanity): string {
     const folds = s.folds.length === 1 ? (Math.abs(s.folds[0].angle_deg) > 300 ? ', enrollada en tubo' : `, doblada ${Math.round(Math.abs(s.folds[0].angle_deg))}°`) : s.folds.length > 1 ? `, doblada en ${s.folds.length + 1} partes` : '';
     if (n.parent < 0) { out.push(`La base es ${piece}${folds}.`); continue; }
     if (s.joint === 'hinge') put(`h|${s.piece}|${p}|${s.hinge_edge}|${s.hinge_angle_deg}`, `${piece} unida al borde ${EDGE[s.hinge_edge]} de «${p}», girada ${Math.round(s.hinge_angle_deg)}°${folds}`);
+    else if (s.joint === 'seam') put(`c|${s.piece}|${p}|${s.hinge_edge}`, `${piece} cosida al borde ${EDGE[s.hinge_edge]} de «${p}»${folds}`);
     else put(`s|${s.piece}|${p}|${s.side}`, `${piece} ${s.side === 'top' ? 'sobre' : 'debajo de'} «${p}»${folds}`);
   }
   for (const g of groups.values()) out.push(`${g.count > 1 ? `${g.count} × ` : ''}${g.text[0].toUpperCase()}${g.text.slice(1)}.`);

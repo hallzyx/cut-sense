@@ -10,15 +10,16 @@
  *    of the piece as drawn), w = thickness (z, bottom face w=0, top face w=T).
  *  - The node tree is a flat list with parent ids (the strict schema forbids recursion).
  *  - "joint" says how a node hangs from its parent: stacked on a face, hinged on an edge,
- *    or root. A hinge or a fold angle animates from 0 (flat) to its target ("armar").
+ *    sewn edge to edge in the parent's plane (seam), or root. A hinge or a fold angle animates
+ *    from 0 (flat) to its target ("armar").
  */
 export const CATEGORIES = [
-  'wallet', 'cardholder', 'coin_pouch', 'zip_pouch', 'glasses_case', 'phone_sleeve', 'bag', 'keychain', 'coaster_set', 'box', 'sleeve', 'other',
+  'wallet', 'cardholder', 'coin_pouch', 'zip_pouch', 'glasses_case', 'phone_sleeve', 'bag', 'keychain', 'coaster_set', 'box', 'sleeve', 'garment', 'other',
 ] as const;
 export const MATERIAL_KINDS = ['leather', 'felt', 'fabric', 'cardboard', 'foam'] as const;
 export const COLORS = ['cognac', 'tan', 'brown', 'dark_brown', 'black', 'burgundy', 'olive', 'navy', 'grey', 'natural', 'red', 'green', 'blue'] as const;
 export const NODE_TYPES = ['panel', 'strap', 'hardware'] as const;
-export const JOINTS = ['root', 'stack', 'hinge'] as const;
+export const JOINTS = ['root', 'stack', 'hinge', 'seam'] as const;
 export const SIDES = ['top', 'bottom'] as const;
 export const EDGES = ['top', 'bottom', 'left', 'right'] as const;
 export const STITCHES = ['none', 'all', 'u_shape', 'sides', 'top', 'bottom', 'left', 'right'] as const;
@@ -28,10 +29,11 @@ export const FOLD_AXES = ['horizontal', 'vertical'] as const;
 export const MOVING = ['positive', 'negative'] as const;
 export const MACROS = [
   'none', 'bifold_wallet', 'cardholder', 'card_slot_stack', 'zip_pouch', 'flap_pouch', 'flat_sleeve', 'envelope_flap',
-  'tube_sleeve', 'box_with_lid', 'tote', 'keychain_loop', 'coaster_stack', 'generic_stack',
+  'tube_sleeve', 'box_with_lid', 'tote', 'keychain_loop', 'coaster_stack', 'garment_top', 'generic_stack',
 ] as const;
 export const ROLES = [
-  'body', 'front', 'back', 'base', 'wall', 'lid', 'flap', 'pocket', 'card_pocket', 'bill_pocket', 'coin_pocket', 'gusset', 'handle', 'tab', 'item', 'lining', 'other',
+  'body', 'front', 'back', 'base', 'wall', 'lid', 'flap', 'pocket', 'card_pocket', 'bill_pocket', 'coin_pocket', 'gusset', 'handle', 'tab', 'item', 'lining',
+  'sleeve', 'collar', 'cuff', 'waistband', 'hood', 'other',
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];
@@ -80,13 +82,13 @@ export interface SceneNode {
   /** Point on this node (fraction of its rotated size) that sits on the anchor. */
   self_x: number;
   self_y: number;
-  /** In-plane rotation in degrees. */
+  /** In-plane rotation in degrees. Seam: swing around the seam point (0 = straight out of the edge, + = counter-clockwise). */
   rotation_deg: number;
   /** Turn the piece face down. */
   flip: boolean;
   /** Extra gap along the face normal, mm. */
   offset_mm: number;
-  /** Hinge: edge of the parent it is attached to. Strap: direction the loop rises. Zipper: edge it runs along. */
+  /** Hinge/seam: edge of the parent it is attached to. Strap: direction the loop rises. Zipper: edge it runs along. */
   hinge_edge: Edge;
   /** Hinge target angle; positive rotates toward the parent's top face. 90 = standing wall, 180 = folded over. */
   hinge_angle_deg: number;
@@ -151,6 +153,14 @@ export const CRITIQUE_SCHEMA = obj({
   issues: { type: 'array', items: str },
   scene: SCENE_SCHEMA,
 });
+/** Verification step: the model fixes the problems the deterministic checks still report. */
+export const ALIGN_SCHEMA = obj({
+  changes: { type: 'array', items: str },
+  scene: SCENE_SCHEMA,
+});
+
+/** Stacked pieces (they lie on a face of the parent and fly in during phase A): stack and seam joints. */
+export const isLaid = (n: Pick<SceneNode, 'type' | 'joint'>) => n.type === 'panel' && (n.joint === 'stack' || n.joint === 'seam');
 
 /** A node with every default filled; macros and the fallback build nodes with this. */
 export function blankNode(id: string, patch: Partial<SceneNode> = {}): SceneNode {

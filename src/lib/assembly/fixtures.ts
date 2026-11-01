@@ -58,4 +58,14 @@ export const PRODUCT_FIXTURES: ProductFixture[] = [
     pieces: [p('Base', 'rect', 12, 9), p('Lateral largo', 'rect', 12, 5, 2), p('Lateral corto', 'rect', 9, 5, 2), p('Tapa', 'rect', 12, 9)],
     assumptions: ['Cartón gris de 2 mm'],
   },
+  {
+    key: 'chaqueta', productName: 'Chaqueta de cuero',
+    pieces: [p('Panel delantero', 'rect', 28, 60, 2), p('Panel trasero', 'rect', 54, 60), p('Manga', 'rect', 20, 58, 2), p('Cuello', 'rrect', 40, 8), p('Bolsillo', 'rrect', 14, 16, 2)],
+    assumptions: ['Cuero de 1,2 mm', 'Cierre frontal con cremallera'],
+  },
+  {
+    key: 'sudadera', productName: 'Sudadera con capucha',
+    pieces: [p('Frente', 'rect', 50, 62), p('Espalda', 'rect', 50, 62), p('Manga', 'rect', 22, 60, 2), p('Capucha', 'rrect', 30, 34), p('Puño', 'rect', 22, 6, 2), p('Pretina', 'rect', 50, 8)],
+    assumptions: ['Felpa de algodón', 'Puños y pretina de rib'],
+  },
 ];

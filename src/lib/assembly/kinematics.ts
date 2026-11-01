@@ -1,5 +1,5 @@
 import type { AgentPiece } from '../agentSchema';
-import type { SceneNode, SceneSpec } from './dsl';
+import { isLaid, type SceneNode, type SceneSpec } from './dsl';
 import { applyD, applyP, chain, clamp01, cross, dot, ident, interpRigid, invRigid, mul, norm, rotX, rotZ, smooth, trans, type M4 } from './math';
 import { DEFAULT_THICKNESS, findPiece, pieceOutline } from './pieces';
 
@@ -45,13 +45,46 @@ export const G = rotX(-Math.PI / 2);
 const HW_HEIGHT: Record<string, number> = { snap: 0.3, stud: 0.35, rivet: 0.2, buckle: 0.3, zipper: 0.25, ring: 0, none: 0 };
 const GAP = 2.5;
 
+/**
+ * Seam joint: the piece is sewn edge to edge to its parent and lies in the parent's plane, like a
+ * sleeve set into an armhole. Its bottom edge (point self_x) meets the parent's hinge_edge at the
+ * anchor; with rotation 0 it leaves the edge straight outward, and rotation_deg swings it around
+ * that point. It overlaps the parent by a small seam allowance and is layered like a stacked piece.
+ */
+const SEAM_BASE: Record<string, number> = { top: 0, bottom: 180, right: -90, left: 90 };
+export const seamAllowance = (h: number) => Math.min(1.2, h * 0.15);
+/** Total in-plane turn of a node in its parent's frame, degrees. */
+function seamTurn(s: SceneNode): number {
+  return s.joint === 'seam' ? SEAM_BASE[s.hinge_edge] + s.rotation_deg : s.rotation_deg;
+}
+/** Seam point on the parent's edge, in the parent's frame. */
+export function seamPoint(s: SceneNode, pW: number, pH: number): [number, number] {
+  const e = s.hinge_edge;
+  return e === 'top' ? [s.anchor_x * pW, pH / 2] : e === 'bottom' ? [s.anchor_x * pW, -pH / 2] : e === 'right' ? [pW / 2, s.anchor_y * pH] : [-pW / 2, s.anchor_y * pH];
+}
+/**
+ * Placement of a seam piece in its parent's frame: centre and total in-plane turn (degrees).
+ * The point sewn to the seam point is (self_x·W, −H/2 + allowance + self_y·H) of the piece:
+ * by default the middle of its bottom edge, a seam allowance inside it.
+ */
+export function seamPlacement(s: SceneNode, pW: number, pH: number, cW: number, cH: number): { cx: number; cy: number; rot: number } {
+  const rot = seamTurn(s);
+  const phi = (rot * Math.PI) / 180;
+  const [px, py] = seamPoint(s, pW, pH);
+  // A flipped piece has its edges mirrored in v.
+  const ax = s.self_x * cW, ay0 = -cH / 2 + seamAllowance(cH) + s.self_y * cH, ay = s.flip ? -ay0 : ay0;
+  const co = Math.cos(phi), si = Math.sin(phi);
+  return { cx: px - (co * ax - si * ay), cy: py - (si * ax + co * ay), rot };
+}
+const seamCentre = (c: RigNode, p: RigNode) => seamPlacement(c.spec, p.W, p.H, c.W, c.H);
+
 export function buildRig(scene: SceneSpec, pieces: AgentPiece[], unused: { piece: string; instance: number }[] = []): Rig {
   const T = (scene.material.thickness_mm || DEFAULT_THICKNESS[scene.material.kind] || 1.5) / 10;
   const idx = new Map(scene.nodes.map((n, i) => [n.id, i]));
   const nodes: RigNode[] = scene.nodes.map((spec, i) => {
     const ref = spec.type === 'hardware' ? null : findPiece(pieces, spec.piece);
     const W = ref?.piece.width_cm ?? 1, H = ref?.piece.height_cm ?? 1;
-    const r = (spec.rotation_deg * Math.PI) / 180;
+    const r = (seamTurn(spec) * Math.PI) / 180;
     const c = Math.abs(Math.cos(r)), s = Math.abs(Math.sin(r));
     return {
       i, spec, parent: spec.parent ? idx.get(spec.parent) ?? -1 : -1, children: [],
@@ -70,12 +103,12 @@ export function buildRig(scene: SceneSpec, pieces: AgentPiece[], unused: { piece
   // 1) Stacking (post-order): every node's own stacks are known before it is placed on its parent.
   const place = (p: RigNode) => {
     for (const c of p.children) place(nodes[c]);
-    const stacked = p.children.map((c) => nodes[c]).filter((c) => c.spec.type === 'panel' && c.spec.joint === 'stack');
+    const stacked = p.children.map((c) => nodes[c]).filter((c) => isLaid(c.spec));
     stacked.sort((a, b) => (a.spec.side === b.spec.side ? a.spec.layer - b.spec.layer || a.i - b.i : a.spec.side === 'top' ? -1 : 1));
     const placedRects: { side: string; x0: number; x1: number; y0: number; y1: number; top: number }[] = [];
     for (const c of stacked) {
       const s = c.spec;
-      const cx = s.anchor_x * p.W - s.self_x * c.Wr, cy = s.anchor_y * p.H - s.self_y * c.Hr;
+      const { cx, cy, rot } = s.joint === 'seam' ? seamCentre(c, p) : { cx: s.anchor_x * p.W - s.self_x * c.Wr, cy: s.anchor_y * p.H - s.self_y * c.Hr, rot: s.rotation_deg };
       const rect = { side: s.side, x0: cx - c.Wr / 2, x1: cx + c.Wr / 2, y0: cy - c.Hr / 2, y1: cy + c.Hr / 2, top: 0 };
       let base = 0;
       for (const o of placedRects) {
@@ -88,7 +121,7 @@ export function buildRig(scene: SceneSpec, pieces: AgentPiece[], unused: { piece
       const ext = c.T + (s.flip ? c.bottomStack : c.topStack) + Math.max(0, (s.side === 'top') !== s.flip ? c.bulge : -c.bulge);
       rect.top = base + off + ext;
       placedRects.push(rect);
-      const rz = rotZ((s.rotation_deg * Math.PI) / 180);
+      const rz = rotZ((rot * Math.PI) / 180);
       const flip = s.flip ? mul(trans(0, 0, c.T), rotX(Math.PI)) : ident();
       const w0 = s.side === 'top' ? p.T + base + off : -(base + off) - c.T;
       c.rest = chain(trans(cx, cy, w0), rz, flip);
@@ -113,7 +146,7 @@ export function buildRig(scene: SceneSpec, pieces: AgentPiece[], unused: { piece
         let moving = 0, fixed = 0;
         for (const ci of n.children) {
           const c = nodes[ci];
-          if (c.spec.type !== 'panel' || c.spec.joint !== 'stack' || (c.spec.side === 'top') !== theta > 0) continue;
+          if (!isLaid(c.spec) || (c.spec.side === 'top') !== theta > 0) continue;
           const pos = coord ? c.rest[13] : c.rest[12];
           // Height of the stack above (or below) the inner face.
           const h = theta > 0 ? c.rest[14] - n.T + c.T + c.topStack : -c.rest[14] + c.bottomStack;
@@ -160,7 +193,7 @@ export function buildRig(scene: SceneSpec, pieces: AgentPiece[], unused: { piece
   const netOf = (i: number): number => {
     const n = nodes[i];
     if (n.net >= 0) return n.net;
-    if (n.parent < 0 || (n.spec.joint === 'stack' && n.spec.type === 'panel') || n.spec.type === 'strap') { n.net = i; nets.push(i); }
+    if (n.parent < 0 || isLaid(n.spec) || n.spec.type === 'strap') { n.net = i; nets.push(i); }
     else n.net = netOf(n.parent);
     return n.net;
   };
@@ -212,7 +245,7 @@ export function buildRig(scene: SceneSpec, pieces: AgentPiece[], unused: { piece
   let seq = 0;
   const visit = (i: number) => {
     const n = nodes[i];
-    if (n.parent >= 0 && n.spec.joint === 'stack' && n.spec.type === 'panel') n.seq = seq++;
+    if (n.parent >= 0 && isLaid(n.spec)) n.seq = seq++;
     [...n.children].sort((a, b) => nodes[a].spec.layer - nodes[b].spec.layer).forEach(visit);
   };
   if (rootIdx >= 0) visit(rootIdx);
@@ -266,7 +299,7 @@ export function pose(rig: Rig, t: number): Pose {
     const s = n.spec;
     if (s.type === 'panel' && s.joint === 'hinge') {
       rel[n.i] = chain(n.edge, trans(0, 0, n.hingeH), rotX(n.hingeTheta * b), trans(0, 0, -n.hingeH), n.rest);
-    } else if (s.type === 'panel' && s.joint === 'stack' && a < 1) {
+    } else if (isLaid(s) && a < 1) {
       const start = (n.seq / K) * 0.55, ak = smooth(clamp01((a - start) / 0.45));
       const target = mul(world[n.parent], n.rest);
       const lift = 0.35 * Math.max(n.W, n.H) + 1.5;

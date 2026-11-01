@@ -9,6 +9,8 @@ import { DEFAULT_THICKNESS, normName } from './pieces';
  * or returns something unusable.
  */
 const FAMILIES: [RegExp, Category, MacroType][] = [
+  // Garments first: "Chaleco con bolsillo para el celular" is a vest, not a phone sleeve.
+  [/chaquet|campera|abrigo|blazer|chamarra|cazadora|casaca|gabardina|parka|chaleco|camis|blusa|sudadera|buzo|polera|chompa|jersey|sueter|cardigan|anorak|\bpolo\b|jacket|coat\b|\bvest\b|waistcoat|shirt|blouse|hoodie|sweater|prenda|garment/, 'garment', 'garment_top'],
   [/tarjetero|porta ?tarjetas|cardholder|card holder|card case/, 'cardholder', 'cardholder'],
   [/billetera|cartera|wallet|bifold/, 'wallet', 'bifold_wallet'],
   [/monedero|coin|portamonedas/, 'coin_pouch', 'flap_pouch'],
@@ -38,6 +40,7 @@ export function guessFamily(productName: string, pieces: AgentPiece[]): { catego
     return { category, macro };
   }
   const roles = pieces.map((p) => guessRole(p.name));
+  if (roles.includes('sleeve') || (roles.includes('collar') && roles.includes('front') && roles.includes('back'))) return { category: 'garment', macro: 'garment_top' };
   if (roles.includes('card_pocket') && pieces.some((p) => p.width_cm >= 15)) return { category: 'wallet', macro: 'bifold_wallet' };
   if (roles.includes('card_pocket')) return { category: 'cardholder', macro: 'cardholder' };
   if (roles.includes('handle')) return { category: 'bag', macro: 'tote' };
@@ -70,11 +73,12 @@ const CAMERA: Partial<Record<MacroType, SceneSpec['camera']>> = {
   box_with_lid: { azimuth_deg: 32, elevation_deg: 30 },
   keychain_loop: { azimuth_deg: 30, elevation_deg: 40 },
   tube_sleeve: { azimuth_deg: 35, elevation_deg: 25 },
+  garment_top: { azimuth_deg: 0, elevation_deg: 62 },
 };
 
 const LABELS: Record<Category, string> = {
   wallet: 'Billetera', cardholder: 'Tarjetero', coin_pouch: 'Monedero', zip_pouch: 'Estuche con cremallera', glasses_case: 'Estuche de gafas',
-  phone_sleeve: 'Funda', bag: 'Bolso', keychain: 'Llavero', coaster_set: 'Set de posavasos', box: 'Caja', sleeve: 'Funda', other: 'Objeto',
+  phone_sleeve: 'Funda', bag: 'Bolso', keychain: 'Llavero', coaster_set: 'Set de posavasos', box: 'Caja', sleeve: 'Funda', garment: 'Prenda', other: 'Objeto',
 };
 
 export function fallbackScene(productName: string, pieces: AgentPiece[], assumptions: string[] = []): SceneSpec {
