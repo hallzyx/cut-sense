@@ -32,9 +32,9 @@ export default function App() {
   }, [theme]);
   const isDark = theme ? theme === 'dark' : window.matchMedia?.('(prefers-color-scheme: dark)').matches;
 
-  const start = (image: NonNullable<Project['image']>, calib: Project['calib'] = null, kitId?: string) => {
+  const start = (image: NonNullable<Project['image']>, calib: Project['calib'] = null, kitId?: string, keep?: { defs: Project['defs']; spacing: number }) => {
     const kit = KITS.find((k) => k.id === kitId);
-    setP({ ...emptyProject(), image, calib, defs: kit ? kitToDefs(kit) : defaultDefs() });
+    setP({ ...emptyProject(), image, calib, defs: keep?.defs ?? (kit ? kitToDefs(kit) : defaultDefs()), spacing: keep?.spacing ?? 0, fill: keep ? 'maxKits' : 'fixed' });
     setKey((k) => k + 1);
     setError(null);
   };
@@ -44,18 +44,18 @@ export default function App() {
     start({ src: ex.src, w: ex.w, h: ex.h, name: ex.title, exampleId: ex.id }, ex.calib ?? null, ex.kitId);
   };
 
-  const onFile = async (f: File) => {
+  const onFile = async (f: File, keep?: { defs: Project['defs']; spacing: number }) => {
     if (!OK_TYPES.includes(f.type)) return setError('Formato no admitido. Usa JPG, PNG o WebP.');
     if (f.size > MAX_BYTES) return setError(`El archivo pesa ${(f.size / 1048576).toFixed(1)} MB; el límite es 10 MB.`);
     try {
       const src = await readFile(f);
       const im = await loadImage(src); // falla si el archivo está corrupto
       const k = Math.min(1, 1600 / Math.max(im.naturalWidth, im.naturalHeight));
-      if (k === 1) return start({ src, w: im.naturalWidth, h: im.naturalHeight, name: f.name });
+      if (k === 1) return start({ src, w: im.naturalWidth, h: im.naturalHeight, name: f.name }, null, undefined, keep);
       const c = document.createElement('canvas');
       c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
       c.getContext('2d')!.drawImage(im, 0, 0, c.width, c.height);
-      start({ src: c.toDataURL('image/jpeg', 0.9), w: c.width, h: c.height, name: f.name });
+      start({ src: c.toDataURL('image/jpeg', 0.9), w: c.width, h: c.height, name: f.name }, null, undefined, keep);
     } catch (e) {
       setError(`No se pudo abrir la imagen: ${(e as Error).message}`);
     }
@@ -75,7 +75,7 @@ export default function App() {
       </header>
       <main>
         {p.image
-          ? <Workspace key={key} p={p} setP={setP} onReset={() => setP(emptyProject())} />
+          ? <Workspace key={key} p={p} setP={setP} onReset={() => setP(emptyProject())} onLeftoverPhoto={(f, defs, spacing) => onFile(f, { defs, spacing })} />
           : <Home onFile={onFile} onExample={onExample} error={error} />}
       </main>
     </>

@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ContourSource, Pt, Ring, TemplateKind } from '../types';
-import { computeMetrics, optimizeAsync, verifySolution } from '../engine';
+import { computeMetrics, computeRemainder, fragmentAsMaterial, maximizeKitsAsync, optimizeAsync, verifySolution, type Fragment } from '../engine';
 import { KIND_LABEL, PALETTE } from '../engine/templates';
 import { EXAMPLES } from '../lib/examples';
 import { loadImage, maskFromModelPng, maskToPolygon, segmentLocal } from '../lib/mask';
-import { bbox, circleRing, pointInRing, ringProblem } from '../lib/poly';
+import { absArea, bbox, circleRing, pointInRing, ringProblem } from '../lib/poly';
 import { buildSvg, download, svgToPng } from '../lib/export';
 import {
-  buildProblem, calibPx, diffResults, kitToDefs, fmt, problemKey, pxPerUnit, unitLabel,
+  buildProblem, calibPx, centroid, diffResults, kitToDefs, fmt, problemKey, pxPerUnit, unitLabel,
   type Calib, type Project, type Result, type TemplateDef,
 } from '../state';
 import Stage, { templateLetter, type Mode, type SamPoint } from './Stage';
 import { NumField } from './fields';
 import PieceDialog, { type NewPiece } from './PieceDialog';
+import { buildDxf } from '../lib/dxf';
 import { buildPlanSvgCm, buildPrintHtml, PAPERS, pxPerCm, type PaperKey } from '../lib/print';
 import { KITS } from '../lib/kits';
 
@@ -20,6 +21,8 @@ interface Props {
   p: Project;
   setP: (f: (p: Project) => Project) => void;
   onReset: () => void;
+  /** Empieza un proyecto nuevo con la foto del sobrante, conservando el pedido. */
+  onLeftoverPhoto: (f: File, defs: TemplateDef[], spacing: number) => void;
 }
 
 interface Proposal { polygon: Ring; source: ContourSource; info: string; holes: Ring[] }
@@ -30,6 +33,7 @@ const SOURCE_LABEL: Record<ContourSource, string> = {
   example: 'Máscara guardada del ejemplo (no es inferencia en vivo)',
   local: 'Segmentación local por contraste (no es Meta AI)',
   manual: 'Trazado manual',
+  leftover: 'Sobrante del plan anterior',
 };
 
 async function downscale(src: string, maxSide: number) {
@@ -49,7 +53,7 @@ const SAM_MSG: Record<string, string> = {
   NETWORK: 'No se pudo contactar con el servidor de segmentación.',
 };
 
-export default function Workspace({ p, setP, onReset }: Props) {
+export default function Workspace({ p, setP, onReset, onLeftoverPhoto }: Props) {
   const img = p.image!;
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState<Mode>(p.contour.length ? 'contour' : 'view');
@@ -60,12 +64,16 @@ export default function Workspace({ p, setP, onReset }: Props) {
   const [calibDist, setCalibDist] = useState('');
   const [calibUnit, setCalibUnit] = useState('cm');
   const [widthCm, setWidthCm] = useState('');
+  const [leftover, setLeftover] = useState<{ fragments: Fragment[]; area: number; materialArea: number } | null>(null);
+  const [detectPhrases, setDetectPhrases] = useState('scar, stain, hole');
+  const [detected, setDetected] = useState<{ ring: Ring; phrase: string }[]>([]);
+  const [dxfRef, setDxfRef] = useState(false);
   const [paper, setPaper] = useState<PaperKey>('A4');
   const [pieceDialog, setPieceDialog] = useState<'draw' | 'svg' | null>(null);
   const [samPoints, setSamPoints] = useState<SamPoint[]>([]);
   const [concept, setConcept] = useState(img.exampleId === 'cuero' ? 'brown shape' : img.exampleId === 'fieltro' ? 'teal shape' : 'fabric');
   const [proposal, setProposal] = useState<Proposal | null>(null);
-  const [busy, setBusy] = useState<'sam' | 'local' | 'opt' | null>(null);
+  const [busy, setBusy] = useState<'sam' | 'local' | 'opt' | 'detect' | null>(null);
   const [progress, setProgress] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const [samFailed, setSamFailed] = useState(false);
@@ -81,7 +89,7 @@ export default function Workspace({ p, setP, onReset }: Props) {
   const unit = unitLabel(p.calib);
   const contourErr = p.contour.length ? ringProblem(p.contour) : 'Aún no hay contorno.';
   const problem = useMemo(() => (contourErr ? null : buildProblem(p)), [p, contourErr]);
-  const key = useMemo(() => problemKey(problem, p.calib), [problem, p.calib]);
+  const key = useMemo(() => problemKey(problem, p.calib) + p.fill, [problem, p.calib, p.fill]);
   const stale = !!result && result.problemKey !== key;
   const live = useMemo(() => (problem ? computeMetrics(problem, []) : null), [problem]);
 
@@ -260,12 +268,83 @@ export default function Workspace({ p, setP, onReset }: Props) {
     if (problem.templates.every((t) => t.qty === 0)) { setErr('El pedido está vacío: indica al menos una pieza.'); return; }
     setErr(null); setBusy('opt'); setProgress(0); setStep(3); setMode('view'); setSelPlacement(null);
     await new Promise((r) => setTimeout(r, 30));
+    setLeftover(null);
     try {
-      const solution = await optimizeAsync(problem, (f: number) => setProgress(f));
-      const verify = verifySolution(problem, solution.placements);
-      setPrev(result);
-      setResult({ solution, verify, problemKey: key, ppu, unit, calibrated: !!p.calib, problem });
+      if (p.fill === 'maxKits') {
+        const mk = await maximizeKitsAsync(problem, (f: number) => setProgress(f));
+        const n = Math.max(mk.kits, 1);
+        const expanded = { ...problem, templates: problem.templates.map((t) => ({ ...t, qty: t.qty * n })) };
+        const verify = verifySolution(expanded, mk.solution.placements);
+        setPrev(result);
+        setResult({ solution: mk.solution, verify, problemKey: key, kits: { n: mk.kits, perKit: mk.perKit }, ppu, unit, calibrated: !!p.calib, problem: expanded });
+      } else {
+        const solution = await optimizeAsync(problem, (f: number) => setProgress(f));
+        const verify = verifySolution(problem, solution.placements);
+        setPrev(result);
+        setResult({ solution, verify, problemKey: key, ppu, unit, calibrated: !!p.calib, problem });
+      }
     } catch (e) { setErr(`La optimización falló: ${(e as Error).message}`); } finally { setBusy(null); }
+  };
+
+  /* ---------- sobrante ---------- */
+  const showLeftover = () => { if (result) setLeftover(computeRemainder(result.problem, result.solution.placements)); };
+  const useFragment = (i: number) => {
+    const f = leftover?.fragments[i];
+    if (!f) return;
+    const { material, defects } = fragmentAsMaterial(f);
+    setP((q) => ({ ...q, contour: material, lastValid: material, defects, source: 'leftover', edited: false, samInfo: null }));
+    setResult(null); setPrev(null); setLeftover(null); setStep(2); setMode('view'); setSelPlacement(null);
+    setFlash(`Sobrante cargado como nuevo material (${fmt(f.area / ppu ** 2)} ${unit}²). Sus huecos pasaron a ser zonas excluidas.`);
+  };
+
+  /* ---------- defectos con IA ---------- */
+  const detectDefects = async () => {
+    const phrases = detectPhrases.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 4);
+    if (!phrases.length) { setErr('Escribe qué buscar: frases cortas en inglés separadas por comas.'); return; }
+    setBusy('detect'); setErr(null); setDetected([]);
+    try {
+      const image = await downscale(img.src, 1024);
+      const dims = await loadImage(image);
+      const matArea = absArea(p.contour);
+      const found: { ring: Ring; phrase: string }[] = [];
+      for (const phrase of phrases) {
+        let res: Response;
+        try {
+          res = await fetch('/api/segment', {
+            method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(60_000),
+            body: JSON.stringify({ image, width: dims.naturalWidth, height: dims.naturalHeight, concept: phrase, all: true }),
+          });
+        } catch (e) { throw Object.assign(new Error('network'), { code: (e as Error).name === 'TimeoutError' ? 'SAM_TIMEOUT' : 'NETWORK' }); }
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 422) continue; // SAM no encontró nada para esa frase
+        if (!res.ok) throw Object.assign(new Error(body.message ?? 'Error de SAM'), { code: body.code ?? 'SAM_ERROR' });
+        for (const m of body.masks as { crop: { w: number; h: number; data: string }; bounds: { left: number; top: number } }[]) {
+          const bin = atob(m.crop.data);
+          const full = new Uint8Array(dims.naturalWidth * dims.naturalHeight);
+          for (let y = 0; y < m.crop.h; y++) for (let x = 0; x < m.crop.w; x++) {
+            const fx = m.bounds.left + x, fy = m.bounds.top + y;
+            if (bin.charCodeAt(y * m.crop.w + x) && fx < dims.naturalWidth && fy < dims.naturalHeight) full[fy * dims.naturalWidth + fx] = 1;
+          }
+          const ring = maskToPolygon({ w: dims.naturalWidth, h: dims.naturalHeight, data: full }, img.w, img.h).polygon;
+          if (ring.length < 3 || ringProblem(ring)) continue;
+          const a = absArea(ring);
+          if (a < matArea * 0.001 || a > matArea * 0.4) continue; // ruido o un objeto entero
+          const c = centroid(ring);
+          if (!pointInRing(c, p.contour) || p.defects.some((d) => pointInRing(c, d))) continue;
+          found.push({ ring, phrase });
+        }
+      }
+      setDetected(found);
+      if (!found.length) setFlash('SAM no encontró defectos con esas frases. Prueba otras (por ejemplo «dark spot», «crack») o márcalos a mano.');
+    } catch (e) {
+      const code = (e as { code?: string }).code ?? 'SAM_ERROR';
+      setErr(`${SAM_MSG[code] ?? (e as Error).message} Puedes marcar los defectos a mano.`);
+    } finally { setBusy(null); }
+  };
+  const acceptDetected = () => {
+    setP((q) => ({ ...q, defects: [...q.defects, ...detected.map((d) => d.ring)] }));
+    setFlash(`Se añadieron ${detected.length} zona(s) propuestas por SAM. Revísalas: puedes editarlas o eliminarlas.`);
+    setDetected([]);
   };
 
   const change = useMemo(() => (result && prev && prev.problemKey !== result.problemKey ? diffResults(prev, result) : null), [result, prev]);
@@ -284,6 +363,11 @@ export default function Workspace({ p, setP, onReset }: Props) {
   const exportReal = () => {
     if (!exportable || !result) return;
     try { const { svg } = buildPlanSvgCm(p, result); download('cutsense-plano-1a1.svg', new Blob([svg], { type: 'image/svg+xml' })); }
+    catch (e) { setErr((e as Error).message); }
+  };
+  const exportDxf = () => {
+    if (!exportable || !result) return;
+    try { download('cutsense-piezas.dxf', new Blob([buildDxf(p, result, { reference: dxfRef })], { type: 'application/dxf' })); }
     catch (e) { setErr((e as Error).message); }
   };
   const printReal = () => {
@@ -332,7 +416,10 @@ export default function Workspace({ p, setP, onReset }: Props) {
               defects={p.defects} onDefects={(d) => setP((q) => ({ ...q, defects: d }))} selDefect={selDefect} onSelDefect={setSelDefect}
               draft={draft} onDraft={setDraft} onCloseDraft={closeDraft}
               calibPts={calibPts} onCalibPts={setCalibPts} samPoints={samPoints} onSamPoints={setSamPoints}
-              placements={step === 3 && result ? result.solution.placements : []} templates={result ? result.problem.templates : []} stale={stale} outlineKind={step === 3 && result?.verify.valid && !stale ? 'verified' : p.edited || p.source === 'manual' ? 'human' : 'ai'}
+              placements={step === 3 && result ? result.solution.placements : []} templates={result ? result.problem.templates : []} stale={stale}
+              kitQty={result?.kits && result.kits.n > 1 ? result.kits.perKit : undefined}
+              defectProposals={detected.map((d) => d.ring)}
+              leftover={step === 3 && leftover && !stale ? leftover.fragments.map((f) => f.outer) : undefined} outlineKind={step === 3 && result?.verify.valid && !stale ? 'verified' : p.edited || p.source === 'manual' ? 'human' : 'ai'}
               selPlacement={selPlacement} onSelPlacement={setSelPlacement}
             />
             {step === 3 && result && result.problem.templates.length > 0 && (
@@ -442,6 +529,24 @@ export default function Workspace({ p, setP, onReset }: Props) {
                 />
 
                 <section className="sect">
+                  <h3 className="h5">Detectar defectos con IA</h3>
+                  <p className="caption">SAM busca por frase corta en inglés (por ejemplo «scar, stain, hole»). Las zonas propuestas no se aplican hasta que las aceptes.</p>
+                  <label className="field"><span>¿Qué buscar?</span>
+                    <span className="input-wrap"><input value={detectPhrases} onChange={(e) => setDetectPhrases(e.target.value)} /></span>
+                  </label>
+                  <button className="btn ghost sm" disabled={!!busy} onClick={detectDefects}>{busy === 'detect' ? 'Buscando con SAM…' : 'Detectar con SAM'}</button>
+                  {detected.length > 0 && (
+                    <div className="alert info">
+                      SAM propone <b>{detected.length}</b> zona(s) ({[...new Set(detected.map((d) => d.phrase))].join(', ')}), punteadas en azul sobre el lienzo.
+                      <div className="row wrap" style={{ marginTop: 8 }}>
+                        <button className="btn dark sm" onClick={acceptDetected}>Añadir las {detected.length}</button>
+                        <button className="btn ghost sm" onClick={() => setDetected([])}>Descartar</button>
+                      </div>
+                    </div>
+                  )}
+                </section>
+
+                <section className="sect">
                   <h3 className="h5">Piezas y pedido</h3>
                   {!p.calib && <p className="caption">Dimensiones en unidades relativas (u).</p>}
                   <label className="field"><span>Kit de producto (medidas reales en cm)</span>
@@ -450,6 +555,8 @@ export default function Workspace({ p, setP, onReset }: Props) {
                       {KITS.map((k) => <option key={k.id} value={k.id}>{k.name} — {k.blurb}</option>)}
                     </select>
                   </label>
+                  <label className="check"><input type="checkbox" checked={p.fill === 'maxKits'} onChange={(e) => setP((q) => ({ ...q, fill: e.target.checked ? 'maxKits' : 'fixed' }))} /> Maximizar juegos completos del pedido</label>
+                  <p className="caption">{p.fill === 'maxKits' ? 'Las cantidades de abajo son las piezas de UN juego (por ejemplo, una cartera). La app busca cuántos juegos completos caben en el material.' : 'Se colocan exactamente las cantidades pedidas.'}</p>
                   {p.defs.map((d) => (
                     <div className="tpl" key={d.id}>
                       <div className="tpl-head">
@@ -513,13 +620,13 @@ export default function Workspace({ p, setP, onReset }: Props) {
                     ) : result.solution.placements.length === 0 ? (
                       <div className="alert error" role="status"><b>No se encontró una colocación válida.</b> Posibles causas: piezas más grandes que el material, separación demasiado alta, o zonas excluidas que cubren casi todo.</div>
                     ) : (
-                      <div className="alert ok" role="status"><b>Plano válido y verificado.</b> {m!.placedCount < m!.requestedCount ? 'Solución parcial: algunas piezas quedaron pendientes.' : 'Se colocó todo el pedido.'}</div>
+                      <div className="alert ok" role="status"><b>Plano válido y verificado.</b> {result.kits ? (result.kits.n === 0 ? 'Se muestra el mejor plan parcial de un solo juego.' : `Caben ${result.kits.n} juego${result.kits.n > 1 ? 's' : ''} completo${result.kits.n > 1 ? 's' : ''} (${m!.placedCount} piezas). Cada pieza lleva su número de juego («A1·2»).`) : m!.placedCount < m!.requestedCount ? 'Solución parcial: algunas piezas quedaron pendientes.' : 'Se colocó todo el pedido.'}</div>
                     )}
 
                     <div className="score-row">
                       <span className="score-ring big" aria-label={`Aprovechamiento ${fmt(m!.usableUtilization)} por ciento del área utilizable`}>{fmt(m!.usableUtilization, 0)}%</span>
                       <div>
-                        <b>{m!.placedCount} de {m!.requestedCount} piezas colocadas</b>
+                        <b>{result.kits ? (result.kits.n === 0 ? 'Ni un juego completo cabe' : `${result.kits.n} juego${result.kits.n > 1 ? 's' : ''} completo${result.kits.n > 1 ? 's' : ''}`) : `${m!.placedCount} de ${m!.requestedCount} piezas colocadas`}</b>
                         <p className="caption">Mejor solución encontrada por la búsqueda ({result.solution.optimizerVersion}); no es un óptimo demostrado.</p>
                       </div>
                     </div>
@@ -542,6 +649,36 @@ export default function Workspace({ p, setP, onReset }: Props) {
                         ))}
                       </tbody>
                     </table>
+
+                    {result.verify.valid && !stale && (
+                      <section className="sect">
+                        <h3 className="h5">Sobrante</h3>
+                        {!leftover ? (
+                          <button className="btn ghost sm" onClick={showLeftover}>Ver sobrante</button>
+                        ) : (
+                          <>
+                            <dl className="metrics">
+                              <div><dt>Área sobrante</dt><dd>{fmt(leftover.area / result.ppu ** 2)} {result.unit}²</dd></div>
+                              <div><dt>Del material total</dt><dd>{fmt((leftover.area / leftover.materialArea) * 100)} %</dd></div>
+                              <div><dt>Fragmentos</dt><dd>{leftover.fragments.length}</dd></div>
+                            </dl>
+                            <p className="caption">Es una estimación digital: el sobrante real tendrá los bordes del corte. Para planificar con exactitud, fotografía el cuero que queda.</p>
+                            {leftover.fragments.slice(0, 4).map((f, i) => (
+                              <button key={i} className="btn ghost sm" onClick={() => useFragment(i)}>Planificar sobre el fragmento {i + 1} ({fmt(f.area / result.ppu ** 2)} {result.unit}²)</button>
+                            ))}
+                            <button className="link" onClick={() => setLeftover(null)}>Ocultar sobrante</button>
+                          </>
+                        )}
+                        <label className="btn ghost sm">
+                          <input type="file" hidden accept="image/jpeg,image/png,image/webp" aria-label="Foto del sobrante" onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            e.target.value = '';
+                            if (f && confirm('¿Empezar un proyecto nuevo con la foto del sobrante? Se conserva el pedido; tendrás que calibrar la foto nueva.')) onLeftoverPhoto(f, p.defs, p.spacing);
+                          }} />
+                          Subir foto del sobrante
+                        </label>
+                      </section>
+                    )}
 
                     {sel && selDef && (
                       <div className="alert info"><b>{selDef.name} #{sel.instance + 1}</b><br />Rotación {sel.rotation}° · {fmt(selDef.w)}×{fmt(selDef.h)} {unit} · {KIND_LABEL[selDef.kind]}</div>
@@ -583,7 +720,10 @@ export default function Workspace({ p, setP, onReset }: Props) {
                         </select>
                         <button className="btn dark sm" disabled={!exportable || !physical} onClick={printReal}>Imprimir 1:1</button>
                         <button className="btn ghost sm" disabled={!exportable || !physical} onClick={exportReal}>SVG en cm</button>
+                        <button className="btn ghost sm" disabled={!exportable || !physical} onClick={exportDxf}>DXF (mm)</button>
                       </div>
+                      <label className="check"><input type="checkbox" checked={dxfRef} onChange={(e) => setDxfRef(e.target.checked)} /> DXF: incluir borde y zonas excluidas como referencia</label>
+                      <p className="caption">DXF R12 en mm, origen abajo-izquierda. Las piezas van en la capa CUT (rojo). Revisa una medida al abrirlo en el programa de tu máquina: ella decide kerf, velocidad y potencia.</p>
                       <p className="caption">{physical ? 'Reparte el plano en hojas con marcas de ensamblaje e incluye una plantilla de cada pieza. Imprime al 100 % y comprueba el cuadro de 5 cm.' : 'Calibra la foto en cm o mm (paso 2) para exportar a escala real.'}</p>
                     </div>
                     {!exportable && <p className="caption">{stale ? 'Reoptimiza para poder exportar un plano vigente.' : 'Se exporta solo un plano verificado y vigente.'}</p>}
