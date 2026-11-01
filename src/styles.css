@@ -186,3 +186,19 @@ input[aria-invalid='true'] { border-color: var(--cs-danger-solid) !important; ba
 
 .real-export { display: flex; flex-direction: column; gap: 6px; border-top: var(--cs-stitch); padding-top: 10px; }
 .real-export .paper { width: auto; }
+
+/* agent dialog */
+.modal.agent { width: min(640px, 100%); }
+.agent-chat { display: flex; flex-direction: column; gap: 10px; min-height: 180px; max-height: 46vh; overflow: auto; padding: 4px; }
+.agent-starters { display: flex; flex-wrap: wrap; gap: 8px; }
+.agent-starters .chip { cursor: pointer; }
+.bubble { max-width: 92%; padding: 8px 12px; border-radius: var(--cs-radius-md); border: var(--cs-border); }
+.bubble p { margin: 2px 0 0; white-space: pre-wrap; font-size: var(--cs-text-sm); }
+.bubble.user { align-self: flex-end; background: var(--cs-human-tint); border-color: var(--cs-human-solid); }
+.bubble.assistant { align-self: flex-start; background: var(--cs-surface-sunk); }
+.agent-proposal { margin-top: 10px; padding-top: 10px; border-top: var(--cs-stitch); display: flex; flex-direction: column; gap: 8px; }
+.agent-pieces { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.agent-pieces li { display: flex; gap: 10px; align-items: center; font-size: var(--cs-text-sm); }
+.agent-assume { margin: 0; padding-left: 18px; }
+.agent-input { display: flex; gap: 8px; align-items: flex-end; border-top: var(--cs-border); padding-top: 10px; }
+.agent-input textarea { flex: 1; resize: vertical; padding: 8px 10px; border: var(--cs-border-strong); border-radius: var(--cs-radius-sm); background: var(--cs-surface); font-size: var(--cs-text-sm); }

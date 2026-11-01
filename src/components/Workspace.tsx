@@ -13,6 +13,9 @@ import {
 import Stage, { templateLetter, type Mode, type SamPoint } from './Stage';
 import { NumField } from './fields';
 import PieceDialog, { type NewPiece } from './PieceDialog';
+import AgentDialog from './AgentDialog';
+import { proposalToKit, type ChatEntry } from '../lib/agent';
+import type { AgentProposal } from '../lib/agentSchema';
 import { buildDxf } from '../lib/dxf';
 import { buildPlanSvgCm, buildPrintHtml, PAPERS, pxPerCm, type PaperKey } from '../lib/print';
 import { KITS } from '../lib/kits';
@@ -72,6 +75,8 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto, restored 
   const [detectPhrases, setDetectPhrases] = useState('scar, stain, hole');
   const [detected, setDetected] = useState<{ ring: Ring; phrase: string }[]>([]);
   const [productId, setProductId] = useState('');
+  const [agentOpen, setAgentOpen] = useState(false);
+  const [agentChat, setAgentChat] = useState<ChatEntry[]>([]);
   const [dxfRef, setDxfRef] = useState(false);
   const [paper, setPaper] = useState<PaperKey>('A4');
   const [pieceDialog, setPieceDialog] = useState<'draw' | 'svg' | null>(null);
@@ -248,6 +253,19 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto, restored 
   const mmToCurrent = (mm: number) => {
     const unitName = p.calib?.unit.trim().toLowerCase();
     return unitName === 'cm' ? mm / 10 : unitName === 'mm' ? mm : null;
+  };
+  /** Dato para el agente: el material disponible, solo si la foto está calibrada en cm. */
+  const agentContext = (() => {
+    if (!p.calib || p.calib.unit.trim().toLowerCase() !== 'cm' || !live || contourErr) return '';
+    const b = bbox(p.contour);
+    return `Material disponible: unos ${fmt(b.w / ppu)} x ${fmt(b.h / ppu)} cm (caja), área utilizable aprox. ${fmt(live.usableArea / ppu ** 2, 0)} cm2`;
+  })();
+  const agentBlocked = p.calib && p.calib.unit.trim().toLowerCase() === 'cm' ? null : 'Para usar las piezas necesitas la foto calibrada en cm (paso 2, «Escala»). Cierra esta ventana, calibra y vuelve: la conversación se conserva.';
+  const approveAgent = (proposal: AgentProposal) => {
+    const kit = proposalToKit(proposal);
+    setP((q) => ({ ...q, defs: kitToDefs(kit), spacing: Math.max(q.spacing, 0.2), fill: 'maxKits' }));
+    setAgentOpen(false);
+    setFlash(`Piezas de «${kit.name}» añadidas al pedido (${kit.pieces.reduce((s, x) => s + x.qty, 0)} piezas por juego). Revisa medidas y cantidades; al optimizar se buscará cuántos juegos caben.`);
   };
   const applyKit = (id: string) => {
     const kit = KITS.find((k) => k.id === id);
@@ -578,6 +596,7 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto, restored 
                       {KITS.map((k) => <option key={k.id} value={k.id}>{k.name} — {k.blurb}</option>)}
                     </select>
                   </label>
+                  <button className="btn ghost sm" onClick={() => setAgentOpen(true)}>✨ Diseñar con IA{agentChat.length ? ' (conversación en curso)' : ''}</button>
                   <label className="check"><input type="checkbox" checked={p.fill === 'maxKits'} onChange={(e) => setP((q) => ({ ...q, fill: e.target.checked ? 'maxKits' : 'fixed' }))} /> Maximizar juegos completos del pedido</label>
                   <p className="caption">{p.fill === 'maxKits' ? 'Las cantidades de abajo son las piezas de UN juego (por ejemplo, una cartera). La app busca cuántos juegos completos caben en el material.' : 'Se colocan exactamente las cantidades pedidas.'}</p>
                   {p.defs.map((d) => (
@@ -779,6 +798,9 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto, restored 
           </aside>
         </div>
       </div>
+      {agentOpen && (
+        <AgentDialog entries={agentChat} setEntries={setAgentChat} context={agentContext} approveBlocked={agentBlocked} onApprove={approveAgent} onClose={() => setAgentOpen(false)} />
+      )}
       {pieceDialog && (
         <PieceDialog
           mode={pieceDialog} unit={unit} defaultWidth={p.calib ? 8 : 15}
