@@ -41,6 +41,20 @@ describe('otro producto con el sobrante', () => {
     expect(res.solution.placements.slice(0, before)).toEqual(r.solution.placements);
   }, 60000);
 
+  it('respeta la cantidad pedida y hace lo máximo si no caben todas', async () => {
+    const { p, r } = baseResult();
+    const two = await addProduct(p, r, kit('llavero'), undefined, 2);
+    expect(two.added).toBe(2);
+    expect(two.requested).toBe(2);
+    expect(two.result.verify.valid).toBe(true);
+    const many = await addProduct(p, r, kit('llavero'), undefined, 500);
+    expect(many.requested).toBe(500);
+    expect(many.added).toBeGreaterThan(2);
+    expect(many.added).toBeLessThan(500);
+    expect(many.result.verify.valid).toBe(true);
+    expect((await addProduct(p, r, kit('llavero'))).requested).toBeNull();
+  }, 120000);
+
   it('permite encadenar otro producto y quitarlo sin tocar el resto', async () => {
     const { p, r } = baseResult();
     const a = await addProduct(p, r, kit('llavero'));

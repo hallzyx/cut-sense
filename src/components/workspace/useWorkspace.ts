@@ -16,7 +16,7 @@ import { proposalToKit, type ChatEntry } from '../../lib/agent';
 import type { AgentProposal } from '../../lib/agentSchema';
 import { buildDxf } from '../../lib/dxf';
 import { buildPlanSvgCm, buildPrintHtml } from '../../lib/print';
-import { KITS } from '../../lib/kits';
+import { KITS, type Kit } from '../../lib/kits';
 import { addProduct, removeProduct } from '../../lib/products';
 import { serializeProject, type LoadedProject } from '../../lib/projectFile';
 import { detectDefectZones, samErrorText, segmentMaterial } from '../../lib/sam';
@@ -60,6 +60,10 @@ export function useWorkspace(p: Project, setP: (f: (p: Project) => Project) => v
   const [detectPhrases, setDetectPhrases] = useState('scar, stain, hole');
   const [detected, setDetected] = useState<{ ring: Ring; phrase: string }[]>([]);
   const [productId, setProductId] = useState('');
+  /** Cantidad que la persona quiere del producto del sobrante; vacío = tantos como quepan. */
+  const [productQty, setProductQty] = useState('');
+  /** Desde dónde se abrió Hilo: define si lo aprobado reemplaza el pedido o se prueba en el sobrante. */
+  const [agentFor, setAgentFor] = useState<'order' | 'leftover'>('order');
   const [agentOpen, setAgentOpen] = useState(false);
   const [agentChat, setAgentChat] = useState<ChatEntry[]>([]);
   const [pieceDialog, setPieceDialog] = useState<'draw' | 'svg' | null>(null);
@@ -297,9 +301,11 @@ export function useWorkspace(p: Project, setP: (f: (p: Project) => Project) => v
     return `Material disponible: unos ${fmt(b.w / ppu)} x ${fmt(b.h / ppu)} cm (caja), área utilizable aprox. ${fmt(live.usableArea / ppu ** 2, 0)} cm2`;
   })();
   const agentBlocked = calibratedInCm(p.calib) ? null : 'Para usar las piezas necesitas la foto calibrada en cm (paso 2, «Escala»). Cierra esta ventana, calibra y vuelve: la conversación se conserva.';
-  const openAgent = () => { setAgentOpen(true); if (agentBlocked) setNeedsCm(true); };
+  const openAgent = () => { setAgentFor('order'); setAgentOpen(true); if (agentBlocked) setNeedsCm(true); };
+  const openAgentForLeftover = () => { setAgentFor('leftover'); setAgentOpen(true); };
   const approveAgent = (proposal: AgentProposal) => {
     const kit = proposalToKit(proposal);
+    if (agentFor === 'leftover') { setAgentOpen(false); void tryProduct(kit); return; }
     setP((q) => ({ ...q, defs: kitToDefs(kit), spacing: Math.max(q.spacing, 0.2), fill: 'maxKits' }));
     setAgentOpen(false); setOpenItem('pieces'); setEditPiece(null);
     toast(`Piezas de «${kit.name}» añadidas al pedido (${kit.pieces.reduce((s, x) => s + x.qty, 0)} piezas por juego). Revisa medidas y cantidades; al optimizar se buscará cuántos juegos caben.`, { sticky: true });
@@ -358,17 +364,28 @@ export function useWorkspace(p: Project, setP: (f: (p: Project) => Project) => v
     [tab, leftoverOk, result],
   );
   useEffect(() => { if (tab === 'leftover' && !leftoverOk) setTab('plan'); }, [tab, leftoverOk]);
-  const tryProduct = async () => {
-    const kit = KITS.find((k) => k.id === productId);
+  /** Para Hilo desde el sobrante: lo disponible es el retazo, no la foto entera. */
+  const hiloContext = agentFor === 'leftover' && leftover && unit.trim().toLowerCase() === 'cm'
+    ? `Material disponible: el sobrante de un corte anterior, en ${leftover.fragments.length} ${leftover.fragments.length === 1 ? 'fragmento' : 'fragmentos'}, `
+      + `área total aprox. ${fmt(leftover.area / ppu ** 2, 0)} cm2; el fragmento más grande tiene ${fmt(Math.max(0, ...leftover.fragments.map((f) => f.area)) / ppu ** 2, 0)} cm2`
+    : agentContext;
+  const tryProduct = async (custom?: Kit) => {
+    const kit = custom ?? KITS.find((k) => k.id === productId);
     if (!kit || !result) return;
-    setErr(null); setBusy('opt'); setProgress(0);
+    const wanted = Math.floor(Number(productQty));
+    const target = wanted >= 1 ? wanted : undefined;
+    const single = kit.kind === 'piece';
+    const unitWord = (n: number) => (single ? (n === 1 ? 'pieza' : 'piezas') : n === 1 ? 'producto completo' : 'productos completos');
+    setTab('leftover'); setErr(null); setBusy('opt'); setProgress(0);
     await new Promise((r) => setTimeout(r, 30));
     try {
-      const out = await addProduct(p, result, kit, (f) => setProgress(f));
-      if (out.added === 0) toast(`En el sobrante no cabe ni un juego completo de «${kit.name}». El plan anterior no cambió.`, { tone: 'warn' });
+      const out = await addProduct(p, result, kit, (f) => setProgress(f), target);
+      if (out.added === 0) toast(`En el sobrante no cabe ni ${single ? 'una pieza' : 'un producto completo'} de «${kit.name}»${target ? ` (pediste ${target})` : ''}. El plan anterior no cambió.`, { tone: 'warn', sticky: true });
       else {
         setResult(out.result); setProductId('');
-        toast(`Se añadieron ${out.added} ${kit.kind === 'piece' ? 'pieza(s)' : 'juego(s) completo(s)'} de «${kit.name}» con lo que sobró.`);
+        if (out.requested && out.added < out.requested) {
+          toast(`Solo se pudieron hacer ${out.added} de los ${out.requested} ${unitWord(out.requested)} de «${kit.name}» que pediste. Es lo máximo que cabe en el sobrante.`, { tone: 'warn', sticky: true });
+        } else toast(`Se añadieron ${out.added} ${unitWord(out.added)} de «${kit.name}» con lo que sobró.`);
       }
     } catch (e) { setErr((e as Error).message, 'leftover'); } finally { setBusy(null); }
   };
@@ -461,7 +478,8 @@ export function useWorkspace(p: Project, setP: (f: (p: Project) => Project) => v
     ppu, unit, calibrated: !!p.calib, contourErr, problem, stale, live, items, outside, zoneAreas,
     setContour, runSam, cancelSam, runLocal, useCached, acceptProposal, startManualTrace, togglePoints, closeDraft, revertContour, canRevert,
     startDefect, quickDefect, delDefect, selectDefect, setDefectsGeom, calibByWidth, calibExample, confirmCalib, cancelCalib, removeCalib,
-    setDef, removeDef, addDef, addCustom, mmToCurrent, agentContext, agentBlocked, openAgent, approveAgent, applyKit, toggleRot, setFill, setSpacing,
+    productQty, setProductQty, agentFor, openAgentForLeftover,
+    setDef, removeDef, addDef, addCustom, mmToCurrent, agentContext: hiloContext, agentBlocked, openAgent, approveAgent, applyKit, toggleRot, setFill, setSpacing,
     blockReason, optimize, leftover, leftoverOk, tryProduct, dropProduct, useFragment, detectDefects, acceptDetected, change,
     ex, doExport, exportReal, exportDxf, printReal, saveProject, downloadJson, resultDefs, extraPieces,
   };

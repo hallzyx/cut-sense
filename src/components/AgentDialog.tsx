@@ -16,6 +16,8 @@ interface Props {
   /** Mensaje si no se puede aprobar todavía (por ejemplo, falta calibrar en cm). */
   approveBlocked: string | null;
   onApprove: (p: AgentProposal) => void;
+  /** Texto del botón de aprobar (cambia si la propuesta se prueba en el sobrante). */
+  approveLabel?: string;
   onClose: () => void;
 }
 
@@ -44,7 +46,7 @@ function Preview({ kind, w, h }: { kind: Parameters<typeof buildShape>[0]; w: nu
   );
 }
 
-function ProposalCard({ turn, approveBlocked, onApprove, disabled }: { turn: AgentTurn; approveBlocked: string | null; onApprove: () => void; disabled: boolean }) {
+function ProposalCard({ turn, approveBlocked, onApprove, disabled, approveLabel = 'Aprobar y usar estas piezas' }: { turn: AgentTurn; approveBlocked: string | null; onApprove: () => void; disabled: boolean; approveLabel?: string }) {
   const p = turn.proposal;
   return (
     <div className="hilo-proposal">
@@ -71,7 +73,7 @@ function ProposalCard({ turn, approveBlocked, onApprove, disabled }: { turn: Age
       <p className="caption">Son medidas propuestas por una IA: revísalas antes de cortar. Las posiciones las calcula el motor y las verifica el verificador.</p>
       {approveBlocked && <p className="alert warn" role="alert">{approveBlocked}</p>}
       <div className="row wrap">
-        <button className="btn primary sm" disabled={disabled || !!approveBlocked} onClick={onApprove}>Aprobar y usar estas piezas</button>
+        <button className="btn primary sm" disabled={disabled || !!approveBlocked} onClick={onApprove}>{approveLabel}</button>
         <span className="caption">¿Algo que cambiar? Díselo a {AGENT_NAME} abajo.</span>
       </div>
     </div>
@@ -87,7 +89,7 @@ function phaseOf(entries: ChatEntry[], busy: boolean): { label: string; tone: 'i
   return { label: `Aclarando · pregunta ${entries.filter((e) => e.role === 'assistant' && e.turn.type === 'question').length}`, tone: 'ask' };
 }
 
-export default function AgentDialog({ entries, setEntries, context, approveBlocked, onApprove, onClose }: Props) {
+export default function AgentDialog({ entries, setEntries, context, approveBlocked, onApprove, approveLabel, onClose }: Props) {
   const [draft, setDraft] = useState('');
   const [sketch, setSketch] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -191,7 +193,7 @@ export default function AgentDialog({ entries, setEntries, context, approveBlock
                   <span className="hilo-who">{AGENT_NAME}</span>
                   <Markdown text={e.text} />
                   {e.turn.type === 'proposal' && i === lastIdx && (
-                    <ProposalCard turn={e.turn} approveBlocked={approveBlocked} disabled={busy} onApprove={() => onApprove(e.turn.proposal)} />
+                    <ProposalCard turn={e.turn} approveBlocked={approveBlocked} approveLabel={approveLabel} disabled={busy} onApprove={() => onApprove(e.turn.proposal)} />
                   )}
                 </div>
               </div>

@@ -9,8 +9,8 @@ import type { Kit } from './kits';
  * (o cuántas piezas sueltas) del producto nuevo caben. El plan combinado se verifica entero.
  */
 export async function addProduct(
-  p: Project, r: Result, kit: Kit, onProgress?: (f: number) => void,
-): Promise<{ result: Result; added: number }> {
+  p: Project, r: Result, kit: Kit, onProgress?: (f: number) => void, target?: number,
+): Promise<{ result: Result; added: number; requested: number | null }> {
   if (!r.calibrated || r.unit.trim().toLowerCase() !== 'cm') throw new Error(`«${kit.name}» usa medidas en cm: la foto debe estar calibrada en cm.`);
   const base = r.problem;
   const nextIndex = Math.max(0, ...(r.extras ?? []).map((e) => Number(e.id.replace(/\D/g, '')))) + 1;
@@ -22,8 +22,10 @@ export async function addProduct(
     defects: [...base.defects, ...r.solution.placements.map((pl) => pl.polygon)],
     templates, spacing: base.spacing, seed: base.seed ?? 1, timeLimitMs: base.timeLimitMs,
   };
-  const mk = await maximizeKitsAsync(sub, onProgress, { maxKits: kit.kind === 'piece' ? 40 : 12 });
-  if (mk.kits === 0) return { result: r, added: 0 };
+  // Con cantidad pedida se busca hasta ese número (o lo máximo posible si no entra); sin ella, tantos como quepan.
+  const requested = target && target > 0 ? Math.floor(target) : null;
+  const mk = await maximizeKitsAsync(sub, onProgress, { maxKits: requested ?? (kit.kind === 'piece' ? 40 : 12) });
+  if (mk.kits === 0) return { result: r, added: 0, requested };
 
   const n = mk.kits;
   const problem: Problem = { ...base, templates: [...base.templates, ...templates.map((t) => ({ ...t, qty: t.qty * n }))] };
@@ -31,7 +33,7 @@ export async function addProduct(
   const verify = verifySolution(problem, placements);
   const extra: ExtraProduct = { id: prefix, name: kit.name, kind: kit.kind ?? 'kit', defs, kits: { n, perKit: mk.perKit } };
   return {
-    added: n,
+    added: n, requested,
     result: { ...r, problem, verify, solution: { ...r.solution, placements, metrics: computeMetrics(problem, placements) }, extras: [...(r.extras ?? []), extra] },
   };
 }

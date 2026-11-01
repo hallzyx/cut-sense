@@ -146,7 +146,8 @@ function LeftoverTab({ w, r, onLeftoverPhoto }: { w: WS; r: Result; onLeftoverPh
   const cm = r.unit.trim().toLowerCase() === 'cm';
   const err = w.errAt === 'leftover' ? w.err : null;
   if (!lo) return null;
-  const a = (x: number) => fmt(x / r.ppu ** 2);
+  const pickedSingle = KITS.find((k) => k.id === w.productId)?.kind === 'piece';
+  const a =(x: number) => fmt(x / r.ppu ** 2);
   return (
     <>
       <MetricTrio items={[
@@ -155,19 +156,27 @@ function LeftoverTab({ w, r, onLeftoverPhoto }: { w: WS; r: Result; onLeftoverPh
         { value: fmt(lo.fragments.length, 0), label: lo.fragments.length === 1 ? 'fragmento' : 'fragmentos' },
       ]} relative={!r.calibrated} />
       <p className="ux-honest">Estimación digital: el sobrante real tendrá los bordes del corte.</p>
-      <label className="cs-field"><span className="cs-label">Otro producto con lo que sobró</span>
+      <label className="cs-field"><span className="cs-label">Hacer otro producto con el sobrante</span>
         <select className="cs-select" value={w.productId} disabled={!cm || !!w.busy} data-testid="leftover-product" onChange={(e) => w.setProductId(e.target.value)}>
           <option value="">Elegir producto…</option>
-          <optgroup label="Juegos completos">{KITS.filter((k) => k.kind !== 'piece').map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}</optgroup>
-          <optgroup label="Piezas sueltas">{KITS.filter((k) => k.kind === 'piece').map((k) => <option key={k.id} value={k.id}>{k.name} · {k.blurb.replace(/^pieza suelta · /, '')}</option>)}</optgroup>
+          <optgroup label="Productos de varias piezas (se arman)">{KITS.filter((k) => k.kind !== 'piece').map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}</optgroup>
+          <optgroup label="Productos de una sola pieza">{KITS.filter((k) => k.kind === 'piece').map((k) => <option key={k.id} value={k.id}>{k.name} · {k.blurb.replace(/^pieza suelta · /, '')}</option>)}</optgroup>
         </select>
         <span className="cs-hint">{cm ? 'El plan actual queda fijo.' : 'Calibra la foto en cm para usar productos con medidas reales.'}</span>
       </label>
+      <label className="cs-field"><span className="cs-label">{pickedSingle ? '¿Cuántas piezas quieres?' : '¿Cuántos productos completos quieres?'}</span>
+        <input className="cs-input" type="number" inputMode="numeric" min={1} max={200} step={1} value={w.productQty} placeholder="Tantos como quepan" disabled={!cm || !!w.busy} data-testid="leftover-qty"
+          onChange={(e) => w.setProductQty(e.target.value)} />
+        <span className="cs-hint">Si no caben todos, hacemos los que quepan y te avisamos cuántos fueron.</span>
+      </label>
+      <button type="button" className="ux-linkrow" data-testid="leftover-agent" disabled={!cm || !!w.busy} onClick={w.openAgentForLeftover}>
+        <Icon name="spark" className="ux-ico ux-ai-ico" /><span>Diseñar con IA un producto para el sobrante<small>Hilo propone las piezas según el material que queda</small></span><span className="ux-chev" aria-hidden="true" />
+      </button>
       {err && <p className="cs-error" role="alert">{err}</p>}
       {(r.extras ?? []).map((e) => (
         <div key={e.id} className="ux-zone ux-extra" data-testid={`extra-${e.id}`}>
           <span className="cs-badge cs-badge--ink" aria-hidden="true">+</span>
-          <span><b>{e.name}</b> <span className="cs-caption">· {e.kind === 'piece' ? `${e.kits.n} ${e.kits.n === 1 ? 'pieza añadida' : 'piezas añadidas'}` : `${e.kits.n} ${e.kits.n === 1 ? 'juego añadido' : 'juegos añadidos'}`}</span></span>
+          <span><b>{e.name}</b> <span className="cs-caption">· {e.kind === 'piece' ? `${e.kits.n} ${e.kits.n === 1 ? 'pieza añadida' : 'piezas añadidas'}` : `${e.kits.n} ${e.kits.n === 1 ? 'producto completo añadido' : 'productos completos añadidos'}`}</span></span>
           <button type="button" className="cs-btn cs-btn--danger-quiet cs-btn--sm" aria-label={`Quitar ${e.name}`} data-testid={`extra-remove-${e.id}`} onClick={() => w.dropProduct(e.id)}>Quitar</button>
         </div>
       ))}
@@ -225,7 +234,7 @@ export const ResultPanel = forwardRef<HTMLHeadingElement, { w: WS; p: Project; o
   let footer: React.ReactNode;
   if (optimizing) footer = <Progress w={w} label={w.tab === 'leftover' ? 'Buscando sitio en el sobrante…' : 'Acomodando piezas…'} />;
   else if (leftoverTab) footer = <>
-    <button type="button" className="cs-btn cs-btn--primary cs-btn--block" data-testid="primary-action" disabled={!w.productId || r!.unit.trim().toLowerCase() !== 'cm'} aria-describedby={!w.productId ? 'r3l' : undefined} onClick={w.tryProduct}>Calcular con el sobrante</button>
+    <button type="button" className="cs-btn cs-btn--primary cs-btn--block" data-testid="primary-action" disabled={!w.productId || r!.unit.trim().toLowerCase() !== 'cm'} aria-describedby={!w.productId ? 'r3l' : undefined} onClick={() => void w.tryProduct()}>Calcular con el sobrante</button>
     {!w.productId && <Reason id="r3l">Elige un producto para calcular.</Reason>}
   </>;
   else if (!r || failed || invalid) footer = <button type="button" className="cs-btn cs-btn--primary cs-btn--block" data-testid="primary-action" disabled={!w.problem} onClick={w.optimize}><Icon name="redo" />Reoptimizar</button>;
