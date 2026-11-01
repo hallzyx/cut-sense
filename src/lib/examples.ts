@@ -7,9 +7,9 @@ export interface Example {
   w: number;
   h: number;
   src: string;
-  /** Contorno precalculado (NO es inferencia en vivo; se rotula como "guardado"). */
+  /** Precomputed outline (NOT live inference; it is labeled "saved"). */
   cachedPolygon: Ring;
-  /** Escala supuesta del ejemplo (sintético): se rotula como tal en la UI. */
+  /** Assumed scale of the (synthetic) example: it is labeled as such in the UI. */
   calib?: { a: Pt; b: Pt; dist: number; unit: string };
   kitId?: string;
 }
@@ -36,8 +36,8 @@ const pts = (r: Ring) => r.map((p) => p.join(',')).join(' ');
 export const EXAMPLES: Example[] = [
   {
     id: 'fieltro',
-    title: 'Retazo de fieltro',
-    blurb: 'Borde cóncavo, un agujero y una mancha visibles.',
+    title: 'Felt offcut',
+    blurb: 'A concave edge, a hole and a stain, all visible.',
     w: 800, h: 600, cachedPolygon: felt,
     src: svg(`
       <polygon points="${pts(felt)}" fill="#2f7f86" stroke="#1f5c62" stroke-width="3" stroke-linejoin="round"/>
@@ -47,8 +47,8 @@ export const EXAMPLES: Example[] = [
   },
   {
     id: 'cuero',
-    title: 'Retal de cuero',
-    blurb: 'Retal de cuero con escala supuesta (14 px = 1 cm) para cortar una cartera bifold.',
+    title: 'Leather scrap',
+    blurb: 'Leather scrap with an assumed scale (14 px = 1 cm) for cutting a bifold wallet.',
     w: 800, h: 600, cachedPolygon: leather,
     calib: { a: [100, 565], b: [240, 565], dist: 10, unit: 'cm' }, kitId: 'cartera',
     src: svg(`

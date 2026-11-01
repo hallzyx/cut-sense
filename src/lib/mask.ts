@@ -1,14 +1,14 @@
 import type { Pt, Ring } from '../types';
 import { simplifyRing } from './poly';
 
-/** Máscara binaria en una rejilla (1 = material). */
+/** Binary mask on a grid (1 = material). */
 export interface Mask { w: number; h: number; data: Uint8Array }
 
 export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((res, rej) => {
     const im = new Image();
     im.onload = () => res(im);
-    im.onerror = () => rej(new Error('No se pudo decodificar la imagen.'));
+    im.onerror = () => rej(new Error('Could not decode the image.'));
     im.src = src;
   });
 }
@@ -23,7 +23,7 @@ function drawScaled(im: HTMLImageElement, maxSide: number) {
   return { c, ctx, w, h };
 }
 
-/** Máscara devuelta por un modelo (PNG): primer plano = opaco y claro. */
+/** Mask returned by a model (PNG): foreground = opaque and light. */
 export async function maskFromModelPng(dataUrl: string, maxSide = 512): Promise<Mask> {
   const im = await loadImage(dataUrl);
   const { ctx, w, h } = drawScaled(im, maxSide);
@@ -36,7 +36,7 @@ export async function maskFromModelPng(dataUrl: string, maxSide = 512): Promise<
   return { w, h, data };
 }
 
-/** Segmentación local por contraste con el fondo (NO es Meta AI): mediana del borde + distancia de color. */
+/** Local segmentation by contrast with the background (NOT Meta AI): edge median + color distance. */
 export async function segmentLocal(src: string, maxSide = 384, threshold = 38): Promise<Mask> {
   const im = await loadImage(src);
   const { ctx, w, h } = drawScaled(im, maxSide);
@@ -57,12 +57,12 @@ export async function segmentLocal(src: string, maxSide = 384, threshold = 38): 
   return { w, h, data };
 }
 
-/** Conserva el mayor componente conexo (4-vecindad) y rellena huecos interiores. */
+/** Keeps the largest connected component (4-neighborhood) and fills interior holes. */
 export function largestComponent(m: Mask): Mask {
   return fillHoles(keepLargest(m));
 }
 
-/** Solo el mayor componente conexo (4-vecindad), sin rellenar huecos. */
+/** Only the largest connected component (4-neighborhood), without filling holes. */
 export function keepLargest(m: Mask): Mask {
   const { w, h, data } = m;
   const label = new Int32Array(w * h);
@@ -86,7 +86,7 @@ export function keepLargest(m: Mask): Mask {
   return { w, h, data: out };
 }
 
-/** Fondo no alcanzable desde el borde pasa a material. */
+/** Background not reachable from the edge becomes material. */
 export function fillHoles(m: Mask): Mask {
   const { w, h, data: out } = m;
   const outside = new Uint8Array(w * h);
@@ -108,7 +108,7 @@ export function fillHoles(m: Mask): Mask {
 
 const DIRS: Pt[] = [[-1, 0], [-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1]];
 
-/** Contorno exterior por vecindad de Moore (criterio de parada de Jacob). */
+/** Outer outline by Moore neighborhood tracing (Jacob's stopping criterion). */
 export function traceOuter(m: Mask): Pt[] {
   const { w, h, data } = m;
   const at = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h && data[y * w + x] === 1;
@@ -116,7 +116,7 @@ export function traceOuter(m: Mask): Pt[] {
   outer: for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (at(x, y)) { sx = x; sy = y; break outer; }
   if (sx < 0) return [];
   const pts: Pt[] = [[sx, sy]];
-  let cx = sx, cy = sy, back = 0; // el vecino oeste del primer píxel es fondo
+  let cx = sx, cy = sy, back = 0; // the west neighbor of the first pixel is background
   let firstMove = -1;
   for (let guard = 0; guard < w * h * 4; guard++) {
     let moved = false;
@@ -132,7 +132,7 @@ export function traceOuter(m: Mask): Pt[] {
       cx = nx; cy = ny; pts.push([cx, cy]); moved = true;
       break;
     }
-    if (!moved) break; // píxel aislado
+    if (!moved) break; // isolated pixel
   }
   if (pts.length > 1 && pts[pts.length - 1][0] === sx && pts[pts.length - 1][1] === sy) pts.pop();
   return pts;
@@ -140,7 +140,7 @@ export function traceOuter(m: Mask): Pt[] {
 
 export interface MaskToPolygonResult { polygon: Ring; areaFraction: number; holes: Ring[] }
 
-/** Huecos interiores del material (agujeros) como polígonos; ignora huecos menores al 0,3 % del material. */
+/** Interior gaps in the material (holes) as polygons; ignores gaps smaller than 0.3% of the material. */
 export function maskHoles(mask: Mask, imgW: number, imgH: number): Ring[] {
   const comp = keepLargest(mask);
   const filled = fillHoles(comp);
@@ -173,7 +173,7 @@ export function maskHoles(mask: Mask, imgW: number, imgH: number): Ring[] {
   return out;
 }
 
-/** Máscara → polígono en coordenadas de la imagen original (limpieza + simplificación). */
+/** Mask → polygon in original image coordinates (cleanup + simplification). */
 export function maskToPolygon(mask: Mask, imgW: number, imgH: number): MaskToPolygonResult {
   const clean = largestComponent(mask);
   const trace = traceOuter(clean);

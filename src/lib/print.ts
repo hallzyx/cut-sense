@@ -2,18 +2,18 @@ import type { Pt, Ring } from '../types';
 import { allDefs, kitQtyFor, pieceLabel, type Project, type Result } from '../state';
 import { bbox, ringPath } from './poly';
 
-/** Plano a escala real (1:1): SVG en centímetros y hojas imprimibles con marcas de ensamblaje. */
+/** Full-scale (1:1) plan: SVG in centimeters and printable sheets with assembly marks. */
 
-export const PAPERS = { A4: { label: 'A4', w: 21, h: 29.7 }, Carta: { label: 'Carta', w: 21.59, h: 27.94 } } as const;
+export const PAPERS = { A4: { label: 'A4', w: 21, h: 29.7 }, Carta: { label: 'Letter', w: 21.59, h: 27.94 } } as const;
 export type PaperKey = keyof typeof PAPERS;
 
-const MARGIN = 1; // cm de margen del plano y de página
-const OVERLAP = 1; // cm de solape entre hojas
+const MARGIN = 1; // cm margin of the plan and of the page
+const OVERLAP = 1; // cm of overlap between sheets
 const letter = (i: number) => String.fromCharCode(65 + i);
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const n = (v: number) => (Math.round(v * 1000) / 1000).toString();
 
-/** Píxeles de la foto por centímetro, o null si la calibración no es física (cm/mm). */
+/** Photo pixels per centimeter, or null if the calibration is not physical (cm/mm). */
 export function pxPerCm(r: Pick<Result, 'ppu' | 'unit' | 'calibrated'>): number | null {
   if (!r.calibrated) return null;
   const u = r.unit.trim().toLowerCase();
@@ -70,7 +70,7 @@ function bodyMarkup(plan: PlanCm) {
   ].join('');
 }
 
-/** Cuadro de 5 cm y regla de 10 cm para comprobar la escala tras imprimir. */
+/** 5 cm square and 10 cm ruler to check the scale after printing. */
 function scaleCheck(x: number, y: number) {
   return `<g font-family="Arial, sans-serif" font-size=".45">` +
     `<rect x="${n(x)}" y="${n(y)}" width="5" height="5" fill="none" stroke="#000" stroke-width=".05"/>` +
@@ -81,28 +81,28 @@ function scaleCheck(x: number, y: number) {
 
 const FOOTER_H = 6.5;
 
-/** SVG único en centímetros (width/height con unidades): se imprime o abre a escala real. */
+/** Single SVG in centimeters (width/height with units): it prints or opens at full scale. */
 export function buildPlanSvgCm(p: Project, r: Result): { svg: string; wCm: number; hCm: number } {
   const plan = planInCm(p, r);
-  if (!plan) throw new Error('El plano a escala real necesita una calibración en cm o mm.');
+  if (!plan) throw new Error('The full-scale plan needs a calibration in cm or mm.');
   const W = Math.max(plan.w, 17.5), H = plan.h + FOOTER_H;
   const m = r.solution.metrics;
   const legend = allDefs(p, r).map((d, i) => `<text x="${MARGIN}" y="${n(plan.h + 0.6 + i * 0.6)}" font-size=".45">${letter(i)} — ${esc(d.name)}: ${m.placed[d.id] ?? 0}/${m.requested[d.id] ?? d.qty} (${n(d.w)}×${n(d.h)} ${esc(r.unit)})</text>`).join('');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${n(W)}cm" height="${n(H)}cm" viewBox="0 0 ${n(W)} ${n(H)}" font-family="Arial, sans-serif">
-<title>CutSense — plano a escala 1:1</title>
+<title>CutSense — 1:1 scale plan</title>
 ${defsMarkup(allDefs(p, r).length)}
 <rect width="${n(W)}" height="${n(H)}" fill="#fff"/>
 ${bodyMarkup(plan)}
 <g>${legend}</g>
 ${scaleCheck(MARGIN, plan.h + 0.6 + allDefs(p, r).length * 0.6)}
-<text x="${MARGIN}" y="${n(H - 0.4)}" font-size=".4" fill="#444">PLANO REFERENCIAL a escala 1:1 (1 unidad = 1 cm). Verifica el cuadro de 5 cm al imprimir. No es una instrucción certificada para maquinaria.</text>
+<text x="${MARGIN}" y="${n(H - 0.4)}" font-size=".4" fill="#444">REFERENCE PLAN at 1:1 scale (1 unit = 1 cm). Check the 5 cm square when printing. Not a certified instruction for machinery.</text>
 </svg>`;
   return { svg, wCm: W, hCm: H };
 }
 
 export interface TileLayout { orientation: 'portrait' | 'landscape'; pw: number; ph: number; cols: number; rows: number; stepX: number; stepY: number }
 
-/** Reparte el plano en hojas con solape; elige la orientación que usa menos hojas. */
+/** Splits the plan into overlapping sheets; picks the orientation that uses fewer sheets. */
 export function layoutTiles(planW: number, planH: number, paper: PaperKey): TileLayout {
   const P = PAPERS[paper];
   const opt = (orientation: 'portrait' | 'landscape'): TileLayout => {
@@ -115,10 +115,10 @@ export function layoutTiles(planW: number, planH: number, paper: PaperKey): Tile
   return b.cols * b.rows < a.cols * a.rows ? b : a;
 }
 
-/** Documento HTML listo para imprimir: instrucciones, hojas del plano 1:1 y plantillas de cada pieza. */
+/** Print-ready HTML document: instructions, 1:1 plan sheets and a template for each piece. */
 export function buildPrintHtml(p: Project, r: Result, paper: PaperKey): string {
   const plan = planInCm(p, r);
-  if (!plan) throw new Error('El plano a escala real necesita una calibración en cm o mm.');
+  if (!plan) throw new Error('The full-scale plan needs a calibration in cm or mm.');
   const P = PAPERS[paper];
   const L = layoutTiles(plan.w, plan.h, paper);
   const [pageW, pageH] = L.orientation === 'portrait' ? [P.w, P.h] : [P.h, P.w];
@@ -134,7 +134,7 @@ export function buildPrintHtml(p: Project, r: Result, paper: PaperKey): string {
       const marks = ([[x0, y0, 1, 1], [x0 + L.pw, y0, -1, 1], [x0, y0 + L.ph, 1, -1], [x0 + L.pw, y0 + L.ph, -1, -1]] as const)
         .map(([x, y, sx, sy]) => `<path d="M${n(x)},${n(y)} h${sx} M${n(x)},${n(y)} v${sy}" stroke="#000" stroke-width=".05"/>`).join('');
       tiles.push(`<section class="page"><svg width="${n(L.pw)}cm" height="${n(L.ph)}cm" viewBox="${n(x0)} ${n(y0)} ${n(L.pw)} ${n(L.ph)}" style="position:absolute;left:${MARGIN}cm;top:${MARGIN}cm;overflow:hidden">${defs}${body}${marks}</svg>
-<div class="tag">Hoja ${row * L.cols + col + 1} de ${total} · fila ${row + 1}/${L.rows}, columna ${col + 1}/${L.cols} · ${L.cols > 1 || L.rows > 1 ? `solape ${OVERLAP} cm: haz coincidir el dibujo en la zona de solape` : 'plano completo'}</div></section>`);
+<div class="tag">Sheet ${row * L.cols + col + 1} of ${total} · row ${row + 1}/${L.rows}, column ${col + 1}/${L.cols} · ${L.cols > 1 || L.rows > 1 ? `${OVERLAP} cm overlap: line up the drawing in the overlap zone` : 'full plan'}</div></section>`);
     }
   }
 
@@ -147,10 +147,10 @@ export function buildPrintHtml(p: Project, r: Result, paper: PaperKey): string {
     const ring = t.shape.map(([x, y]) => [(x - b.x0) / plan.k + 0.2, (y - b.y0) / plan.k + 0.2] as Pt);
     const fits = Math.min(w, h) + 0.4 <= Math.min(L.pw, L.ph) && Math.max(w, h) + 0.4 <= Math.max(L.pw, L.ph);
     return `<div class="tpl"><svg width="${n(w + 0.4)}cm" height="${n(h + 0.4)}cm" viewBox="0 0 ${n(w + 0.4)} ${n(h + 0.4)}">${defs}<path d="${ringPath(ring)}" fill="url(#pp${i})" stroke="#000" stroke-width=".07" stroke-linejoin="round"/></svg>
-<p><b>${letter(i)} · ${esc(d.name)}</b> — cortar ${placed} · ${n(w)} × ${n(h)} cm · giros permitidos: ${d.rotations.join('°, ')}°${fits ? '' : ' · <b>no cabe en una hoja: usa el plano completo</b>'}</p></div>`;
+<p><b>${letter(i)} · ${esc(d.name)}</b> — cut ${placed} · ${n(w)} × ${n(h)} cm · allowed rotations: ${d.rotations.join('°, ')}°${fits ? '' : ' · <b>does not fit on one sheet: use the full plan</b>'}</p></div>`;
   }).join('');
 
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>CutSense — impresión 1:1</title>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>CutSense — 1:1 print</title>
 <style>
 @page { size: ${pageW}cm ${pageH}cm; margin: 0 }
 * { box-sizing: border-box }
@@ -167,19 +167,19 @@ body { margin: 0; font-family: Arial, sans-serif; color: #000 }
 @media screen { body { background: #ddd } .page { background: #fff; margin: 12px auto; box-shadow: 0 0 6px #0005 } .intro, .tpls { background: #fff; max-width: ${pageW}cm; margin: 12px auto } }
 </style></head><body>
 <section class="page intro">
-  <h1>CutSense · Plano a escala 1:1</h1>
-  <p>Material de ${Math.round((plan.w - 2 * MARGIN) * 10) / 10} × ${Math.round((plan.h - 2 * MARGIN) * 10) / 10} cm · ${m.placedCount} de ${m.requestedCount} piezas colocadas · ${total} hoja${total > 1 ? 's' : ''} ${P.label} (${L.orientation === 'portrait' ? 'vertical' : 'horizontal'}) + plantillas por pieza.</p>
-  <div class="warn"><b>Imprime al 100 %.</b> Desactiva «Ajustar a la página» / «Fit to page» en el diálogo de impresión. Mide el cuadro de abajo: debe medir 5 × 5 cm y la regla 10 cm.</div>
+  <h1>CutSense · 1:1 scale plan</h1>
+  <p>Material of ${Math.round((plan.w - 2 * MARGIN) * 10) / 10} × ${Math.round((plan.h - 2 * MARGIN) * 10) / 10} cm · ${m.placedCount} of ${m.requestedCount} pieces placed · ${total} ${P.label} sheet${total > 1 ? 's' : ''} (${L.orientation}) + a template per piece.</p>
+  <div class="warn"><b>Print at 100%.</b> Turn off "Fit to page" in the print dialog. Measure the square below: it must be 5 × 5 cm and the ruler 10 cm.</div>
   <svg width="17cm" height="5.6cm" viewBox="0 0 17 5.6">${scaleCheck(0.2, 0.2)}</svg>
   <ol>
-    <li>Imprime las hojas del plano y únelas haciendo coincidir el dibujo en la franja de solape de ${OVERLAP} cm; las esquinas marcan el área útil de cada hoja.</li>
-    <li>Coloca el plano sobre el material y marca las piezas, o recorta las plantillas de las últimas páginas y úsalas como molde.</li>
-    <li>El contorno punteado es el borde del material digitalizado; el rayado rojo son zonas que no se deben cortar.</li>
+    <li>Print the plan sheets and join them by lining up the drawing in the ${OVERLAP} cm overlap strip; the corner marks show the usable area of each sheet.</li>
+    <li>Lay the plan over the material and mark the pieces, or cut out the templates on the last pages and use them as patterns.</li>
+    <li>The dotted outline is the edge of the digitized material; the red hatching marks zones that must not be cut.</li>
   </ol>
-  <p style="font-size:9pt;color:#333">Plano referencial: la exactitud depende de la calibración y de que la foto sea casi cenital. No es una instrucción certificada para maquinaria. Mejor solución encontrada por la búsqueda (${esc(r.solution.optimizerVersion)}, semilla ${r.solution.seed}); no es un óptimo demostrado.</p>
+  <p style="font-size:9pt;color:#333">Reference plan: accuracy depends on the calibration and on the photo being nearly top-down. Not a certified instruction for machinery. Best solution found by the search (${esc(r.solution.optimizerVersion)}, seed ${r.solution.seed}); not a proven optimum.</p>
 </section>
 ${tiles.join('\n')}
-<section class="tpls"><h2 style="margin-top:0">Plantillas por pieza (1:1)</h2>${tplBlocks || '<p>No hay piezas colocadas.</p>'}</section>
+<section class="tpls"><h2 style="margin-top:0">Templates per piece (1:1)</h2>${tplBlocks || '<p>No pieces placed.</p>'}</section>
 <script>addEventListener('load', function () { setTimeout(function () { window.print(); }, 400); });</script>
 </body></html>`;
 }

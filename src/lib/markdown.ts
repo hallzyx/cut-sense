@@ -1,7 +1,7 @@
 /**
- * Markdown ligero y SEGURO para los mensajes del agente. No genera HTML: produce un árbol que la interfaz
- * dibuja con elementos de React (el texto siempre se escapa) y solo admite enlaces http(s).
- * Soporta: párrafos, saltos de línea, # títulos, listas con - * • y 1., citas con >, **negrita**, *cursiva*, `código` y [enlaces](https://…).
+ * Lightweight, SAFE Markdown for the agent messages. It does not generate HTML: it produces a tree that the interface
+ * draws with React elements (text is always escaped) and only allows http(s) links.
+ * Supports: paragraphs, line breaks, # headings, lists with - * • and 1., quotes with >, **bold**, *italic*, `code` and [links](https://…).
  */
 export type Inline =
   | { t: 'text'; v: string }
@@ -80,7 +80,7 @@ export function parseMarkdown(text: string): Block[] {
   return blocks;
 }
 
-/** Texto plano del Markdown (para lectores de pantalla o resúmenes). */
+/** Plain text of the Markdown (for screen readers or summaries). */
 export function plainText(text: string): string {
   const inl = (xs: Inline[]): string => xs.map((x) => (x.t === 'text' || x.t === 'code' ? x.v : inl(x.c))).join('');
   return parseMarkdown(text).map((b) => (b.t === 'p' || b.t === 'quote' ? b.lines.map(inl).join(' ') : b.t === 'h' ? inl(b.c) : b.items.map(inl).join('; '))).join(' ');

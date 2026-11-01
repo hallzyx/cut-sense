@@ -1,6 +1,6 @@
-/** Contrato compartido entre UI, servidor y motor geométrico. Unidades: píxeles de imagen (o unidades relativas). */
+/** Shared contract between the UI, the server and the geometry engine. Units: image pixels (or relative units). */
 export type Pt = [number, number];
-/** Anillo simple, sin repetir el primer punto al final, sin agujeros. */
+/** Simple ring: the first point is not repeated at the end, and there are no holes. */
 export type Ring = Pt[];
 
 export type TemplateKind = 'rect' | 'rrect' | 'circle' | 'trapezoid' | 'irregular' | 'custom';
@@ -10,46 +10,46 @@ export interface Template {
   name: string;
   color: string;
   kind: TemplateKind;
-  /** Ancho y alto del bounding box, en unidades del lienzo. */
+  /** Bounding-box width and height, in canvas units. */
   w: number;
   h: number;
   qty: number;
-  /** Rotaciones permitidas en grados (p. ej. [0, 180]). */
+  /** Allowed rotations in degrees (e.g. [0, 180]). */
   rotations: number[];
-  /** Forma base (ya dimensionada, bbox con esquina mínima en 0,0). */
+  /** Base shape (already sized, bbox with its minimum corner at 0,0). */
   shape: Ring;
 }
 
 export interface Problem {
-  /** Contorno exterior del material. */
+  /** Outer outline of the material. */
   material: Ring;
-  /** Zonas excluidas (pueden solaparse entre sí o salirse del material). */
+  /** Excluded zones (they may overlap each other or extend past the material). */
   defects: Ring[];
   templates: Template[];
-  /** Separación mínima entre piezas, entre pieza y defecto y entre pieza y borde. >= 0 */
+  /** Minimum spacing between pieces, between a piece and a defect, and between a piece and the edge. >= 0 */
   spacing: number;
   seed?: number;
-  /** Presupuesto de búsqueda en ms (por defecto 4000). */
+  /** Search budget in ms (default 4000). */
   timeLimitMs?: number;
 }
 
 export interface Placement {
   templateId: string;
-  /** Índice de instancia 0..qty-1 de esa plantilla. */
+  /** Instance index 0..qty-1 of that template. */
   instance: number;
-  /** Grados. Debe pertenecer a template.rotations. */
+  /** Degrees. Must be one of template.rotations. */
   rotation: number;
-  /** Polígono final en coordenadas del lienzo. */
+  /** Final polygon in canvas coordinates. */
   polygon: Ring;
 }
 
 export interface Metrics {
   totalArea: number;
-  excludedArea: number; // unión de defectos ∩ material, sin doble conteo
+  excludedArea: number; // union of defects ∩ material, no double counting
   usableArea: number;
   occupiedArea: number;
-  usableUtilization: number; // % ocupada / utilizable
-  materialUtilization: number; // % ocupada / total
+  usableUtilization: number; // % occupied / usable
+  materialUtilization: number; // % occupied / total
   requested: Record<string, number>;
   placed: Record<string, number>;
   pending: Record<string, number>;
@@ -79,5 +79,5 @@ export interface VerifyResult {
   violations: Violation[];
 }
 
-/** sam = inferencia SAM en vivo · example = máscara precalculada del ejemplo · local = contraste local (no es Meta AI) */
+/** sam = live SAM inference · example = precomputed mask of the example · local = local contrast (not Meta AI) */
 export type ContourSource = 'sam' | 'example' | 'local' | 'manual' | 'leftover';

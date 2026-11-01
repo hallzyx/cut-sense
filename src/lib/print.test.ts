@@ -19,15 +19,15 @@ function scenario(unit = 'cm', dist = 10): { p: Project; r: Result } {
   return { p, r };
 }
 
-describe('exportación a escala real', () => {
-  it('convierte la calibración a px por cm (cm y mm) y rechaza lo no físico', () => {
+describe('full-scale export', () => {
+  it('converts the calibration to px per cm (cm and mm) and rejects non-physical units', () => {
     expect(pxPerCm({ ppu: 14, unit: 'cm', calibrated: true })).toBe(14);
     expect(pxPerCm({ ppu: 1.4, unit: 'mm', calibrated: true })).toBeCloseTo(14);
     expect(pxPerCm({ ppu: 8, unit: 'u', calibrated: false })).toBeNull();
     expect(pxPerCm({ ppu: 8, unit: 'in', calibrated: true })).toBeNull();
   });
 
-  it('el SVG 1:1 mide en cm lo que mide el material + márgenes', () => {
+  it('the 1:1 SVG measures the material plus margins in cm', () => {
     const { p, r } = scenario();
     const b = bbox(p.contour);
     const plan = planInCm(p, r)!;
@@ -37,18 +37,18 @@ describe('exportación a escala real', () => {
     expect(svg).toContain(`width="${Math.round(wCm * 1000) / 1000}cm"`);
     expect(hCm).toBeGreaterThan(plan.h);
     expect(svg).toContain('5 × 5 cm');
-    expect(svg).toContain('PLANO REFERENCIAL');
-    // cada pieza colocada aparece con su etiqueta
+    expect(svg).toContain('REFERENCE PLAN');
+    // each placed piece appears with its label
     expect((svg.match(/stroke-linejoin="round"/g) ?? []).length).toBe(r.solution.placements.length);
   });
 
-  it('con mm obtiene las mismas medidas físicas', () => {
+  it('with mm it yields the same physical measurements', () => {
     const cm = planInCm(...Object.values(scenario('cm', 10)) as [Project, Result])!;
     const mm = planInCm(...Object.values(scenario('mm', 100)) as [Project, Result])!;
     expect(mm.w).toBeCloseTo(cm.w);
   });
 
-  it('reparte en hojas con solape y elige la orientación con menos hojas', () => {
+  it('splits into overlapping sheets and picks the orientation with fewer sheets', () => {
     const a = layoutTiles(15, 25, 'A4');
     expect([a.cols, a.rows, a.orientation]).toEqual([1, 1, 'portrait']);
     const b = layoutTiles(45, 33, 'A4');
@@ -58,19 +58,19 @@ describe('exportación a escala real', () => {
     expect(wide.cols * wide.rows).toBe(1);
   });
 
-  it('genera el HTML imprimible con hojas, escala y plantillas', () => {
+  it('generates the printable HTML with sheets, scale and templates', () => {
     const { p, r } = scenario();
     const html = buildPrintHtml(p, r, 'A4');
-    expect(html).toContain('Imprime al 100 %');
-    expect(html).toContain('Hoja 1 de');
-    expect(html).toContain('Plantillas por pieza');
-    expect(html).toContain('Exterior');
+    expect(html).toContain('Print at 100%');
+    expect(html).toContain('Sheet 1 of');
+    expect(html).toContain('Templates per piece');
+    expect(html).toContain('Outer');
   });
 
-  it('se niega a exportar sin calibración física', () => {
+  it('refuses to export without a physical calibration', () => {
     const { p, r } = scenario();
     const bad = { ...r, calibrated: false, unit: 'u' };
-    expect(() => buildPlanSvgCm(p, bad)).toThrow(/calibración/);
-    expect(() => buildPrintHtml(p, bad, 'A4')).toThrow(/calibración/);
+    expect(() => buildPlanSvgCm(p, bad)).toThrow(/calibration/);
+    expect(() => buildPrintHtml(p, bad, 'A4')).toThrow(/calibration/);
   });
 });

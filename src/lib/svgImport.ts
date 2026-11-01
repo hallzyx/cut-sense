@@ -7,9 +7,9 @@ const MAX_VERTICES = 120;
 
 export interface SvgPiece {
   ring: Ring;
-  /** Formas encontradas en el archivo (se usa la de mayor área). */
+  /** Shapes found in the file (the one with the largest area is used). */
   found: number;
-  /** Ancho real de la forma en mm, según width/viewBox del SVG (1 px = 1/96 pulgada si no declara unidades). */
+  /** Real width of the shape in mm, from the SVG width/viewBox (1 px = 1/96 inch if it declares no units). */
   widthMm: number;
 }
 
@@ -33,7 +33,7 @@ function sample(el: SVGGeometryElement): Ring {
   });
 }
 
-/** Un `<path>` con varios subtrazados se divide: se usa el de mayor área (los huecos se ignoran). */
+/** A `<path>` with several subpaths is split: the one with the largest area is used (holes are ignored). */
 function subpaths(d: string): string[] {
   return d.split(/(?=[Mm])/).map((s) => s.trim()).filter(Boolean);
 }
@@ -54,7 +54,7 @@ function cleanup(r: Ring): Ring {
 
 const MM: Record<string, number> = { mm: 1, cm: 10, in: 25.4, pt: 25.4 / 72, pc: 25.4 / 6, px: 25.4 / 96, '': 25.4 / 96 };
 
-/** Milímetros por unidad de usuario del SVG, a partir de width y viewBox del elemento raíz. */
+/** Millimeters per SVG user unit, from the width and viewBox of the root element. */
 function mmPerUserUnit(svg: Element): number {
   const m = /^\s*([\d.]+)\s*([a-z%]*)\s*$/i.exec(svg.getAttribute('width') ?? '');
   const vb = (svg.getAttribute('viewBox') ?? '').trim().split(/[\s,]+/).map(Number);
@@ -63,10 +63,10 @@ function mmPerUserUnit(svg: Element): number {
   return MM.px;
 }
 
-/** Extrae el contorno exterior de la forma más grande de un SVG (solo navegador). */
+/** Extracts the outer outline of the largest shape in an SVG (browser only). */
 export function ringFromSvg(text: string): SvgPiece {
   const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
-  if (doc.querySelector('parsererror') || doc.documentElement.localName !== 'svg') throw new Error('El archivo no es un SVG válido.');
+  if (doc.querySelector('parsererror') || doc.documentElement.localName !== 'svg') throw new Error('The file is not a valid SVG.');
   const host = document.createElementNS(NS, 'svg');
   host.setAttribute('style', 'position:absolute;left:-9999px;top:0;width:0;height:0;visibility:hidden');
   document.body.appendChild(host);
@@ -83,11 +83,11 @@ export function ringFromSvg(text: string): SvgPiece {
         try {
           const r = cleanup(sample(el));
           if (r.length >= 3 && absArea(r) > 0) cands.push(r);
-        } catch { /* elemento no medible */ }
+        } catch { /* element cannot be measured */ }
         host.removeChild(el);
       }
     });
-    if (!cands.length) throw new Error('No encontré ninguna forma cerrada (path, polygon, rect, circle o ellipse) en el SVG.');
+    if (!cands.length) throw new Error('I could not find any closed shape (path, polygon, rect, circle or ellipse) in the SVG.');
     const ring = cands.reduce((a, b) => (absArea(b) > absArea(a) ? b : a));
     return { ring, found: cands.length, widthMm: bbox(ring).w * mmPerUserUnit(doc.documentElement) };
   } finally {

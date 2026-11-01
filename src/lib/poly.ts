@@ -17,15 +17,15 @@ function segCross(a: Pt, b: Pt, c: Pt, d: Pt) {
   return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
 }
 
-/** Devuelve un mensaje si el anillo no es válido (<3 puntos, área nula o autointersección). */
+/** Returns a message if the ring is not valid (<3 points, zero area or self-intersection). */
 export function ringProblem(r: Ring): string | null {
-  if (r.length < 3) return 'Necesita al menos 3 puntos.';
-  if (absArea(r) < 1) return 'La región está vacía o es degenerada.';
+  if (r.length < 3) return 'Needs at least 3 points.';
+  if (absArea(r) < 1) return 'The region is empty or degenerate.';
   const n = r.length;
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
       if (j === i + 1 || (i === 0 && j === n - 1)) continue;
-      if (segCross(r[i], r[(i + 1) % n], r[j], r[(j + 1) % n])) return 'El contorno se cruza a sí mismo.';
+      if (segCross(r[i], r[(i + 1) % n], r[j], r[(j + 1) % n])) return 'The outline crosses itself.';
     }
   }
   return null;
@@ -48,7 +48,7 @@ export function distToSeg(p: Pt, a: Pt, b: Pt): { d: number; t: number } {
   return { d: Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy)), t };
 }
 
-/** Arista más cercana a p: índice i (i → i+1), distancia y parámetro t. */
+/** Edge nearest to p: index i (i → i+1), distance and parameter t. */
 export function nearestEdge(p: Pt, r: Ring) {
   let best = { i: 0, d: Infinity, t: 0 };
   for (let i = 0; i < r.length; i++) {
@@ -70,7 +70,7 @@ function dp(pts: Pt[], eps: number): Pt[] {
   return [...dp(pts.slice(0, mi + 1), eps).slice(0, -1), ...dp(pts.slice(mi), eps)];
 }
 
-/** Douglas-Peucker sobre anillo cerrado. */
+/** Douglas-Peucker on a closed ring. */
 export function simplifyRing(r: Ring, eps: number): Ring {
   if (r.length < 4) return r;
   let far = 0, fd = -1;

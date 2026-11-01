@@ -22,8 +22,8 @@ function scenario(): { p: Project; r: Result } {
 const parse = (s: string) => new DxfParser().parseSync(s)!;
 const verts = (e: any) => e.vertices.map((v: any) => [v.x, v.y] as [number, number]);
 
-describe('exportación DXF', () => {
-  it('es un DXF R12 en mm que un lector independiente entiende', () => {
+describe('DXF export', () => {
+  it('is an R12 DXF in mm that an independent reader understands', () => {
     const { p, r } = scenario();
     const txt = buildDxf(p, r);
     expect(txt).toContain('AC1009');
@@ -34,7 +34,7 @@ describe('exportación DXF', () => {
     expect(polys.every((e: any) => e.layer === 'CUT' && e.shape === true)).toBe(true);
   });
 
-  it('las medidas están en mm, con origen abajo-izquierda y Y hacia arriba', () => {
+  it('measurements are in mm, with origin at bottom-left and Y pointing up', () => {
     const { p, r } = scenario();
     const d = parse(buildDxf(p, r, { reference: true }));
     const mat = d.entities.find((e: any) => e.layer === 'MATERIAL') as any;
@@ -44,7 +44,7 @@ describe('exportación DXF', () => {
     expect(Math.min(...ys)).toBeCloseTo(0, 2);
     expect(Math.max(...xs)).toBeCloseTo((b.w / 14) * 10, 1);
     expect(Math.max(...ys)).toBeCloseTo((b.h / 14) * 10, 1);
-    // la primera pieza (Exterior 18,5 × 9,5 cm) conserva sus dimensiones reales
+    // the first piece (Outer 18.5 × 9.5 cm) keeps its real dimensions
     const cut = d.entities.filter((e: any) => e.layer === 'CUT') as any[];
     const ext = verts(cut[0]);
     const w = Math.max(...ext.map((v: number[]) => v[0])) - Math.min(...ext.map((v: number[]) => v[0]));
@@ -52,15 +52,15 @@ describe('exportación DXF', () => {
     expect([w, h].sort((a, b2) => a - b2).map((v) => Math.round(v))).toEqual([95, 185]);
   });
 
-  it('por defecto solo exporta la capa CUT; la referencia es opcional', () => {
+  it('by default it only exports the CUT layer; the reference is optional', () => {
     const { p, r } = scenario();
     expect(new Set(parse(buildDxf(p, r)).entities.map((e: any) => e.layer))).toEqual(new Set(['CUT']));
     const withRef = parse(buildDxf(p, r, { reference: true }));
     expect(new Set(withRef.entities.map((e: any) => e.layer))).toEqual(new Set(['CUT', 'MATERIAL', 'DEFECTS']));
   });
 
-  it('se niega a exportar sin calibración física', () => {
+  it('refuses to export without a physical calibration', () => {
     const { p, r } = scenario();
-    expect(() => buildDxf(p, { ...r, calibrated: false, unit: 'u' })).toThrow(/calibración/);
+    expect(() => buildDxf(p, { ...r, calibrated: false, unit: 'u' })).toThrow(/calibration/);
   });
 });

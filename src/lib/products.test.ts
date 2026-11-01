@@ -21,8 +21,8 @@ function baseResult(): { p: Project; r: Result } {
   return { p, r };
 }
 
-describe('otro producto con el sobrante', () => {
-  it('añade piezas sueltas sobre lo que sobra y el plan combinado es válido', async () => {
+describe('another product from the leftover', () => {
+  it('adds single pieces on what is left over and the combined plan is valid', async () => {
     const { p, r } = baseResult();
     expect(r.kits!.n).toBeGreaterThanOrEqual(2);
     const before = r.solution.placements.length;
@@ -33,15 +33,15 @@ describe('otro producto con el sobrante', () => {
     expect(res.solution.placements.length).toBe(before + out.added);
     expect(res.extras).toHaveLength(1);
     expect(allDefs(p, res)).toHaveLength(p.defs.length + 1);
-    // las plantillas nuevas están en el problema y en las métricas
+    // the new templates are in the problem and in the metrics
     const id = res.extras![0].defs[0].id;
     expect(res.solution.metrics.placed[id]).toBe(out.added);
     expect(res.problem.templates.map((t) => t.id)).toContain(id);
-    // el plan anterior no se movió
+    // the previous plan did not move
     expect(res.solution.placements.slice(0, before)).toEqual(r.solution.placements);
   }, 60000);
 
-  it('respeta la cantidad pedida y hace lo máximo si no caben todas', async () => {
+  it('respects the requested quantity and does its best if they do not all fit', async () => {
     const { p, r } = baseResult();
     const two = await addProduct(p, r, kit('llavero'), undefined, 2);
     expect(two.added).toBe(2);
@@ -55,11 +55,11 @@ describe('otro producto con el sobrante', () => {
     expect((await addProduct(p, r, kit('llavero'))).requested).toBeNull();
   }, 120000);
 
-  it('permite encadenar otro producto y quitarlo sin tocar el resto', async () => {
+  it('allows chaining another product and removing it without touching the rest', async () => {
     const { p, r } = baseResult();
     const a = await addProduct(p, r, kit('llavero'));
     const b = await addProduct(p, a.result, kit('posavasos'));
-    expect(b.result.extras!.map((e) => e.name)).toEqual(['Llaveros', ...(b.added ? ['Posavasos'] : [])]);
+    expect(b.result.extras!.map((e) => e.name)).toEqual(['Keychains', ...(b.added ? ['Coasters'] : [])]);
     expect(b.result.verify.valid).toBe(true);
     const back = removeProduct(a.result, a.result.extras![0].id);
     expect(back.solution.placements).toEqual(r.solution.placements);
@@ -67,19 +67,19 @@ describe('otro producto con el sobrante', () => {
     expect(back.extras).toEqual([]);
   }, 90000);
 
-  it('un kit completo que no cabe deja el plan igual', async () => {
+  it('a complete set that does not fit leaves the plan unchanged', async () => {
     const { p, r } = baseResult();
     const out = await addProduct(p, r, kit('cartera'));
     if (out.added === 0) expect(out.result).toBe(r);
     else expect(out.result.verify.valid).toBe(true);
   }, 60000);
 
-  it('rechaza fotos sin calibración en cm', async () => {
+  it('rejects photos without a cm calibration', async () => {
     const { p, r } = baseResult();
     await expect(addProduct(p, { ...r, unit: 'u', calibrated: false }, kit('llavero'))).rejects.toThrow(/cm/);
   });
 
-  it('kitQtyFor solo devuelve piezas por juego para kits con varios juegos', async () => {
+  it('kitQtyFor only returns pieces per set for kits with several sets', async () => {
     const { p, r } = baseResult();
     const t0 = p.defs[0].id;
     expect(kitQtyFor(r, t0)).toBe(r.kits!.perKit[t0]);

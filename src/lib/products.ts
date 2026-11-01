@@ -4,14 +4,14 @@ import { allDefs, kitToDefs, toTemplate, type ExtraProduct, type Project, type R
 import type { Kit } from './kits';
 
 /**
- * Planifica un producto más sobre el material que sobró: las piezas ya colocadas quedan fijas
- * (se tratan como obstáculos con la misma separación) y se busca cuántos juegos completos
- * (o cuántas piezas sueltas) del producto nuevo caben. El plan combinado se verifica entero.
+ * Plans one more product on the material that is left over: the pieces already placed stay fixed
+ * (treated as obstacles with the same spacing) and it searches for how many complete sets
+ * (or how many single pieces) of the new product fit. The combined plan is verified as a whole.
  */
 export async function addProduct(
   p: Project, r: Result, kit: Kit, onProgress?: (f: number) => void, target?: number,
 ): Promise<{ result: Result; added: number; requested: number | null }> {
-  if (!r.calibrated || r.unit.trim().toLowerCase() !== 'cm') throw new Error(`«${kit.name}» usa medidas en cm: la foto debe estar calibrada en cm.`);
+  if (!r.calibrated || r.unit.trim().toLowerCase() !== 'cm') throw new Error(`"${kit.name}" uses measurements in cm: the photo must be calibrated in cm.`);
   const base = r.problem;
   const nextIndex = Math.max(0, ...(r.extras ?? []).map((e) => Number(e.id.replace(/\D/g, '')))) + 1;
   const prefix = `x${nextIndex}_`;
@@ -22,7 +22,7 @@ export async function addProduct(
     defects: [...base.defects, ...r.solution.placements.map((pl) => pl.polygon)],
     templates, spacing: base.spacing, seed: base.seed ?? 1, timeLimitMs: base.timeLimitMs,
   };
-  // Con cantidad pedida se busca hasta ese número (o lo máximo posible si no entra); sin ella, tantos como quepan.
+  // With a requested quantity it searches up to that number (or as many as possible if they do not fit); without one, as many as fit.
   const requested = target && target > 0 ? Math.floor(target) : null;
   const mk = await maximizeKitsAsync(sub, onProgress, { maxKits: requested ?? (kit.kind === 'piece' ? 40 : 12) });
   if (mk.kits === 0) return { result: r, added: 0, requested };
@@ -38,7 +38,7 @@ export async function addProduct(
   };
 }
 
-/** Quita un producto añadido del plan combinado (no recalcula nada: solo lo filtra). */
+/** Removes an added product from the combined plan (it recalculates nothing: it only filters it out). */
 export function removeProduct(r: Result, extraId: string): Result {
   const extra = r.extras?.find((e) => e.id === extraId);
   if (!extra) return r;

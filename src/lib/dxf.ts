@@ -4,15 +4,15 @@ import { bbox } from './poly';
 import { pxPerCm } from './print';
 
 /**
- * Exportación DXF en la variante más compatible con cortadoras láser, plotters y CNC:
- * R12 (AC1009) ASCII, milímetros, polilíneas cerradas, capas con colores estándar.
- *   CUT       (rojo, 1)  contorno de cada pieza colocada — lo que la máquina debe cortar
- *   MATERIAL  (azul, 5)  borde del material  — solo referencia, opcional
- *   DEFECTS   (magenta, 6) zonas excluidas    — solo referencia, opcional
- * Origen en la esquina inferior izquierda del material; eje Y hacia arriba.
+ * DXF export in the variant most compatible with laser cutters, plotters and CNC machines:
+ * R12 (AC1009) ASCII, millimeters, closed polylines, layers with standard colors.
+ *   CUT       (red, 1)  outline of each placed piece — what the machine must cut
+ *   MATERIAL  (blue, 5)  edge of the material  — reference only, optional
+ *   DEFECTS   (magenta, 6) excluded zones    — reference only, optional
+ * Origin at the bottom-left corner of the material; Y axis pointing up.
  */
 export interface DxfOptions {
-  /** Incluye MATERIAL y DEFECTS. Desactivado por defecto: algunas máquinas cortan todas las capas. */
+  /** Includes MATERIAL and DEFECTS. Off by default: some machines cut every layer. */
   reference?: boolean;
 }
 
@@ -24,10 +24,10 @@ const LAYERS = [
 
 export function buildDxf(p: Project, r: Result, opts: DxfOptions = {}): string {
   const k = pxPerCm(r);
-  if (!k) throw new Error('El DXF necesita una calibración en cm o mm.');
+  if (!k) throw new Error('The DXF needs a calibration in cm or mm.');
   const b = bbox(p.contour);
   const hMm = (b.h / k) * 10;
-  // px de la foto → mm, con origen abajo-izquierda y Y hacia arriba
+  // photo px → mm, with origin at bottom-left and Y pointing up
   const mm = ([x, y]: Pt): Pt => [((x - b.x0) / k) * 10, hMm - ((y - b.y0) / k) * 10];
   const f = (v: number) => (Math.round(v * 1000) / 1000).toFixed(3);
 
@@ -66,6 +66,6 @@ export function buildDxf(p: Project, r: Result, opts: DxfOptions = {}): string {
   g(0, 'ENDSEC');
   g(0, 'EOF');
 
-  // Los DXF usan pares código/valor, uno por línea, con CRLF.
+  // DXF files use code/value pairs, one per line, with CRLF.
   return out.join('\r\n') + '\r\n';
 }

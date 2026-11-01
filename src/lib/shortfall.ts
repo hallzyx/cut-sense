@@ -1,11 +1,11 @@
 import type { TemplateKind } from '../types';
 
-/** Texto que se le entrega a Hilo cuando el plan no logró ni un producto completo. */
+/** Text handed to Hilo when the plan could not fit even one complete product. */
 export interface ShortfallInput {
   product: string;
   unit: string;
   pieces: { name: string; kind: TemplateKind; w: number; h: number; qty: number; rotations: number[] }[];
-  /** Caja que envuelve al material, en la unidad actual. */
+  /** Box that wraps the material, in the current unit. */
   materialW: number;
   materialH: number;
   usableArea: number;
@@ -15,19 +15,19 @@ export interface ShortfallInput {
   calibration: { dist: number; unit: string } | null;
 }
 
-const KIND: Record<string, string> = { rect: 'rectángulo', rrect: 'rectángulo redondeado', circle: 'círculo', trapezoid: 'trapecio', irregular: 'silueta en L', custom: 'forma propia' };
-const n = (x: number) => (Math.round(x * 10) / 10).toLocaleString('es', { maximumFractionDigits: 1 });
+const KIND: Record<string, string> = { rect: 'rectangle', rrect: 'rounded rectangle', circle: 'circle', trapezoid: 'trapezoid', irregular: 'L-shaped silhouette', custom: 'custom shape' };
+const n = (x: number) => (Math.round(x * 10) / 10).toLocaleString('en-US', { maximumFractionDigits: 1 });
 
 export function shortfallMessage(s: ShortfallInput): string {
-  const lines = s.pieces.slice(0, 8).map((p) => `- ${p.name.slice(0, 40)}: ${KIND[p.kind] ?? p.kind}, ${n(p.w)} × ${n(p.h)} ${s.unit}, ${p.qty} por producto, giros ${p.rotations.join('/')}°`);
+  const lines = s.pieces.slice(0, 8).map((p) => `- ${p.name.slice(0, 40)}: ${KIND[p.kind] ?? p.kind}, ${n(p.w)} × ${n(p.h)} ${s.unit}, ${p.qty} per product, rotations ${p.rotations.join('/')}°`);
   const big = s.pieces.reduce((a, p) => (p.w * p.h > a.w * a.h ? p : a), s.pieces[0] ?? { w: 0, h: 0, name: '' });
   return [
-    `Optimicé «${s.product.slice(0, 60)}» y no cupo ni un producto completo: solo se colocaron ${s.placed} de ${s.requested} piezas de un solo producto.`,
-    'Piezas de un producto:',
+    `I optimized "${s.product.slice(0, 60)}" and not even one complete product fit: only ${s.placed} of ${s.requested} pieces of a single product were placed.`,
+    'Pieces of one product:',
     ...lines,
-    `Material: caja de ${n(s.materialW)} × ${n(s.materialH)} ${s.unit}, área útil ${n(s.usableArea)} ${s.unit}², separación ${n(s.spacing)} ${s.unit}.`,
-    big.name ? `La pieza más grande es «${big.name.slice(0, 40)}» (${n(big.w)} × ${n(big.h)} ${s.unit}).` : '',
-    s.calibration ? `La escala se calibró con una referencia de ${n(s.calibration.dist)} ${s.calibration.unit}.` : 'La foto no tiene calibración física.',
-    'Ayúdame a entender qué pasó: ¿puede estar mal la calibración o alguna medida? Dime mis opciones y, si de verdad no alcanza, sé sincero y sugiéreme otro objeto más pequeño que sí pueda hacer con este material.',
+    `Material: box of ${n(s.materialW)} × ${n(s.materialH)} ${s.unit}, usable area ${n(s.usableArea)} ${s.unit}², spacing ${n(s.spacing)} ${s.unit}.`,
+    big.name ? `The largest piece is "${big.name.slice(0, 40)}" (${n(big.w)} × ${n(big.h)} ${s.unit}).` : '',
+    s.calibration ? `The scale was calibrated with a reference of ${n(s.calibration.dist)} ${s.calibration.unit}.` : 'The photo has no physical calibration.',
+    'Help me understand what happened: could the calibration or one of the measurements be wrong? Tell me my options and, if it truly does not fit, be honest and suggest a smaller object I can make with this material.',
   ].filter(Boolean).join('\n');
 }
