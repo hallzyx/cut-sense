@@ -11,7 +11,13 @@ CutSense turns a photo of an irregular flat offcut — leather, felt, foam, card
 1. **Digitize** — SAM 3.1 proposes a mask of your material. Accept it, reject it, or edit the outline point by point. Holes found in the mask are suggested as exclusion zones.
 2. **Prepare** — Calibrate the scale with a known length, mark areas that must not be cut, and define your pieces. Start from a ready-made product kit (leather cardholder, bifold wallet) with real measurements in cm. Need a shape that is not in the list? Draw it on the canvas or import it from an SVG; curves become polygons and the piece scales to the size you set.
 3. **Optimize** — A deterministic nesting engine places the pieces. An independent verifier validates every plan before it is shown as valid.
-4. **Iterate and export** — Add a defect or change the order and re-optimize. The result view tells you what changed. Export the verified plan as SVG or PNG.
+   - **Maximize complete sets:** treat the order as one set (for example one wallet) and let CutSense find how many complete sets fit in the offcut.
+   - **AI defect detection:** ask SAM for short phrases such as "scar, stain, hole"; proposed zones are applied only after you accept them.
+4. **Iterate and export** — Add a defect or change the order and re-optimize. The result view tells you what changed. Export the verified plan as SVG or PNG. With a physical calibration you can also print the plan at 1:1 across A4/Letter sheets with per-piece templates, or export a DXF (R12, millimetres, pieces on a `CUT` layer) for cutting machines.
+
+### Using up the whole offcut
+
+After a plan, **Leftover** shows what is left of the material (minus pieces and defects). Plan the next batch on a leftover fragment, or upload a photo of the real leftover after cutting: SAM digitizes the new irregular shape and your order is kept.
 
 ## What does what
 
