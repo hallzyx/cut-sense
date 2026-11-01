@@ -3,6 +3,9 @@
  * Se usa en el servidor (para pedir salida estructurada y validarla) y en el cliente.
  * Nada de lo que devuelve el modelo se acepta sin pasar por validateTurn.
  */
+export const AGENT_NAME = 'Hilo';
+export const AGENT_ROLE = 'tu maestro de patrones';
+
 export const PIECE_KINDS = ['rect', 'rrect', 'circle', 'trapezoid', 'irregular'] as const;
 export type AgentPieceKind = (typeof PIECE_KINDS)[number];
 
@@ -16,18 +19,21 @@ export interface AgentPiece {
   notes: string;
 }
 export interface AgentProposal { name: string; pieces: AgentPiece[]; assumptions: string[] }
-export interface AgentTurn { type: 'question' | 'proposal'; message: string; proposal: AgentProposal }
+/** question: una sola pregunta · proposal: piezas propuestas · redirect: la solicitud está fuera de alcance. */
+export type AgentTurnType = 'question' | 'proposal' | 'redirect';
+export interface AgentTurn { type: AgentTurnType; message: string; quick_replies: string[]; proposal: AgentProposal }
 
-export const LIMITS = { maxPieces: 6, minCm: 0.3, maxCm: 120, maxQty: 50, maxMessage: 2000 };
+export const LIMITS = { maxPieces: 6, minCm: 0.3, maxCm: 120, maxQty: 50, maxMessage: 2000, maxReplies: 4, maxReplyChars: 40 };
 
 /** JSON Schema (subconjunto estricto de Meta: objetos cerrados, todo requerido, sin oneOf/allOf). */
 export const TURN_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['type', 'message', 'proposal'],
+  required: ['type', 'message', 'quick_replies', 'proposal'],
   properties: {
-    type: { type: 'string', enum: ['question', 'proposal'] },
+    type: { type: 'string', enum: ['question', 'proposal', 'redirect'] },
     message: { type: 'string' },
+    quick_replies: { type: 'array', items: { type: 'string' } },
     proposal: {
       type: 'object',
       additionalProperties: false,
@@ -60,12 +66,23 @@ export const TURN_SCHEMA = {
 type Result = { ok: true; turn: AgentTurn } | { ok: false; error: string };
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const round1 = (n: number) => Math.round(n * 10) / 10;
+const countQuestions = (s: string) => (s.match(/\?/g) ?? []).length;
 
 export function validateTurn(raw: unknown): Result {
   const bad = (error: string): Result => ({ ok: false, error });
   if (!isObj(raw)) return bad('la respuesta no es un objeto');
-  if (raw.type !== 'question' && raw.type !== 'proposal') return bad('type debe ser question o proposal');
+  if (raw.type !== 'question' && raw.type !== 'proposal' && raw.type !== 'redirect') return bad('type debe ser question, proposal o redirect');
   if (typeof raw.message !== 'string' || !raw.message.trim() || raw.message.length > LIMITS.maxMessage) return bad('message vacío o demasiado largo');
+  if (raw.type === 'question' && countQuestions(raw.message) !== 1) return bad('una pregunta (type question) debe contener exactamente UNA pregunta; las demás van en turnos siguientes');
+  if (raw.type === 'redirect' && countQuestions(raw.message) > 1) return bad('un redirect no debe hacer más de una pregunta');
+
+  if (!Array.isArray(raw.quick_replies) || raw.quick_replies.length > LIMITS.maxReplies) return bad(`quick_replies: máximo ${LIMITS.maxReplies}`);
+  const replies: string[] = [];
+  for (const r of raw.quick_replies as unknown[]) {
+    if (typeof r !== 'string' || !r.trim() || r.trim().length > LIMITS.maxReplyChars) return bad(`quick_replies: cada opción debe tener 1–${LIMITS.maxReplyChars} caracteres`);
+    if (!replies.includes(r.trim())) replies.push(r.trim());
+  }
+
   if (!isObj(raw.proposal)) return bad('falta proposal');
   const pr = raw.proposal;
   if (typeof pr.name !== 'string' || pr.name.length > 80) return bad('proposal.name');
@@ -95,8 +112,8 @@ export function validateTurn(raw: unknown): Result {
   return {
     ok: true,
     turn: {
-      type: raw.type, message: raw.message.trim(),
-      proposal: raw.type === 'question' ? { name: '', pieces: [], assumptions: [] } : { name: (pr.name as string).trim(), pieces, assumptions: pr.assumptions as string[] },
+      type: raw.type, message: raw.message.trim(), quick_replies: replies,
+      proposal: raw.type === 'proposal' ? { name: (pr.name as string).trim(), pieces, assumptions: pr.assumptions as string[] } : { name: '', pieces: [], assumptions: [] },
     },
   };
 }
