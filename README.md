@@ -67,6 +67,10 @@ SAM 3.1 segments by short noun phrase, so the Digitize step asks what material t
 - Defects are marked by you or suggested from mask holes; stains that the model treats as material must be drawn manually.
 - Exported SVG/PNG files carry a reference-plan warning and the calibration status.
 
+## Save and reopen projects
+
+**Save project (.json)** stores the photo, outline, exclusion zones, calibration, order and plan in one file. **Open a saved project** on the home screen restores it. On load the file is strictly validated and the plan is **verified again**; a tampered or outdated plan is discarded instead of shown as valid. The file includes your photo, so treat it as private.
+
 ## Reproducibility
 
 Every result includes the seed and optimizer version, and "Download problem + solution (JSON)" saves the inputs and output. The same input and seed produce the same plan.
