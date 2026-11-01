@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blankNode, CRITIQUE_SCHEMA, SCENE_SCHEMA, type SceneSpec } from './dsl';
+import { ALIGN_SCHEMA, blankNode, CRITIQUE_SCHEMA, SCENE_SCHEMA, type SceneSpec } from './dsl';
 import { describeRig } from './describe';
 import { fallbackScene, guessFamily } from './fallback';
 import { PRODUCT_FIXTURES } from './fixtures';
@@ -43,6 +43,7 @@ describe('esquema de escena (subconjunto estricto)', () => {
     };
     expect(walk(SCENE_SCHEMA, 1)).toBeLessThanOrEqual(10);
     expect(walk(CRITIQUE_SCHEMA, 1)).toBeLessThanOrEqual(10);
+    expect(walk(ALIGN_SCHEMA, 1)).toBeLessThanOrEqual(10);
   });
 });
 
@@ -102,6 +103,20 @@ describe('roles y familias', () => {
     expect(guessFamily('Funda para el móvil', fixture('celular').pieces).macro).toBe('flat_sleeve');
     expect(guessFamily('algo', [panel(10, 10, 'Posavasos', 6)]).macro).toBe('coaster_stack');
     expect(guessFamily('Estuche de gafas', [panel(8, 30, 'Cuerpo')]).macro).toBe('envelope_flap');
+  });
+  it('reconoce prendas por el nombre del producto o por sus piezas', () => {
+    const jk = fixture('chaqueta').pieces;
+    for (const name of ['Chaqueta de cuero', 'Campera de jean', 'Abrigo largo', 'Blazer entallado', 'Chamarra', 'Camisa de lino', 'Chaleco de fieltro', 'Leather jacket', 'Wool coat', 'Denim vest', 'Sudadera con capucha'])
+      expect(guessFamily(name, jk), name).toEqual({ category: 'garment', macro: 'garment_top' });
+    expect(guessFamily('Modelo nuevo', [panel(50, 60, 'Espalda'), panel(20, 55, 'Manga', 2)]).macro).toBe('garment_top');
+    expect(guessFamily('Funda para el móvil', fixture('celular').pieces).macro).toBe('flat_sleeve');
+    expect(guessRole('Manga')).toBe('sleeve');
+    expect(guessRole('Cuello')).toBe('collar');
+    expect(guessRole('Puño')).toBe('cuff');
+    expect(guessRole('Capucha')).toBe('hood');
+    expect(guessRole('Espalda')).toBe('back');
+    // A phone "sleeve" is not a garment sleeve outside garments.
+    expect(guessRole('Sleeve panel', false)).not.toBe('sleeve');
   });
 });
 
@@ -171,5 +186,92 @@ describe('macros y comprobaciones con los productos de ejemplo', () => {
     expect(s.size[0]).toBeGreaterThan(8);
     expect(s.size[0]).toBeLessThan(11.5);
     expect(s.size[1]).toBeLessThan(2.5);
+  });
+});
+
+describe('prendas y costuras', () => {
+  const f = fixture('chaqueta');
+  const sample = (rig: ReturnType<typeof buildRig>, re: RegExp) => samplePanels(pose(rig, 1)).filter((x) => re.test(rig.nodes[x.node].spec.piece));
+  // The root lies face up: its local +y (towards the collar) is world −z.
+  const u = (p: number[]) => p[0], v = (p: number[]) => -p[2];
+
+  it('una costura une el borde de la pieza al del padre y gira alrededor de ese punto', () => {
+    for (const rot of [0, 40, -70]) {
+      const { rig } = build(base([
+        blankNode('b', { piece: 'Base' }),
+        blankNode('s', { piece: 'Tira', parent: 'b', joint: 'seam', hinge_edge: 'right', anchor_y: 0.2, rotation_deg: rot }),
+      ]), [panel(10, 10, 'Base'), panel(4, 12, 'Tira')]);
+      const ps = pose(rig, 1);
+      const p = [0, -6 + 1.2, 0];
+      ps.map(1, p);
+      expect(p[0]).toBeCloseTo(5, 6);
+      expect(-p[2]).toBeCloseTo(2, 6);
+      expect(sanityCheck(rig).penalty).toBe(0);
+    }
+  });
+
+  it('la chaqueta se arma con las mangas cosidas junto a los hombros, colgando a cada lado', () => {
+    const { rig } = build(fallbackScene(f.productName, f.pieces, f.assumptions), f.pieces);
+    const s = sanityCheck(rig);
+    expect(s.disconnected, s.issues.join('\n')).toBe(0);
+    expect(s.structural, s.issues.join('\n')).toBe(0);
+    expect(s.penalty).toBe(0);
+    expect(rig.loose).toEqual([]);
+    const torso = sample(rig, /^Panel/).flatMap((x) => x.pts);
+    const top = Math.max(...torso.map(v));
+    const torsoFew = torso.filter((_, k) => k % 5 === 0);
+    const sleeves = sample(rig, /^Manga/);
+    expect(sleeves).toHaveLength(2);
+    const sides = sleeves.map((sl) => {
+      expect(rig.nodes[sl.node].spec.joint).toBe('seam');
+      const vs = sl.pts.map(v);
+      expect(top - Math.max(...vs)).toBeLessThan(3); // the cap starts at the shoulder line
+      expect(Math.max(...vs) - Math.min(...vs)).toBeGreaterThan(50); // ~58 cm sleeve hanging almost vertical
+      const gap = Math.min(...sl.pts.filter((_, k) => k % 6 === 0).map((p) => Math.min(...torsoFew.map((q) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2])))));
+      expect(gap).toBeLessThan(1.5); // sewn to the body, not floating beside it
+      return Math.sign(sl.pts.reduce((a, p) => a + u(p), 0));
+    });
+    expect(sides.sort()).toEqual([-1, 1]);
+    const fronts = sample(rig, /^Panel delantero/).map((x) => [Math.min(...x.pts.map(u)), Math.max(...x.pts.map(u))]).sort((a, b) => a[0] - b[0]);
+    expect(fronts[1][0] - fronts[0][1]).toBeLessThan(0.5); // they meet (or cross) at the centre
+    const collar = sample(rig, /^Cuello/)[0].pts.map(v);
+    expect(top - Math.max(...collar)).toBeLessThan(1.5);
+  });
+
+  it('la comprobación detecta mangas en cruz, sueltas o encima del cuerpo', () => {
+    const torso = [
+      blankNode('back', { piece: 'Panel trasero' }),
+      blankNode('f0', { piece: 'Panel delantero', instance: 0, parent: 'back', joint: 'stack', anchor_x: -0.24 }),
+      blankNode('f1', { piece: 'Panel delantero', instance: 1, parent: 'back', joint: 'stack', anchor_x: 0.24, layer: 1 }),
+      blankNode('c', { piece: 'Cuello', parent: 'back', joint: 'hinge', hinge_edge: 'top', hinge_angle_deg: 180 }),
+      blankNode('p0', { piece: 'Bolsillo', instance: 0, parent: 'f0', joint: 'stack', anchor_y: -0.25 }),
+      blankNode('p1', { piece: 'Bolsillo', instance: 1, parent: 'f1', joint: 'stack', anchor_y: -0.25 }),
+    ];
+    const run = (sleeves: SceneSpec['nodes']) => {
+      const { rig } = build(base([...torso, ...sleeves], { category: 'garment' }), f.pieces);
+      return sanityCheck(rig);
+    };
+    // Straight out in a cross, as the model drew it.
+    const cross = run([
+      blankNode('m0', { piece: 'Manga', instance: 0, parent: 'back', joint: 'hinge', hinge_edge: 'left', anchor_y: 0.3, hinge_angle_deg: 10 }),
+      blankNode('m1', { piece: 'Manga', instance: 1, parent: 'back', joint: 'hinge', hinge_edge: 'right', anchor_y: 0.3, hinge_angle_deg: 10 }),
+    ]);
+    expect(cross.issues.filter((x) => /sale horizontal/.test(x))).toHaveLength(2);
+    expect(cross.structural).toBeGreaterThanOrEqual(2);
+    // Off the body, not touching anything.
+    const loose = run([
+      blankNode('m0', { piece: 'Manga', instance: 0, parent: 'back', joint: 'stack', anchor_x: -1 }),
+      blankNode('m1', { piece: 'Manga', instance: 1, parent: 'back', joint: 'stack', anchor_x: 1 }),
+    ]);
+    expect(loose.disconnected).toBe(2);
+    expect(loose.issues.join(' ')).toMatch(/flota separada/);
+    // Lying on top of the body.
+    const onTop = run([
+      blankNode('m0', { piece: 'Manga', instance: 0, parent: 'f0', joint: 'stack', layer: 1 }),
+      blankNode('m1', { piece: 'Manga', instance: 1, parent: 'f1', joint: 'stack', layer: 1 }),
+    ]);
+    expect(onTop.issues.join(' ')).toMatch(/encima del cuerpo/);
+    // Any of them ranks below the rule-based jacket (penalty 0), so the pipeline would never pick it.
+    for (const s of [cross, loose, onTop]) expect(s.penalty).toBeGreaterThan(0);
   });
 });

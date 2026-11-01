@@ -1,7 +1,7 @@
 import express from 'express';
 import type { AddressInfo } from 'node:net';
 import { describe, expect, it } from 'vitest';
-import { checkCritique, checkInput, critiqueScene, EXAMPLES, generateScene, registerAssemblyRoutes, AssemblyError } from './assembly';
+import { alignScene, checkAlign, checkCritique, checkInput, critiqueScene, EXAMPLES, generateScene, registerAssemblyRoutes, AssemblyError } from './assembly';
 import { blankNode, SCENE_SCHEMA } from '../src/lib/assembly/dsl';
 import { validateScene } from '../src/lib/assembly/validate';
 
@@ -113,6 +113,39 @@ describe('vista 3D (servidor): revisión con imagen', () => {
   });
 });
 
+describe('vista 3D (servidor): verificación de alineación', () => {
+  const body = { ...input, scene, issues: ['«Manga» (m1) flota separada 12 cm del resto del modelo.', ''], sanity: 'Medidas…\n- algo', image: IMG };
+  it('valida escena, problemas e imagen opcional', () => {
+    const bad = (b: unknown, code: string) => { try { checkAlign(b); throw new Error('no lanzó'); } catch (e) { expect((e as AssemblyError).code).toBe(code); } };
+    bad({ ...body, issues: [] }, 'ASSEMBLY_BAD_REQUEST');
+    bad({ ...body, issues: 'x' }, 'ASSEMBLY_BAD_REQUEST');
+    bad({ ...body, scene: { nodes: 'x' } }, 'ASSEMBLY_BAD_REQUEST');
+    bad({ ...body, image: 'https://evil.test/x.png' }, 'ASSEMBLY_BAD_IMAGE');
+    const ok = checkAlign({ ...body, issues: Array(30).fill('a\nb'.repeat(400)) });
+    expect(ok.issues).toHaveLength(12);
+    expect(ok.issues[0].length).toBeLessThanOrEqual(300);
+    expect(ok.issues[0]).not.toMatch(/\n/);
+    expect(checkAlign({ ...body, image: undefined }).image).toBe('');
+  });
+
+  it('envía los problemas medidos y la escena explícita y devuelve la escena corregida', async () => {
+    const { f, calls } = fakeFetch([{ changes: ['Manga unida a la sisa'], scene }]);
+    const out = await alignScene(checkAlign(body), cfg(f), signal());
+    expect(out.changes).toEqual(['Manga unida a la sisa']);
+    expect(out.scene.macro.type).toBe('bifold_wallet');
+    const req = calls[0].body;
+    expect(req.response_format.json_schema).toMatchObject({ name: 'cutsense_assembly_align', strict: true });
+    const [text, image] = req.messages[1].content;
+    expect(text.text).toContain('flota separada 12 cm');
+    expect(text.text).toContain('"type":"none"');
+    expect(image).toEqual({ type: 'image_url', image_url: { url: IMG } });
+    // Without an image the request is text only.
+    const t = fakeFetch([{ changes: [], scene }]);
+    await alignScene(checkAlign({ ...body, image: undefined }), cfg(t.f), signal());
+    expect(typeof t.calls[0].body.messages[1].content).toBe('string');
+  });
+});
+
 describe('vista 3D (servidor): rutas', () => {
   async function serve(c: Parameters<typeof registerAssemblyRoutes>[1]) {
     const app = express();
@@ -146,6 +179,15 @@ describe('vista 3D (servidor): rutas', () => {
     const r = await post(`${s.url}/api/assembly/critique`, { ...input, scene, image: 'x', round: 1 });
     expect(r.status).toBe(400);
     expect((await r.json()).code).toBe('ASSEMBLY_BAD_IMAGE');
+    expect((await post(`${s.url}/api/assembly/align`, { ...input, scene, issues: [] })).status).toBe(400);
+    await s.close();
+  });
+
+  it('la verificación responde 200 con la escena corregida', async () => {
+    const s = await serve({ ...cfg(fakeFetch([{ changes: ['ok'], scene }]).f), rateLimit: () => false });
+    const r = await post(`${s.url}/api/assembly/align`, { ...input, scene, issues: ['Manga suelta'] });
+    expect(r.status).toBe(200);
+    expect(await r.json()).toMatchObject({ changes: ['ok'], scene: { macro: { type: 'bifold_wallet' } }, model: 'muse-spark-1.3' });
     await s.close();
   });
 });

@@ -23,6 +23,11 @@ export interface SceneRequest { productName: string; pieces: AgentPiece[]; assum
 export interface SceneResponse { scene: unknown; warnings: string[]; model: string; latencyMs: number }
 export interface CritiqueResponse { verdict: 'ok' | 'revise'; score: number; issues: string[]; scene: unknown; warnings: string[]; model: string; latencyMs: number }
 
+export interface AlignResponse { changes: string[]; scene: unknown; warnings: string[]; model: string; latencyMs: number }
+
 export const requestScene = (req: SceneRequest, signal?: AbortSignal) => post<SceneResponse>('/api/assembly', req, signal);
 export const requestCritique = (req: SceneRequest & { scene: SceneSpec; image: string; sanity: string; round: number }, signal?: AbortSignal) =>
   post<CritiqueResponse>('/api/assembly/critique', req, signal);
+/** Final verification: the model fixes the problems the deterministic checks still measure. */
+export const requestAlign = (req: SceneRequest & { scene: SceneSpec; issues: string[]; sanity: string; image?: string }, signal?: AbortSignal) =>
+  post<AlignResponse>('/api/assembly/align', req, signal);
