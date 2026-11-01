@@ -42,10 +42,31 @@ export interface Result {
   problemKey: string;
   /** Presente con fill = 'maxKits': juegos completos colocados y piezas por juego. */
   kits?: { n: number; perKit: Record<string, number> };
+  /** Productos añadidos con el material sobrante (después del pedido principal). */
+  extras?: ExtraProduct[];
   ppu: number;
   unit: string;
   calibrated: boolean;
   problem: Problem;
+}
+
+/** Producto adicional planificado sobre el sobrante. Sus plantillas siguen a las del pedido principal. */
+export interface ExtraProduct {
+  id: string;
+  name: string;
+  kind: 'kit' | 'piece';
+  defs: TemplateDef[];
+  kits: { n: number; perKit: Record<string, number> };
+}
+
+/** Plantillas del pedido y de los productos añadidos, en el mismo orden que result.problem.templates. */
+export const allDefs = (p: Project, r?: Pick<Result, 'extras'> | null): TemplateDef[] => [...p.defs, ...(r?.extras?.flatMap((e) => e.defs) ?? [])];
+
+/** Piezas por juego de una plantilla cuando hay varios juegos (para etiquetar «A1·2»), si aplica. */
+export function kitQtyFor(r: Pick<Result, 'kits' | 'extras'>, templateId: string): number | undefined {
+  if (r.kits && r.kits.n > 1 && templateId in r.kits.perKit) return r.kits.perKit[templateId];
+  const e = r.extras?.find((x) => x.kind === 'kit' && x.kits.n > 1 && templateId in x.kits.perKit);
+  return e?.kits.perKit[templateId];
 }
 
 export const emptyProject = (): Project => ({
@@ -78,8 +99,8 @@ export function defaultDefs(): TemplateDef[] {
   return [mk(0, 'rect', 20, 12, 3), mk(1, 'circle', 13, 13, 3), mk(2, 'trapezoid', 18, 11, 2), mk(3, 'irregular', 16, 12, 2)];
 }
 
-export function kitToDefs(kit: Kit): TemplateDef[] {
-  return kit.pieces.map((k, i) => ({ id: `t${i}`, name: k.name, color: PALETTE[i % PALETTE.length], kind: k.kind, w: k.w, h: k.h, qty: k.qty, rotations: k.rotations ?? [0, 180] }));
+export function kitToDefs(kit: Kit, prefix = 't', offset = 0): TemplateDef[] {
+  return kit.pieces.map((k, i) => ({ id: `${prefix}${i}`, name: k.name, color: PALETTE[(offset + i) % PALETTE.length], kind: k.kind, w: k.w, h: k.h, qty: k.qty, rotations: k.rotations ?? [0, 180] }));
 }
 
 export function buildProblem(p: Project): Problem | null {

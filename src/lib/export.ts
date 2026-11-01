@@ -2,7 +2,7 @@ import type { Project, Result } from '../state';
 import { fmt, calibPx } from '../state';
 import { ringPath } from './poly';
 import { templateLetter } from '../components/Stage';
-import { pieceLabel } from '../state';
+import { allDefs, kitQtyFor, pieceLabel } from '../state';
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const PAT = [
@@ -14,22 +14,22 @@ const PAT = [
 /** SVG del estado validado actual. Solo debe invocarse con un resultado vigente y verificado. */
 export function buildSvg(p: Project, r: Result, includePhoto: boolean): { svg: string; w: number; h: number } {
   const img = p.image!;
-  const legendH = 60 + p.defs.length * 22 + 70;
+  const legendH = 60 + allDefs(p, r).length * 22 + 70;
   const W = img.w, H = img.h + legendH;
   const m = r.solution.metrics;
   const calibNote = r.calibrated
     ? `Calibrado: ${fmt(r.ppu, 3)} px = 1 ${r.unit} (referencia ${fmt(p.calib!.dist)} ${r.unit} = ${fmt(calibPx(p.calib!))} px)`
     : 'Sin calibración: unidades relativas (1 u = 1 % del ancho de la imagen). Medidas no físicas.';
-  const defs = p.defs.map((d, i) =>
+  const defs = allDefs(p, r).map((d, i) =>
     `<pattern id="p${i}" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${d.color}" fill-opacity=".92"/>${PAT[i % PAT.length]}</pattern>`).join('');
   const pieces = r.solution.placements.map((pl) => {
-    const ti = p.defs.findIndex((d) => d.id === pl.templateId);
+    const ti = allDefs(p, r).findIndex((d) => d.id === pl.templateId);
     const cx = pl.polygon.reduce((s, q) => s + q[0], 0) / pl.polygon.length;
     const cy = pl.polygon.reduce((s, q) => s + q[1], 0) / pl.polygon.length;
     return `<path d="${ringPath(pl.polygon)}" fill="url(#p${ti})" stroke="#000" stroke-width="1.5"/>` +
-      `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">${pieceLabel(ti, pl.instance, r.kits && r.kits.n > 1 ? r.kits.perKit[pl.templateId] : undefined)}</text>`;
+      `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">${pieceLabel(ti, pl.instance, kitQtyFor(r, pl.templateId))}</text>`;
   }).join('');
-  const legend = p.defs.map((d, i) => {
+  const legend = allDefs(p, r).map((d, i) => {
     const y = img.h + 70 + i * 22;
     return `<rect x="16" y="${y - 12}" width="18" height="14" fill="url(#p${i})" stroke="#000"/><text x="42" y="${y}" font-size="13">${templateLetter(i)} — ${esc(d.name)}: ${m.placed[d.id] ?? 0}/${m.requested[d.id] ?? d.qty} colocadas (${fmt(d.w)}×${fmt(d.h)} ${esc(r.unit)})</text>`;
   }).join('');

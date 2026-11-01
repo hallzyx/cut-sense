@@ -1,5 +1,5 @@
 import type { Pt, Ring } from '../types';
-import { pieceLabel, type Project, type Result } from '../state';
+import { allDefs, kitQtyFor, pieceLabel, type Project, type Result } from '../state';
 import { bbox, ringPath } from './poly';
 
 /** Plano a escala real (1:1): SVG en centímetros y hojas imprimibles con marcas de ensamblaje. */
@@ -36,8 +36,8 @@ export function planInCm(p: Project, r: Result): PlanCm | null {
   const b = bbox(p.contour);
   const cm = (q: Pt): Pt => [(q[0] - b.x0) / k + MARGIN, (q[1] - b.y0) / k + MARGIN];
   const pieces = r.solution.placements.map((pl) => {
-    const tpl = p.defs.findIndex((d) => d.id === pl.templateId);
-    return { ring: pl.polygon.map(cm), label: pieceLabel(tpl, pl.instance, r.kits && r.kits.n > 1 ? r.kits.perKit[pl.templateId] : undefined), tpl };
+    const tpl = allDefs(p, r).findIndex((d) => d.id === pl.templateId);
+    return { ring: pl.polygon.map(cm), label: pieceLabel(tpl, pl.instance, kitQtyFor(r, pl.templateId)), tpl };
   });
   return { w: b.w / k + 2 * MARGIN, h: b.h / k + 2 * MARGIN, material: p.contour.map(cm), defects: p.defects.map((d) => d.map(cm)), pieces, k };
 }
@@ -87,14 +87,14 @@ export function buildPlanSvgCm(p: Project, r: Result): { svg: string; wCm: numbe
   if (!plan) throw new Error('El plano a escala real necesita una calibración en cm o mm.');
   const W = Math.max(plan.w, 17.5), H = plan.h + FOOTER_H;
   const m = r.solution.metrics;
-  const legend = p.defs.map((d, i) => `<text x="${MARGIN}" y="${n(plan.h + 0.6 + i * 0.6)}" font-size=".45">${letter(i)} — ${esc(d.name)}: ${m.placed[d.id] ?? 0}/${m.requested[d.id] ?? d.qty} (${n(d.w)}×${n(d.h)} ${esc(r.unit)})</text>`).join('');
+  const legend = allDefs(p, r).map((d, i) => `<text x="${MARGIN}" y="${n(plan.h + 0.6 + i * 0.6)}" font-size=".45">${letter(i)} — ${esc(d.name)}: ${m.placed[d.id] ?? 0}/${m.requested[d.id] ?? d.qty} (${n(d.w)}×${n(d.h)} ${esc(r.unit)})</text>`).join('');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${n(W)}cm" height="${n(H)}cm" viewBox="0 0 ${n(W)} ${n(H)}" font-family="Arial, sans-serif">
 <title>CutSense — plano a escala 1:1</title>
-${defsMarkup(p.defs.length)}
+${defsMarkup(allDefs(p, r).length)}
 <rect width="${n(W)}" height="${n(H)}" fill="#fff"/>
 ${bodyMarkup(plan)}
 <g>${legend}</g>
-${scaleCheck(MARGIN, plan.h + 0.6 + p.defs.length * 0.6)}
+${scaleCheck(MARGIN, plan.h + 0.6 + allDefs(p, r).length * 0.6)}
 <text x="${MARGIN}" y="${n(H - 0.4)}" font-size=".4" fill="#444">PLANO REFERENCIAL a escala 1:1 (1 unidad = 1 cm). Verifica el cuadro de 5 cm al imprimir. No es una instrucción certificada para maquinaria.</text>
 </svg>`;
   return { svg, wCm: W, hCm: H };
@@ -122,7 +122,7 @@ export function buildPrintHtml(p: Project, r: Result, paper: PaperKey): string {
   const P = PAPERS[paper];
   const L = layoutTiles(plan.w, plan.h, paper);
   const [pageW, pageH] = L.orientation === 'portrait' ? [P.w, P.h] : [P.h, P.w];
-  const defs = defsMarkup(p.defs.length);
+  const defs = defsMarkup(allDefs(p, r).length);
   const body = bodyMarkup(plan);
   const total = L.cols * L.rows;
   const m = r.solution.metrics;
@@ -138,7 +138,7 @@ export function buildPrintHtml(p: Project, r: Result, paper: PaperKey): string {
     }
   }
 
-  const tplBlocks = p.defs.map((d, i) => {
+  const tplBlocks = allDefs(p, r).map((d, i) => {
     const t = r.problem.templates[i];
     const placed = m.placed[d.id] ?? 0;
     if (!t || !placed) return '';
