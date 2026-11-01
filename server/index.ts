@@ -18,6 +18,7 @@
  */
 import express from 'express';
 import { agentTurn, AgentError } from './agent';
+import { registerAssemblyRoutes } from './assembly';
 import { buildObjectPrompt, decodeMaskToRaster, parseImageStream, recordsOfKind, type ResponsesEvent } from '@meta-sam/parser';
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -101,6 +102,7 @@ async function callSam(image: string, w: number, h: number, concept: string, poi
 
 const app = express();
 app.use(express.json({ limit: '12mb' }));
+registerAssemblyRoutes(app, { base: API_BASE || undefined, key: SAM_API_KEY, model: AGENT_MODEL });
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, sam: Boolean(SAM_API_URL && SAM_API_KEY), model: SAM_MODEL, agent: Boolean(API_BASE && SAM_API_KEY), agentModel: AGENT_MODEL });
@@ -117,7 +119,7 @@ app.post('/api/agent', async (req, res) => {
     return;
   }
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 40_000);
+  const timer = setTimeout(() => ctl.abort(), 60_000);
   try {
     const turn = await agentTurn({ messages: req.body?.messages, context: req.body?.context }, { base: API_BASE, key: SAM_API_KEY, model: AGENT_MODEL, signal: ctl.signal });
     res.json({ turn, model: AGENT_MODEL });
