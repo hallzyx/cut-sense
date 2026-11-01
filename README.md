@@ -17,6 +17,8 @@ CutSense turns a photo of an irregular flat offcut — leather, felt, foam, card
 
 ### Using up the whole offcut
 
+After a plan you can also **try another product with what is left**: pick a complete kit or a loose piece (keychains, coasters, bookmarks) and CutSense fits as many as it can around the pieces already placed. The combined plan is verified as a whole, and each added product can be removed.
+
 After a plan, **Leftover** shows what is left of the material (minus pieces and defects). Plan the next batch on a leftover fragment, or upload a photo of the real leftover after cutting: SAM digitizes the new irregular shape and your order is kept.
 
 ## What does what

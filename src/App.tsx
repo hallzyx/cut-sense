@@ -34,7 +34,7 @@ export default function App() {
 
   const start = (image: NonNullable<Project['image']>, calib: Project['calib'] = null, kitId?: string, keep?: { defs: Project['defs']; spacing: number }) => {
     const kit = KITS.find((k) => k.id === kitId);
-    setP({ ...emptyProject(), image, calib, defs: keep?.defs ?? (kit ? kitToDefs(kit) : defaultDefs()), spacing: keep?.spacing ?? 0, fill: keep ? 'maxKits' : 'fixed' });
+    setP({ ...emptyProject(), image, calib, defs: keep?.defs ?? (kit ? kitToDefs(kit) : defaultDefs()), spacing: keep?.spacing ?? 0, fill: keep || kit ? 'maxKits' : 'fixed' });
     setKey((k) => k + 1);
     setError(null);
   };

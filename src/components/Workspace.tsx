@@ -7,7 +7,7 @@ import { loadImage, maskFromModelPng, maskToPolygon, segmentLocal } from '../lib
 import { absArea, bbox, circleRing, pointInRing, ringProblem } from '../lib/poly';
 import { buildSvg, download, svgToPng } from '../lib/export';
 import {
-  buildProblem, calibPx, centroid, diffResults, kitToDefs, fmt, problemKey, pxPerUnit, unitLabel,
+  allDefs, buildProblem, calibPx, centroid, kitQtyFor, diffResults, kitToDefs, fmt, problemKey, pxPerUnit, unitLabel,
   type Calib, type Project, type Result, type TemplateDef,
 } from '../state';
 import Stage, { templateLetter, type Mode, type SamPoint } from './Stage';
@@ -16,6 +16,7 @@ import PieceDialog, { type NewPiece } from './PieceDialog';
 import { buildDxf } from '../lib/dxf';
 import { buildPlanSvgCm, buildPrintHtml, PAPERS, pxPerCm, type PaperKey } from '../lib/print';
 import { KITS } from '../lib/kits';
+import { addProduct, removeProduct } from '../lib/products';
 
 interface Props {
   p: Project;
@@ -67,6 +68,7 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto }: Props) 
   const [leftover, setLeftover] = useState<{ fragments: Fragment[]; area: number; materialArea: number } | null>(null);
   const [detectPhrases, setDetectPhrases] = useState('scar, stain, hole');
   const [detected, setDetected] = useState<{ ring: Ring; phrase: string }[]>([]);
+  const [productId, setProductId] = useState('');
   const [dxfRef, setDxfRef] = useState(false);
   const [paper, setPaper] = useState<PaperKey>('A4');
   const [pieceDialog, setPieceDialog] = useState<'draw' | 'svg' | null>(null);
@@ -252,8 +254,8 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto }: Props) 
       return;
     }
     setErr(null);
-    setP((q) => ({ ...q, defs: kitToDefs(kit), spacing: Math.max(q.spacing, 0.2) }));
-    setFlash(`Kit «${kit.name}» cargado (${kit.pieces.reduce((s, x) => s + x.qty, 0)} piezas, medidas en cm). Revisa cantidades y rotaciones.`);
+    setP((q) => ({ ...q, defs: kitToDefs(kit), spacing: Math.max(q.spacing, 0.2), fill: 'maxKits' }));
+    setFlash(`Kit «${kit.name}» cargado (${kit.pieces.reduce((s, x) => s + x.qty, 0)} piezas por juego, medidas en cm). Al optimizar, la app buscará cuántos juegos completos caben.`);
   };
   const toggleRot = (d: TemplateDef, r: number) => {
     const has = d.rotations.includes(r);
@@ -288,6 +290,21 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto }: Props) 
 
   /* ---------- sobrante ---------- */
   const showLeftover = () => { if (result) setLeftover(computeRemainder(result.problem, result.solution.placements)); };
+  const tryProduct = async () => {
+    const kit = KITS.find((k) => k.id === productId);
+    if (!kit || !result) return;
+    setErr(null); setBusy('opt'); setProgress(0);
+    await new Promise((r) => setTimeout(r, 30));
+    try {
+      const out = await addProduct(p, result, kit, (f) => setProgress(f));
+      if (out.added === 0) setFlash(`En el sobrante no cabe ni un juego completo de «${kit.name}». El plan anterior no cambió.`);
+      else {
+        setResult(out.result); setLeftover(null);
+        setFlash(`Se añadieron ${out.added} ${kit.kind === 'piece' ? 'pieza(s)' : 'juego(s) completo(s)'} de «${kit.name}» con lo que sobró.`);
+      }
+    } catch (e) { setErr((e as Error).message); } finally { setBusy(null); }
+  };
+  const dropProduct = (id: string) => { if (result) { setResult(removeProduct(result, id)); setLeftover(null); } };
   const useFragment = (i: number) => {
     const f = leftover?.fragments[i];
     if (!f) return;
@@ -382,7 +399,9 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto }: Props) 
 
   const m = result?.solution.metrics;
   const sel = selPlacement !== null && result ? result.solution.placements[selPlacement] : null;
-  const selDef = sel ? p.defs.find((d) => d.id === sel.templateId) : null;
+  const resultDefs = allDefs(p, result);
+  const extraPieces = m ? (result?.extras ?? []).reduce((t, e) => t + e.defs.reduce((a, d) => a + (m.placed[d.id] ?? 0), 0), 0) : 0;
+  const selDef = sel ? resultDefs.find((d) => d.id === sel.templateId) : null;
   const canNext1 = !contourErr;
   const stageMode: Mode = draft ? 'view' : mode;
 
@@ -417,14 +436,14 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto }: Props) 
               draft={draft} onDraft={setDraft} onCloseDraft={closeDraft}
               calibPts={calibPts} onCalibPts={setCalibPts} samPoints={samPoints} onSamPoints={setSamPoints}
               placements={step === 3 && result ? result.solution.placements : []} templates={result ? result.problem.templates : []} stale={stale}
-              kitQty={result?.kits && result.kits.n > 1 ? result.kits.perKit : undefined}
+              kitQty={result ? Object.fromEntries(result.problem.templates.flatMap((t) => { const q = kitQtyFor(result, t.id); return q ? [[t.id, q] as const] : []; })) : undefined}
               defectProposals={detected.map((d) => d.ring)}
               leftover={step === 3 && leftover && !stale ? leftover.fragments.map((f) => f.outer) : undefined} outlineKind={step === 3 && result?.verify.valid && !stale ? 'verified' : p.edited || p.source === 'manual' ? 'human' : 'ai'}
               selPlacement={selPlacement} onSelPlacement={setSelPlacement}
             />
             {step === 3 && result && result.problem.templates.length > 0 && (
               <ul className="legend" aria-label="Leyenda">
-                {p.defs.map((d, i) => <li key={d.id}><i style={{ background: d.color }} />{templateLetter(i)} · {d.name}</li>)}
+                {resultDefs.map((d, i) => <li key={d.id}><i style={{ background: d.color }} />{templateLetter(i)} · {d.name}</li>)}
                 <li><i className="hatch" />Zona excluida</li>
               </ul>
             )}
@@ -620,7 +639,7 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto }: Props) 
                     ) : result.solution.placements.length === 0 ? (
                       <div className="alert error" role="status"><b>No se encontró una colocación válida.</b> Posibles causas: piezas más grandes que el material, separación demasiado alta, o zonas excluidas que cubren casi todo.</div>
                     ) : (
-                      <div className="alert ok" role="status"><b>Plano válido y verificado.</b> {result.kits ? (result.kits.n === 0 ? 'Se muestra el mejor plan parcial de un solo juego.' : `Caben ${result.kits.n} juego${result.kits.n > 1 ? 's' : ''} completo${result.kits.n > 1 ? 's' : ''} (${m!.placedCount} piezas). Cada pieza lleva su número de juego («A1·2»).`) : m!.placedCount < m!.requestedCount ? 'Solución parcial: algunas piezas quedaron pendientes.' : 'Se colocó todo el pedido.'}</div>
+                      <div className="alert ok" role="status"><b>Plano válido y verificado.</b> {result.kits ? (result.kits.n === 0 ? 'Se muestra el mejor plan parcial de un solo juego.' : `Caben ${result.kits.n} juego${result.kits.n > 1 ? 's' : ''} completo${result.kits.n > 1 ? 's' : ''} (${m!.placedCount - extraPieces} piezas)${extraPieces ? ` y ${extraPieces} pieza(s) de otros productos` : ''}. Cada pieza lleva su número de juego («A1·2»).`) : m!.placedCount < m!.requestedCount ? 'Solución parcial: algunas piezas quedaron pendientes.' : 'Se colocó todo el pedido.'}</div>
                     )}
 
                     <div className="score-row">
@@ -644,7 +663,7 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto }: Props) 
                     <table className="tbl">
                       <thead><tr><th>Pieza</th><th>Colocadas</th><th>Pendientes</th></tr></thead>
                       <tbody>
-                        {p.defs.map((d, i) => (
+                        {resultDefs.map((d, i) => (
                           <tr key={d.id}><td><i className="dot" style={{ background: d.color }} />{templateLetter(i)} · {d.name}</td><td>{m!.placed[d.id] ?? 0}/{m!.requested[d.id] ?? 0}</td><td>{m!.pending[d.id] ?? 0}</td></tr>
                         ))}
                       </tbody>
@@ -669,6 +688,23 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto }: Props) 
                             <button className="link" onClick={() => setLeftover(null)}>Ocultar sobrante</button>
                           </>
                         )}
+                        <div className="stack">
+                          <p className="h5">Probar otro producto con lo que sobró</p>
+                          <p className="caption">El plan actual queda fijo; la app busca cuántos juegos completos (o piezas sueltas) del nuevo producto caben en el sobrante.</p>
+                          <select aria-label="Otro producto" value={productId} onChange={(e) => setProductId(e.target.value)}>
+                            <option value="">Elegir producto…</option>
+                            <optgroup label="Kits completos">{KITS.filter((k) => k.kind !== 'piece').map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}</optgroup>
+                            <optgroup label="Piezas sueltas">{KITS.filter((k) => k.kind === 'piece').map((k) => <option key={k.id} value={k.id}>{k.name} — {k.blurb}</option>)}</optgroup>
+                          </select>
+                          <button className="btn dark sm" disabled={!productId || !!busy || result.unit.trim().toLowerCase() !== 'cm'} onClick={tryProduct}>Calcular con el sobrante</button>
+                          {result.unit.trim().toLowerCase() !== 'cm' && <p className="caption">Calibra la foto en cm para usar productos con medidas reales.</p>}
+                          {(result.extras ?? []).map((e) => (
+                            <div key={e.id} className="row wrap">
+                              <span className="caption"><b>{e.name}:</b> {e.kind === 'piece' ? `${e.kits.n} pieza(s)` : `${e.kits.n} juego(s)`}</span>
+                              <button className="link danger" onClick={() => dropProduct(e.id)}>Quitar</button>
+                            </div>
+                          ))}
+                        </div>
                         <label className="btn ghost sm">
                           <input type="file" hidden accept="image/jpeg,image/png,image/webp" aria-label="Foto del sobrante" onChange={(e) => {
                             const f = e.target.files?.[0];
