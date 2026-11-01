@@ -63,8 +63,6 @@ CutSense is honest about its limits, and so is this README:
 
 ## Screenshots
 
-> The captures below come from an earlier Spanish build of the interface. Layout and behaviour are the same in the English build.
-
 | Prepare: excluded zones proposed by SAM | Prepare: editing a kit piece |
 |---|---|
 | ![Prepare step with two defect zones proposed by SAM](design/ux/screenshots/f5-1280-light.png) | ![Prepare step with a kit piece open for editing](design/ux/screenshots/f7-1280-light.png) |
