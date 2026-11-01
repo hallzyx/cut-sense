@@ -37,7 +37,11 @@ interface Props {
   /** Fragmentos del material que sobran tras el plan. */
   leftover?: Ring[];
   /** Provenance of the material outline: AI proposal, human-corrected, or verified plan. */
-  outlineKind: 'ai' | 'human' | 'verified';
+  outlineKind: 'ai' | 'human' | 'verified' | 'stale';
+  /** Piezas desaturadas (vista de sobrante). */
+  dimPieces?: boolean;
+  /** Línea de cota sobre el lienzo (p. ej. «ancho = ? cm» al calibrar por ancho). */
+  guide?: { x0: number; x1: number; y: number; label: string } | null;
   selPlacement: number | null;
   onSelPlacement: (i: number | null) => void;
 }
@@ -51,7 +55,7 @@ const PATTERN_SHAPES = [
   (c: string) => <path d="M4,0 V8" stroke={c} strokeWidth="1.6" />,
 ];
 
-const OV = { halo: 'rgba(255,255,255,.78)', casing: '#0B0F0D', ai: '#4D7CFF', human: '#FF5A1F', verified: '#5BD69A', defect: '#FF3B30' };
+const OV = { halo: 'rgba(255,255,255,.78)', casing: '#0B0F0D', ai: '#4D7CFF', human: '#FF5A1F', verified: '#5BD69A', stale: '#F2B544', defect: '#FF3B30' };
 
 /** Tri-stroke: light halo > dark casing > colour core, legible on any photo. */
 function Tri({ d, color, sw, dash, fill, fillOpacity, onPointerDown, cursor }: { d: string; color: string; sw: number; dash?: string; fill?: string; fillOpacity?: number; onPointerDown?: (e: React.PointerEvent) => void; cursor?: string }) {
@@ -174,7 +178,7 @@ export default function Stage(p: Props) {
       {p.showImage ? <image href={p.src} width={p.w} height={p.h} /> : <rect width={p.w} height={p.h} fill="#f2f4f5" />}
 
       {p.contour.length > 2 && (
-        <Tri d={ringPath(p.contour)} color={OV[p.outlineKind]} sw={sw * (p.outlineKind === 'verified' ? 2 : 1.4)} dash={p.outlineKind === 'ai' ? `${8 / k()} ${5 / k()}` : undefined} fill={OV[p.outlineKind]} fillOpacity={p.mode === 'contour' ? 0.16 : 0.07} />
+        <Tri d={ringPath(p.contour)} color={OV[p.outlineKind]} sw={sw * (p.outlineKind === 'verified' ? 2 : 1.4)} dash={p.outlineKind === 'ai' ? `${8 / k()} ${5 / k()}` : p.outlineKind === 'stale' ? `${1 / k()} ${7 / k()}` : undefined} fill={OV[p.outlineKind]} fillOpacity={p.mode === 'contour' ? 0.16 : 0.07} />
       )}
 
       {p.proposal && p.proposal.length > 2 && (
@@ -204,7 +208,7 @@ export default function Stage(p: Props) {
         <Tri key={`dp${i}`} d={ringPath(d)} color={OV.ai} sw={sw * 1.3} dash={`${6 / k()} ${4 / k()}`} fill={OV.ai} fillOpacity={0.3} />
       ))}
 
-      <g opacity={p.stale ? 0.4 : 1}>
+      <g opacity={p.stale ? 0.4 : 1} style={p.stale || p.dimPieces ? { filter: `grayscale(${p.stale ? 1 : 0.9})${p.dimPieces ? ' brightness(1.15)' : ''}` } : undefined}>
         {p.placements.map((pl, i) => {
           const ti = p.templates.findIndex((t) => t.id === pl.templateId);
           const c = centroid(pl.polygon);
@@ -244,6 +248,16 @@ export default function Stage(p: Props) {
         <g>
           <polyline points={[...p.draft, ...(hover ? [hover] : [])].map((v) => v.join(',')).join(' ')} fill="none" stroke="#000" strokeWidth={sw * 1.5} strokeDasharray={`${5 / k()} ${4 / k()}`} />
           {p.draft.map((v, i) => <circle key={i} cx={v[0]} cy={v[1]} r={i === 0 ? r * 1.4 : r * 0.8} fill={i === 0 ? OV.human : '#fff'} stroke="#000" strokeWidth={sw} />)}
+        </g>
+      )}
+
+      {p.guide && (
+        <g aria-hidden="true">
+          <line x1={p.guide.x0} y1={p.guide.y} x2={p.guide.x1} y2={p.guide.y} stroke="#fff" strokeWidth={sw * 2.5} />
+          <line x1={p.guide.x0} y1={p.guide.y} x2={p.guide.x1} y2={p.guide.y} stroke="#0B0F0D" strokeWidth={sw} strokeDasharray={`${6 / k()} ${4 / k()}`} />
+          {[p.guide.x0, p.guide.x1].map((x) => <line key={x} x1={x} y1={p.guide!.y - 10 / k()} x2={x} y2={p.guide!.y + 10 / k()} stroke="#0B0F0D" strokeWidth={sw * 1.25} />)}
+          <rect x={(p.guide.x0 + p.guide.x1) / 2 - 64 / k()} y={p.guide.y - 13 / k()} width={128 / k()} height={26 / k()} rx={4 / k()} fill="rgba(11,15,13,.86)" />
+          <text x={(p.guide.x0 + p.guide.x1) / 2} y={p.guide.y} textAnchor="middle" dominantBaseline="central" fontSize={13 / k()} fontFamily="JetBrains Mono, monospace" fontWeight="600" fill="#fff">{p.guide.label}</text>
         </g>
       )}
 

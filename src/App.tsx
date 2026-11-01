@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Logo } from './components/Logo';
+import { Logo, LogoMark } from './components/Logo';
 import Home from './components/Home';
 import Workspace from './components/Workspace';
 import { EXAMPLES } from './lib/examples';
@@ -25,6 +25,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [key, setKey] = useState(0);
   const [restored, setRestored] = useState<LoadedProject | null>(null);
+  // Hueco de la cabecera donde el espacio de trabajo pone sus pasos y el menú «Proyecto».
+  const [slot, setSlot] = useState<HTMLDivElement | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark' | null>(() => {
     try { const t = localStorage.getItem('cs-theme'); return t === 'light' || t === 'dark' ? t : null; } catch { return null; }
   });
@@ -36,7 +38,7 @@ export default function App() {
 
   const start = (image: NonNullable<Project['image']>, calib: Project['calib'] = null, kitId?: string, keep?: { defs: Project['defs']; spacing: number }) => {
     const kit = KITS.find((k) => k.id === kitId);
-    setP({ ...emptyProject(), image, calib, defs: keep?.defs ?? (kit ? kitToDefs(kit) : defaultDefs()), spacing: keep?.spacing ?? 0, fill: keep || kit ? 'maxKits' : 'fixed' });
+    setP({ ...emptyProject(), image, calib, defs: keep?.defs ?? (kit ? kitToDefs(kit) : image.exampleId ? defaultDefs() : []), spacing: keep?.spacing ?? 0, fill: keep || kit ? 'maxKits' : 'fixed' });
     setKey((k) => k + 1);
     setRestored(null);
     setError(null);
@@ -77,19 +79,23 @@ export default function App() {
 
   return (
     <>
-      <header className="nav">
-        <div className="container nav-in">
+      <header className={`nav ${p.image ? 'nav--app' : ''}`}>
+        <div className={p.image ? 'nav-in nav-in--app' : 'container nav-in'}>
           <a className="logo" href="/" onClick={(e) => { if (p.image) { e.preventDefault(); if (confirm('¿Volver al inicio? Se perderán los cambios no guardados.')) setP(emptyProject()); } }}>
-            <Logo height={30} />
+            {p.image ? <><span className="logo-word"><Logo height={26} /></span><span className="logo-mark" role="img" aria-label="CutSense"><LogoMark size={30} /></span></> : <Logo height={30} />}
           </a>
-          <span className="nav-note">Dale sentido a cada retazo</span>
-          <button className="theme-toggle" aria-label={isDark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'} onClick={() => setTheme(isDark ? 'light' : 'dark')}>{isDark ? '☀' : '☾'}</button>
-          {p.image && <button className="btn primary xs" onClick={() => { if (confirm('¿Descartar el proyecto actual?')) setP(emptyProject()); }}>Nuevo proyecto</button>}
+          {p.image
+            ? <div className="nav-slot" ref={setSlot} />
+            : <>
+              <span className="nav-note">Dale sentido a cada retazo</span>
+              <button className="theme-toggle" aria-label={isDark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'} onClick={() => setTheme(isDark ? 'light' : 'dark')}>{isDark ? '☀' : '☾'}</button>
+            </>}
         </div>
       </header>
       <main>
         {p.image
-          ? <Workspace key={key} p={p} setP={setP} restored={restored} onReset={() => setP(emptyProject())} onLeftoverPhoto={(f, defs, spacing) => onFile(f, { defs, spacing })} />
+          ? <Workspace key={key} p={p} setP={setP} restored={restored} onReset={() => setP(emptyProject())} onLeftoverPhoto={(f, defs, spacing) => onFile(f, { defs, spacing })}
+            headerSlot={slot} isDark={!!isDark} onTheme={() => setTheme(isDark ? 'light' : 'dark')} />
           : <Home onFile={onFile} onExample={onExample} onOpenProject={onOpenProject} error={error} />}
       </main>
     </>
