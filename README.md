@@ -8,19 +8,19 @@ CutSense turns a photo of an irregular flat offcut — leather, felt, foam, card
 
 ## How it works
 
-1. **Digitize** — SAM 3.1 proposes a mask of your material. Accept it, reject it, or edit the outline point by point. Holes found in the mask are suggested as exclusion zones.
-2. **Prepare** — Calibrate the scale with a known length, mark areas that must not be cut, and define your pieces. Start from a ready-made product kit (leather cardholder, bifold wallet) with real measurements in cm. Need a shape that is not in the list? Draw it on the canvas or import it from an SVG; curves become polygons and the piece scales to the size you set.
+1. **Digitize** — SAM 3.1 proposes a mask of your material. Accept it, reject it, or edit the outline point by point. Holes found in the mask are suggested as exclusion zones. Guide points, local contrast segmentation, the stored example mask and manual tracing live in the **Other ways** menu.
+2. **Prepare** — A three-item checklist (**Scale**, **Excluded zones**, **Pieces**; one open at a time, each showing its state when closed): calibrate the scale with a known length, mark areas that must not be cut with the tools on the canvas, and define your pieces. Start from a ready-made product kit (leather cardholder, bifold wallet) with real measurements in cm. Need a shape that is not in the list? Draw it on the canvas or import it from an SVG; curves become polygons and the piece scales to the size you set.
 3. **Optimize** — A deterministic nesting engine places the pieces. An independent verifier validates every plan before it is shown as valid.
    - **Maximize complete sets:** treat the order as one set (for example one wallet) and let CutSense find how many complete sets fit in the offcut.
    - **Design with AI:** describe what you want to make in plain text. The agent (Muse Spark, via the Meta Model API) asks clarifying questions, remembers the whole session, and proposes the flat pieces with sizes and quantities. Nothing is applied until you approve it; then the pieces enter the order like any kit.
    - **AI defect detection:** ask SAM for short phrases such as "scar, stain, hole"; proposed zones are applied only after you accept them.
-4. **Iterate and export** — Add a defect or change the order and re-optimize. The result view tells you what changed. Export the verified plan as SVG or PNG. With a physical calibration you can also print the plan at 1:1 across A4/Letter sheets with per-piece templates, or export a DXF (R12, millimetres, pieces on a `CUT` layer) for cutting machines.
+4. **Iterate and export** — Add a defect or change the order and re-optimize: a changed plan is marked out of date until you do, and the result view tells you what changed. The **Export** menu holds every format: the verified plan as SVG or PNG. With a physical calibration you can also print the plan at 1:1 across A4/Letter sheets with per-piece templates, or export a DXF (R12, millimetres, pieces on a `CUT` layer) for cutting machines.
 
 ### Using up the whole offcut
 
 After a plan you can also **try another product with what is left**: pick a complete kit or a loose piece (keychains, coasters, bookmarks) and CutSense fits as many as it can around the pieces already placed. The combined plan is verified as a whole, and each added product can be removed.
 
-After a plan, **Leftover** shows what is left of the material (minus pieces and defects). Plan the next batch on a leftover fragment, or upload a photo of the real leftover after cutting: SAM digitizes the new irregular shape and your order is kept.
+After a plan, the **Leftover** tab shows what is left of the material (minus pieces and defects). Plan the next batch on a leftover fragment, or upload a photo of the real leftover after cutting: SAM digitizes the new irregular shape and your order is kept.
 
 ## What does what
 
@@ -72,7 +72,7 @@ SAM 3.1 segments by short noun phrase, so the Digitize step asks what material t
 
 ## Save and reopen projects
 
-**Save project (.json)** stores the photo, outline, exclusion zones, calibration, order and plan in one file. **Open a saved project** on the home screen restores it. On load the file is strictly validated and the plan is **verified again**; a tampered or outdated plan is discarded instead of shown as valid. The file includes your photo, so treat it as private.
+**Save project** (in the header's **Project** menu, or Ctrl/Cmd+S) stores the photo, outline, exclusion zones, calibration, order and plan in one file. **Open a saved project** on the home screen restores it. On load the file is strictly validated and the plan is **verified again**; a tampered or outdated plan is discarded instead of shown as valid. The file includes your photo, so treat it as private.
 
 ## Reproducibility
 
@@ -84,7 +84,7 @@ Every result includes the seed and optimizer version, and "Download problem + so
 server/        Segmentation proxy for the Meta Model API
 src/engine/    Geometry, verifier, metrics, optimizer (+ tests)
 src/lib/       Mask → polygon, kits, export, examples
-src/components Wizard UI (Home, Workspace, Stage)
+src/components Wizard UI (Home, Workspace, Stage); src/components/workspace/ holds the workspace controller hook and its panels, menus and canvas toolbar
 src/brand/    Brand tokens used by the app
 design/        Brand book, logos, tokens, components and preview (see design/DESIGN.md)
 ```
