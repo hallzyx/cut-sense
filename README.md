@@ -12,6 +12,7 @@ CutSense turns a photo of an irregular flat offcut — leather, felt, foam, card
 2. **Prepare** — Calibrate the scale with a known length, mark areas that must not be cut, and define your pieces. Start from a ready-made product kit (leather cardholder, bifold wallet) with real measurements in cm. Need a shape that is not in the list? Draw it on the canvas or import it from an SVG; curves become polygons and the piece scales to the size you set.
 3. **Optimize** — A deterministic nesting engine places the pieces. An independent verifier validates every plan before it is shown as valid.
    - **Maximize complete sets:** treat the order as one set (for example one wallet) and let CutSense find how many complete sets fit in the offcut.
+   - **Design with AI:** describe what you want to make in plain text. The agent (Muse Spark, via the Meta Model API) asks clarifying questions, remembers the whole session, and proposes the flat pieces with sizes and quantities. Nothing is applied until you approve it; then the pieces enter the order like any kit.
    - **AI defect detection:** ask SAM for short phrases such as "scar, stain, hole"; proposed zones are applied only after you accept them.
 4. **Iterate and export** — Add a defect or change the order and re-optimize. The result view tells you what changed. Export the verified plan as SVG or PNG. With a physical calibration you can also print the plan at 1:1 across A4/Letter sheets with per-piece templates, or export a DXF (R12, millimetres, pieces on a `CUT` layer) for cutting machines.
 
@@ -52,6 +53,7 @@ The segmentation proxy (`server/index.ts`) keeps credentials on the server; they
 | `SAM_API_URL` | Meta Model API base URL (`https://api.meta.ai/v1`) |
 | `SAM_API_KEY` | API key (Bearer) |
 | `SAM_MODEL` | Optional model id (default `sam-3.1`) |
+| `AGENT_MODEL` | Optional model for the design agent (default `muse-spark-1.3`) |
 | `PORT` | API port (default `8787`) |
 
 Without credentials the app still works. It states clearly that **AI segmentation did not run** and offers labelled alternatives: a stored example mask, local contrast segmentation, or manual tracing.
@@ -60,6 +62,7 @@ SAM 3.1 segments by short noun phrase, so the Digitize step asks what material t
 
 ## Honest by design
 
+- The design agent only proposes pieces, sizes and quantities. Its output is validated against a strict schema (ranges, known shapes, at most 6 piece types) and you review it before use; placement and verification stay deterministic. Treat its measurements as a starting point, and note that your messages are sent to Meta.
 - Results are the **best solution found** by a heuristic search, not a proven optimum.
 - Without calibration, measurements are relative units (1 u = 1 % of image width), never centimetres. Product kits require a calibration in cm.
 - Two-point calibration assumes a near top-down photo; strong perspective makes the scale unreliable.
