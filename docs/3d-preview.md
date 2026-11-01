@@ -1,12 +1,12 @@
 # 3D assembly preview
 
-After the design agent proposes the flat pieces for a product, CutSense can show how those pieces become the object: a wallet folding shut, pockets landing on a cardholder, the walls of a box standing up, the sleeves of a jacket hanging from its shoulders. The preview is built from the real piece sizes, so what you see is a consequence of what you are about to cut. It is labelled **Vista previa aproximada** and is never a technical drawing.
+After [Hilo](agent.md), the design agent, proposes the flat pieces for a product, CutSense can show how those pieces become the object: a wallet folding shut, pockets landing on a cardholder, the walls of a box standing up, the sleeves of a jacket hanging from its shoulders. The preview is built from the real piece sizes, so what you see is a consequence of what you are about to cut. It is labelled **Approximate preview** and is never a technical drawing.
 
 - Component: `src/components/AssemblyPreview.tsx` (styles in `AssemblyPreview.css`)
 - Scene language, validator, macros, kinematics, checks: `src/lib/assembly/`
 - three.js renderer, loaded on demand: `src/viewer3d/`
-- Server routes: `server/assembly.ts` (`POST /api/assembly`, `POST /api/assembly/critique`, `POST /api/assembly/align`)
-- Dev lab: `assembly-lab.html` (dev server only)
+- Server routes: `server/assembly.ts` (`POST /api/assembly`, `POST /api/assembly/critique`, `POST /api/assembly/align`; contract in [api.md](api.md#3d-assembly-routes))
+- Dev lab: `assembly-lab.html` (dev server only; see [development.md](development.md#the-dev-lab))
 
 ## How it works
 
@@ -15,13 +15,13 @@ After the design agent proposes the flat pieces for a product, CutSense can show
 3. **The model checks its own work.** The app renders the assembled object from four angles (pieces painted in the cutting-plan colours) and sends the image, the scene and an automatic geometry report back. The model answers `ok` or a corrected scene. Up to two rounds; a correction is only accepted if it is not geometrically worse, and the loop stops early when a correction changes nothing.
 4. **Verification.** If the deterministic checks still measure problems (a piece detached from the one it should be sewn to, a sleeve sticking out sideways, fronts that do not meet), one more call sends the scene, the render and exactly those problems, and asks for a corrected scene. The correction is kept only if it scores strictly better; when nothing is left to fix the call is skipped.
 5. **Reveal.** The final scene is the best candidate by score. Only then does the 3D appear and play the assembly once.
-6. **Armar.** A slider (and a *Ver cómo se arma* button) animates from the pieces lying flat, as cut, to the assembled object: stacked and sewn pieces travel onto their parent, then hinges and folds close and pouches fill out.
+6. **Assemble.** A slider (and a *See how it goes together* button) animates from the pieces lying flat, as cut, to the assembled object: stacked and sewn pieces travel onto their parent, then hinges and folds close and pouches fill out.
 
 ### Progress while the model works
 
-While steps 2–4 run, the 3D view is covered by an opaque panel with a spinner, a percentage, a bar and the current step (*Modelando el armado con IA…*, *Revisando el modelo con IA (1/2)…*, *Verificando que todas las piezas encajen…*, *Preparando la vista 3D…*). The viewer stays mounted underneath because it renders the images for the review; the camera controls and the *Armar* slider are disabled until the reveal.
+While steps 2–4 run, the 3D view is covered by an opaque panel with a spinner, a percentage, a bar and the current step (*Modelling the assembly with AI…*, *Reviewing the model with AI (1/2)…*, *Checking that every piece fits…*, *Preparing the 3D preview…*). The viewer stays mounted underneath because it renders the images for the review; the camera controls and the *Assemble* slider are disabled until the reveal.
 
-The percentage follows the calls actually made: the scene takes 0–34 %, the reviews 34–56 % and 56–74 %, the verification 74–94 % and the reveal 94–99 %. Finishing a step moves the bar to the start of the next one (a step that is skipped, such as a second review after an `ok`, is jumped over); within a step it only creeps toward 85 % of its share, so it never runs ahead of the work. The value never goes back and never passes 99 % before the 3D appears. If a call fails, the panel goes away and the best scene measured so far is shown with an honest note (*La IA no respondió; se muestra el armado por reglas.*, *IA no disponible…*, or *La revisión con IA no terminó; se muestra el mejor armado obtenido.*) and a *Reintentar con IA* link. A scene already computed for the same product and pieces is shown at once.
+The percentage follows the calls actually made: the scene takes 0–34 %, the reviews 34–56 % and 56–74 %, the verification 74–94 % and the reveal 94–99 %. Finishing a step moves the bar to the start of the next one (a step that is skipped, such as a second review after an `ok`, is jumped over); within a step it only creeps toward 85 % of its share, so it never runs ahead of the work. The value never goes back and never passes 99 % before the 3D appears. If a call fails, the panel goes away and the best scene measured so far is shown with an honest note (*The AI did not answer; showing the rule-based assembly.*, *AI unavailable; showing the rule-based assembly.*, or *The AI review did not finish; showing the best assembly so far.*) and a *Retry with AI* link. A scene already computed for the same product and pieces is shown at once.
 
 The panel is a `progressbar` with `aria-valuenow`, `aria-valuetext` and the step as its label; the step is also announced in the polite status line. With reduced motion the spinner and the bar do not animate.
 
@@ -52,7 +52,7 @@ A `seam` piece meets its parent at the point `anchor_x` (top and bottom edges) o
 - **pockets** go low on the fronts, **flaps** cover them (or become lapels when there are no pockets), and the closure (zipper or a row of snaps) runs along the centre front;
 - linings and anything else that fits lie on the back, under the fronts.
 
-The product name picks the macro (*chaqueta, campera, abrigo, blazer, chamarra, cazadora, casaca, camisa, blusa, chaleco, sudadera, buzo, polera, chompa, jersey, cárdigan, jacket, coat, vest, shirt, hoodie, sweater…*), and so does a piece set with sleeves. Piece names map to the garment roles *manga* → `sleeve`, *cuello* → `collar`, *puño* → `cuff`, *capucha* → `hood`, *pretina / cinturilla / dobladillo* → `waistband`; these are only guessed for garments, so the "sleeve" of a phone case is still its body.
+The product name picks the macro, in English or Spanish (*jacket, coat, vest, waistcoat, shirt, blouse, hoodie, sweater, garment…* as well as *chaqueta, campera, abrigo, blazer, chaleco, camisa, sudadera, jersey…*), and so does a piece set with sleeves. Piece names map to the garment roles *sleeve / manga* → `sleeve`, *collar / lapel / cuello* → `collar`, *cuff / puño* → `cuff`, *hood / capucha* → `hood`, *waistband / hem / ribbing / pretina / cinturilla / dobladillo* → `waistband`; these are only guessed for garments, so the "sleeve" of a phone case is still its body.
 
 ## Guardrails
 
@@ -70,10 +70,10 @@ The product name picks the macro (*chaqueta, campera, abrigo, blazer, chamarra, 
 
 ## Accessibility and honesty
 
-- The canvas has a text label, keyboard orbit (arrow keys, `+`/`−`, `Home`), on-screen camera buttons and a keyboard-operable *Armar* slider with spoken values. With reduced motion the preview opens assembled and nothing animates on its own.
-- *Descripción del modelo* gives a text alternative generated from the scene (what sits on what, which edges are joined, approximate assembled size).
+- The canvas has a text label, keyboard orbit (arrow keys, `+`/`−`, `Home`), on-screen camera buttons and a keyboard-operable *Assemble* slider with spoken values. With reduced motion the preview opens assembled and nothing animates on its own.
+- *Model description* gives a text alternative generated from the scene (what sits on what, which edges are joined, approximate assembled size).
 - The caption states the simplifications: uniform thickness, ideal folds, symbolic stitches and hardware, and lists any piece the scene could not place. Assumptions the model made about the assembly are listed below it.
-- *Por pieza* paints each piece in its cutting-plan colour, so a piece in the 3D view can be matched to the plan.
+- *By piece* paints each piece in its cutting-plan colour, so a piece in the 3D view can be matched to the plan.
 
 ## Known limits
 
@@ -96,4 +96,10 @@ The component imports its own CSS and expects the brand stylesheet (`src/styles.
 
 ## Screenshots
 
-`docs/3d-preview/` holds one sheet per product family from the lab (flat pieces, mid-assembly, assembled, second angle), rendered after the model and critique loop: `billetera`, `tarjetero`, `monedero`, `gafas`, `celular`, `tote`, `llavero`, `posavasos`, `neceser`, `caja`, `chaqueta`, plus `billetera-dark` for the dark theme.
+`docs/3d-preview/` holds one sheet per product family from the lab (flat pieces, mid-assembly, assembled, second angle), rendered after the model and critique loop. File names are the fixture keys: `billetera` (bifold wallet), `tarjetero` (cardholder), `monedero` (coin purse), `gafas` (glasses case), `celular` (phone sleeve), `tote`, `llavero` (keychain), `posavasos` (coasters), `neceser` (toiletry bag), `caja` (box), `chaqueta` (jacket), plus `billetera-dark` for the dark theme.
+
+| Bifold wallet | Jacket (`garment_top`) |
+|---|---|
+| ![Bifold wallet: flat pieces, mid-assembly, assembled and a second angle](3d-preview/billetera.webp) | ![Jacket laid flat: two fronts meeting at the centre over the back, pockets, sleeves hanging from the shoulders and the collar at the neckline](3d-preview/chaqueta.webp) |
+| **Tote** | **Box with lid** |
+| ![Tote bag sheet: flat pieces, mid-assembly, assembled and a second angle](3d-preview/tote.webp) | ![Box with lid sheet: flat pieces, mid-assembly, assembled and a second angle](3d-preview/caja.webp) |

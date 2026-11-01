@@ -12,29 +12,29 @@ Files in this folder:
 | `logo-mark-reverse.svg`, `logo-wordmark-reverse.svg` | For dark surfaces (paper offcut, light thread) |
 | `tokens.css` | All design tokens (`--cs-*`), light + dark, Google Fonts import |
 | `components.css` | Framework-agnostic components (`.cs-*`) + signature keyframes |
-| `preview.html` | Living style guide: open in a browser, toggle Claro/Oscuro (`?theme=dark` also works) |
+| `preview.html` | Living style guide: open in a browser, toggle Light/Dark (`?theme=dark` also works) |
 | `screenshots/` | Full-page captures at 390 px and 1280 px in both themes, plus close-ups |
 
 ---
 
 ## 1. Concept
 
-### The name: *sentido de corte*
-In Spanish, **sentido** means both *sense* (perception, judgement) and *direction*. A master cutter has *sentido de corte*: they read the hide, dodge the scar, follow the grain and know where each piece fits before the knife moves. CutSense puts that sense on screen, and makes it checkable.
+### The name: *sense of the cut*
+A master cutter has a **sense of the cut**: they read the hide, dodge the scar, follow the grain and know where each piece fits before the knife moves. *Sense* is both perception and direction (the grain, the way a piece should run). CutSense puts that sense on screen, and makes it checkable.
 
 The story in one line: **the scrap becomes meaningful.** Every offcut on the bench is either waste or material for the next cardholder; the difference is knowing where to cut.
 
-- Tagline (ES): **Dale sentido a cada retazo.** *(Give every scrap a purpose.)*
-- Product promise (ES): **De una foto a un plan de corte en el que puedes confiar.** *(From a photo to a cutting plan you can trust.)*
+- Tagline: **Make sense of every offcut.**
+- Product promise: **From a photo to a cutting plan you can trust.**
 
-### Personality: *el maestro del taller* (the workshop master)
+### Personality: the workshop master
 Patient, precise, warm, honest. Speaks like someone standing next to you at the bench, not like a SaaS dashboard. Says "I don't know" when it does not know. Never sells an optimum it cannot prove.
 
 | Is | Is not |
 |---|---|
 | Practical, plain-spoken | Corporate, buzzwordy |
-| Craft-literate (retazo, molde, merma, piquete) | Jargon-heavy (polygon offset, NFP) in the UI |
-| Honest about limits | Hype ("¡perfecto!", "ahorra 32 %") |
+| Craft-literate (offcut, pattern, waste, notch) | Jargon-heavy (polygon offset, NFP) in the UI |
+| Honest about limits | Hype ("Perfect!", "Save 32%") |
 | Calm under failure | Alarmist or blaming |
 
 ### Visual direction: four workshop materials
@@ -104,14 +104,14 @@ Dark pills: AI `#AFC4FF/#1B2747` **8.52** · human `#FFA27F/#3D2116` **7.51** ·
 ### Provenance language (the core of the system)
 Each origin has a **line style + a word + a colour**. Remove the colour and the line and word still tell you who did what.
 
-| State | Line on canvas | Pill (ES) | Colour |
+| State | Line on canvas | Pill | Colour |
 |---|---|---|---|
-| AI proposed | dashed 8/5 | *Propuesta IA* | chalk blue |
-| Human corrected | solid + vertex handles | *Corregido por ti* | thread vermilion |
-| Deterministic computed | thin solid hairline | *Calculado · semilla 4127* | graphite |
-| Verified | thick solid + toothed seal | *Verificado* | mat green |
-| Stale | round-dotted 1/7 | *Desactualizado* | amber |
-| Failed | broken line + ✕ | *Falló* / *IA no disponible* | brick red |
+| AI proposed | dashed 8/5 | *AI proposal* | chalk blue |
+| Human corrected | solid + vertex handles | *Corrected by you* | thread vermilion |
+| Deterministic computed | thin solid hairline | *Computed · seed 4127* | graphite |
+| Verified | thick solid + toothed seal | *Verified* | mat green |
+| Stale | round-dotted 1/7 | *Out of date* | amber |
+| Failed | broken line + ✕ | *Failed* / *AI unavailable* | brick red |
 
 ---
 
@@ -127,7 +127,7 @@ Each origin has a **line style + a word + a colour**. Remove the colour and the 
 | UI / body | **Instrument Sans** 400–700 | Compact and legible at 14 px in the dense side panel |
 | Measurements, seeds, coordinates, eyebrows | **JetBrains Mono** 400–600, slashed zero | Every number + unit is `.cs-measure` (tabular, no wrap) |
 
-Scale (`--cs-text-*`): 11 · 12 · 14 · 16 · 18 · 22 · 26→36 (fluid) · 36→64 (fluid hero). Inputs are always 16 px (prevents iOS zoom). Line height 1.5 body, 1.05 display. Spanish decimals use a comma: `12,4 cm`.
+Scale (`--cs-text-*`): 11 · 12 · 14 · 16 · 18 · 22 · 26→36 (fluid) · 36→64 (fluid hero). Inputs are always 16 px (prevents iOS zoom). Line height 1.5 body, 1.05 display. Numbers use English conventions: dot decimals and comma thousands (`12.4 cm`, `1,023.3 cm²`).
 
 ---
 
@@ -144,27 +144,27 @@ Scale (`--cs-text-*`): 11 · 12 · 14 · 16 · 18 · 22 · 26→36 (fluid) · 36
 ## 6. Screen-by-screen spec
 
 ### Landing
-Grid-paper hero. Eyebrow *SENTIDO DE CORTE* (mono, dashed lead line). H1 **«Dale sentido a cada retazo.»** with a chalk underline under *retazo*. Lead: *«Fotografía tu retazo. La IA propone el contorno, tú lo corriges, y la geometría verifica cada plan antes de mostrártelo.»* Primary CTA **«Subir foto del retazo»** (camera icon), secondary **«Probar con un ejemplo»**. Below: the four provenance pills as the "how it works" in one glance, then a ruler. Right (desktop) / below (mobile): a real verified plan on a dark photo, rotated 1.2°, with the seal overlapping its corner. Then: example cards, honest FAQ, footer note *«Los planos exportados son referenciales.»*
-Caption under CTAs: *«JPG, PNG o WebP · hasta 10 MB · foto desde arriba, fondo que contraste.»*
+Grid-paper hero. Eyebrow *SENSE OF THE CUT* (mono, dashed lead line). H1 **"Make sense of every offcut."** with a chalk underline under *offcut*. Lead: *"Photograph your offcut. AI proposes the outline, you correct it, and geometry verifies every plan before you see it."* Primary CTA **"Upload a photo of your offcut"** (camera icon), secondary **"Try an example"**. Below: the four provenance pills as the "how it works" in one glance, then a ruler. Right (desktop) / below (mobile): a real verified plan on a dark photo, rotated 1.2°, with the seal overlapping its corner. Then: example cards, honest FAQ, footer note *"Exported plans are reference drawings."*
+Caption under CTAs: *"JPG, PNG or WebP · up to 10 MB · photo from above, contrasting background."*
 
-### Step 1 · Digitalizar
-- **Processing:** pill *IA analizando* (with live dot), chalk-blue scan band sweeping the photo, indeterminate chalk progress. Copy: *«Leyendo el borde del material…»* / *«SAM 3.1 suele tardar unos segundos. Tu foto no se guarda.»* + *Cancelar*.
-- **Proposal:** dashed chalk outline with 16 % blue tint; detected holes dashed blue. Sheet: pill *Propuesta IA · SAM 3.1*, vertex count (mono), **«¿Este es el borde de tu material?»**, *«La IA propone; tú tienes la última palabra. Encontramos 1 agujero y lo marcaremos como zona excluida.»* Actions: **Aceptar contorno** (primary), *Ajustar a mano*, *Descartar*.
-- **Editing:** outline turns thread-solid with white handles; the dragged/selected handle is vermilion and larger. Pill switches to *IA + corregido por ti*.
-- **AI failed (recoverable):** danger alert *«La IA no pudo leer el borde esta vez»* / *«El servicio no respondió a tiempo. Tu foto sigue aquí.»* Actions: *Reintentar*, *Segmentar por contraste*, *Trazar a mano*. The photo stays visible with tag *Foto · sin contorno*.
-- **Invalid outline:** the crossing segments are drawn thick red, the offending vertex gets a red ✕ badge; alert *«El contorno se cruza consigo mismo»* / *«Mueve el vértice marcado o vuelve al último contorno válido. Optimizar queda bloqueado mientras tanto.»* Action *Volver al último válido*. Stepper step 2 shows locked (dashed box).
+### Step 1 · Digitize
+- **Processing:** pill *AI analysing* (with live dot), chalk-blue scan band sweeping the photo, indeterminate chalk progress. Copy: *"Reading the edge of the material…"* / *"SAM 3.1 usually takes a few seconds. Your photo is not stored."* + *Cancel*.
+- **Proposal:** dashed chalk outline with 16 % blue tint; detected holes dashed blue. Sheet: pill *AI proposal · SAM 3.1*, vertex count (mono), **"Is this the edge of your material?"**, *"AI proposes; you have the last word. We found 1 hole and will mark it as an excluded zone."* Actions: **Accept outline** (primary), *Adjust by hand*, *Discard*.
+- **Editing:** outline turns thread-solid with white handles; the dragged/selected handle is vermilion and larger. Pill switches to *AI + corrected by you*.
+- **AI failed (recoverable):** danger alert *"AI could not read the edge this time"* / *"The service did not answer in time. Your photo is still here."* Actions: *Retry*, *Segment by contrast*, *Trace by hand*. The photo stays visible with tag *Photo · no outline*.
+- **Invalid outline:** the crossing segments are drawn thick red, the offending vertex gets a red ✕ badge; alert *"The outline crosses itself"* / *"Move the marked vertex or go back to the last valid outline. Optimizing is blocked until then."* Action *Back to last valid*. Stepper step 2 shows locked (dashed box).
 
-### Step 2 · Preparar
-Sections separated by hairlines: **Escala** (unit badge: solid `Calibrado · cm` or dashed `≈ Sin calibrar · u relativas`; calibration draws a ruler line with end ticks and a dark label `8,56 cm`; hint *«Una tarjeta bancaria mide 8,56 cm de largo.»*), **Zonas excluidas** (count badge; *Dibujar zona*, *+ Círculo*; nudge when empty: *«¿Tu retazo tiene agujeros, marcas o costuras? Márcalos para que ninguna pieza caiga encima.»*), **Piezas** (kit selector cards; piece rows = swatch with pattern+letter, name, mono size, qty stepper; empty state *«Aún no hay piezas»*), live area metrics, primary **Optimizar distribución**. Choosing a kit while uncalibrated shows a warn alert: *«Este kit usa medidas reales en cm. Calibra primero la foto.»*
+### Step 2 · Prepare
+Sections separated by hairlines: **Scale** (unit badge: solid `Calibrated · cm` or dashed `≈ Not calibrated · relative u`; calibration draws a ruler line with end ticks and a dark label `8.56 cm`; hint *"A bank card is 8.56 cm long."*), **Excluded zones** (count badge; *Draw zone*, *+ Circle*; nudge when empty: *"Does your offcut have holes, marks or seams? Mark them so no piece lands on them."*), **Pieces** (kit selector cards; piece rows = swatch with pattern+letter, name, mono size, qty stepper; empty state *"No pieces yet"*), live area metrics, primary **Optimize layout**. Choosing a kit while uncalibrated shows a warn alert: *"This kit uses real measurements in cm. Calibrate the photo first."*
 
-### Step 3 · Resultado
-- **Optimizing:** pill *Calculando · semilla 4127*, striped determinate progress, *«Acomodando piezas… 62 %»*, *Cancelar*. Pieces already placed appear; the next candidate slot is a white dashed box.
-- **Verified:** seal + big number **78 %** *«del área útil · 11 de 11 piezas»*, ruler meter, metrics (digitised − excluded = usable, occupied), caption *«Mejor distribución encontrada por la búsqueda (v0.4 · semilla 4127). No es un óptimo demostrado.»* Export: **Exportar SVG** / PNG, *Incluir fotografía*, note *«Plano de referencia: revisa las medidas antes de cortar.»*
-- **Partial:** verified seal still shown (what's placed is valid) + warn alert *«Verificado, pero incompleto: 9 de 11 piezas»* / *«Faltan 2 × Lengüeta. Prueba permitir giro de 90° o bajar la separación.»* A **pending tray** under the canvas holds dashed amber outlines of the unplaced pieces.
-- **No valid solution:** canvas shows material and exclusions only; dashed empty state *«Ninguna pieza entra sin tocar una zona excluida»* / *«Las piezas son más grandes que el área libre o la separación es muy alta. Revisa medidas, quita una zona o usa otro retazo.»* Actions *Revisar piezas*, *Ver zonas*. Never show 0 % as a score.
-- **Verification failed (engine bug path):** danger alert *«Este plan no pasó la verificación»* listing up to 4 violations; nothing is exportable.
-- **Stale:** pieces go grayscale at 45 %, material outline becomes amber dotted, tag *Desactualizado · reoptimiza*, stepper step 3 shows the amber "!" state, export disabled. Alert *«Cambiaste algo después de optimizar»* / *«Este plan ya no corresponde a tus datos y no se puede exportar.»* Primary **Reoptimizar**.
-- **What changed:** after re-optimising, panel alert with thread bar: *Qué cambió* → *Nueva zona excluida: 6,2 cm²* · *2 piezas se movieron (C1, F1)* · *Área útil: 593,6 → 587,4 cm²* + caption *«El área útil cambió, así que no comparamos porcentajes como "mejora".»*
+### Step 3 · Result
+- **Optimizing:** pill *Computing · seed 4127*, striped determinate progress, *"Fitting pieces… 62 %"*, *Cancel*. Pieces already placed appear; the next candidate slot is a white dashed box.
+- **Verified:** seal + big number **78 %** *"of the usable area · 11 of 11 pieces"*, ruler meter, metrics (digitized − excluded = usable, occupied), caption *"Best layout found by the search (v0.4 · seed 4127). Not a proven optimum."* Export: **Export SVG** / PNG, *Include photo*, note *"Reference plan: check the measurements before cutting."*
+- **Partial:** verified seal still shown (what's placed is valid) + warn alert *"Verified, but incomplete: 9 of 11 pieces"* / *"2 × Tab missing. Try allowing a 90° turn or lowering the spacing."* A **pending tray** under the canvas holds dashed amber outlines of the unplaced pieces.
+- **No valid solution:** canvas shows material and exclusions only; dashed empty state *"No piece fits without touching an excluded zone"* / *"The pieces are larger than the free area or the spacing is too high. Check sizes, remove a zone or use another offcut."* Actions *Review pieces*, *See zones*. Never show 0 % as a score.
+- **Verification failed (engine bug path):** danger alert *"This plan did not pass verification"* listing up to 4 violations; nothing is exportable.
+- **Stale:** pieces go grayscale at 45 %, material outline becomes amber dotted, tag *Out of date · re-optimize*, stepper step 3 shows the amber "!" state, export disabled. Alert *"You changed something after optimizing"* / *"This plan no longer matches your data and cannot be exported."* Primary **Re-optimize**.
+- **What changed:** after re-optimizing, panel alert with thread bar: *What changed* → *New excluded zone: 6.2 cm²* · *2 pieces moved (C1, F1)* · *Usable area: 593.6 → 587.4 cm²* + caption *"The usable area changed, so we do not compare percentages as an 'improvement'."*
 
 ---
 
@@ -208,7 +208,7 @@ Principles: **motion explains provenance**, it never decorates. Fast for control
 2. **The settle + seal** (`.cs-anim-settle`, `.cs-seal--animate`): pieces drop from −18 px with a small random tilt, 70 ms stagger (`--i`), 900 ms; when the verifier returns, the seal stamps in (scale 1.8 → 1, rotate −24° → −10°). Reduced motion: final state, no stagger.
 3. **What changed** (`.cs-anim-changed`, `.cs-ov-changed`): moved pieces pulse once with a white glow (2.4 s) while marching ants run; afterwards a static dashed outline and the ghost stay until dismissed or the next edit. Reduced motion: no pulse, no marching; the static outline and ghost still show the change.
 
-Live regions: announce *«Contorno propuesto por la IA»*, *«Plan verificado: 11 de 11 piezas»*, *«2 piezas se movieron»* in `aria-live="polite"`.
+Live regions: announce *"Outline proposed by AI"*, *"Plan verified: 11 of 11 pieces"*, *"2 pieces moved"* in `aria-live="polite"`.
 
 ---
 
@@ -261,7 +261,7 @@ Live regions: announce *«Contorno propuesto por la IA»*, *«Plan verificado: 1
 | `.score-ring` | `.cs-seal` + `.cs-stat` (result); step numbers → plain `.cs-h4` with mono index |
 | `.chip`, `.chip.dark` | `.cs-badge`, `.cs-badge--ink`; canvas hints → `.cs-stage__tag` |
 | `.alert.error/.warn/.ok/.info` | `.cs-alert--danger/--warn/--success/--info` (`--ai` for proposals) |
-| flash message (`alert ok` + Cerrar) | `.cs-toast` |
+| flash message (`alert ok` + Close) | `.cs-toast` |
 | `.stepper`, `.step`, `.step.on` | `.cs-stepper` + `.cs-step--done/--current/--locked/--attention` (`--compact` on mobile) |
 | `.work-grid`, `.panel`, `.stage-card` | same grid using `--cs-panel-width`; `.cs-card` panel; `.cs-stage` + `.cs-stage__bar` |
 | `.stage`, `.handle` | `.cs-stage svg`, `.cs-ov-handle` (+ `--selected`) |

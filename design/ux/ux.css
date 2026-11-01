@@ -104,7 +104,7 @@
 .ux-disc__val { margin-left: auto; font-family: var(--cs-font-mono); font-size: var(--cs-text-xs); font-weight: 500; color: var(--cs-text-muted); }
 .ux-disc__body { display: grid; gap: 10px; padding: 0 0 12px; }
 
-/* ---------- Checklist (Step 2: Escala → Zonas → Piezas) ---------- */
+/* ---------- Checklist (Step 2: Scale → Zones → Pieces) ---------- */
 .ux-checklist { display: grid; gap: 8px; }
 .ux-check { border: 1.5px solid var(--cs-line); border-radius: var(--cs-radius-md); background: var(--cs-surface); }
 .ux-check[data-open='true'] { border-color: var(--cs-text); box-shadow: var(--cs-shadow-1); }
@@ -142,7 +142,7 @@
 .ux-zone { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; min-height: 44px; padding: 4px 4px 4px 10px; border: 1px solid var(--cs-line); border-radius: var(--cs-radius-sm); font-size: var(--cs-text-sm); }
 .ux-zone__name { font-weight: 600; }
 
-/* Option cards (empty state of Piezas) */
+/* Option cards (empty state of Pieces) */
 .ux-options { display: grid; gap: 8px; }
 .ux-option { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; width: 100%; padding: 9px 12px; border: 1.5px solid var(--cs-line); border-radius: var(--cs-radius-md); background: var(--cs-surface); color: var(--cs-text); text-align: left; cursor: pointer; }
 .ux-option:hover { border-color: var(--cs-text); }
