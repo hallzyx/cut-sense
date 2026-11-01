@@ -14,31 +14,40 @@
  *    puntuación.
  * 3. Validez por colisión directa: punto-en-polígono + distancia segmento-segmento >= spacing + margen,
  *    contra el contorno del material (índice espacial en rejilla), defectos y piezas colocadas.
- * 4. Varias pasadas: órdenes y gravedades fijas al principio, luego perturbaciones con PRNG mulberry32
- *    sembrado (seed). Se conserva el mejor plan. Cada mejora se pasa por `verifySolution`
+ *    Un ráster de ocupación (celdas S/256) rechaza en O(1) posiciones cuyos puntos interiores
+ *    profundos caen en zona bloqueada (exacto: solo descarta posiciones inválidas).
+ * 4. Varias pasadas (150 por defecto): 4 con orden por área y gravedad uniforme, luego un genoma
+ *    (orden + gravedad por pieza) que alterna reinicios aleatorios y mutaciones del genoma actual
+ *    (ascenso de colinas que acepta empates; adelanta piezas que no cupieron), con PRNG mulberry32
+ *    sembrado (seed). Al final, reparación: inserción de pendientes con rejilla fina y por
+ *    intercambio con una pieza menor. Se conserva el mejor plan. Cada mejora se pasa por `verifySolution`
  *    (independiente); si fallase, se eliminan las piezas infractoras: nunca se devuelve un plan inválido.
  *
  * Determinismo: mismo problema + seed ⇒ misma secuencia de pasadas. La búsqueda se detiene tras
  * `maxIterations` pasadas (determinista), al colocar todo, o al agotar `timeLimitMs` (salvaguarda:
  * si el reloj corta antes que maxIterations, máquinas más lentas podrían explorar menos pasadas).
  */
-import type { Placement, Problem, Ring, Solution, Template } from '../types';
+import type { Placement, Problem, Pt, Ring, Solution, Template } from '../types';
 import {
-  type BBox, bbox, dedupeRing, difference, isSimple, multiArea, placeShape, pointInRing, ringArea,
-  scaleOf, segSegDist2, translateRing,
+  type BBox, bbox, centroid, dedupeRing, difference, isSimple, multiArea, placeShape, pointInRing, ringArea,
+  pointSegDist2, scaleOf, segSegDist2, translateRing,
 } from './geometry';
 import { computeMetrics } from './metrics';
 import { verifySolution } from './verify';
 
 export const OPTIMIZER_VERSION = 'cs-nest-1.0';
 export const DEFAULT_TIME_LIMIT_MS = 4000;
-export const DEFAULT_MAX_ITERATIONS = 40;
+export const DEFAULT_MAX_ITERATIONS = 150;
 export const DEFAULT_SEED = 1;
 /** Margen extra (relativo a la escala) que el optimizador añade a la separación para no rozar la tolerancia del verificador. */
 export const OPT_MARGIN_REL = 1e-7;
 const MAX_INSTANCES = 400;
 /** Paso mínimo de la rejilla refinada: S / REFINE_MIN_DIV. */
 const REFINE_MIN_DIV = 100;
+/** Paso mínimo de la rejilla en la reparación final: S / REPAIR_MIN_DIV. */
+const REPAIR_MIN_DIV = 200;
+/** Resolución del ráster de ocupación: celdas de S / RASTER_DIV. */
+const RASTER_DIV = 256;
 
 export interface OptimizeProgress {
   /** Avance estimado 0..1: max(pasadas hechas / maxIterations, tiempo / timeLimitMs); 1 al terminar. */
@@ -78,7 +87,12 @@ const defaultNow = (): number =>
 
 // ---------------------------------------------------------------- estructuras internas
 
-interface Orient { rot: number; base: Ring; w: number; h: number }
+/**
+ * `probe`: punto interior de la forma (prueba rápida de solape antes de las distancias exactas).
+ * `deep`: puntos interiores a más de una celda del borde; si su celda del ráster está bloqueada,
+ * hay un punto bloqueado dentro de la pieza ⇒ posición inválida (rechazo O(1) exacto).
+ */
+interface Orient { rot: number; base: Ring; w: number; h: number; probe: Pt; deep: Pt[] }
 interface Item { t: Template; tIdx: number; orients: Orient[]; area: number }
 interface Obstacle { ring: Ring; bb: BBox }
 interface Placed { item: Item; o: Orient; x: number; y: number; ring: Ring; bb: BBox }
@@ -182,6 +196,45 @@ function better(a: Score, b: Score, tol: number): boolean {
   return a[1] < b[1] - tol;
 }
 
+/** Un punto estrictamente interior de un anillo simple (centroide si cae dentro; si no, barrido horizontal). */
+function interiorPoint(ring: Ring): Pt {
+  const c = centroid(ring);
+  if (pointInRing(c[0], c[1], ring)) return c;
+  const b = bbox(ring);
+  for (const f of [0.5, 0.25, 0.75, 0.1, 0.9]) {
+    const y = b.minY + (b.maxY - b.minY) * f;
+    const xs: number[] = [];
+    for (let i = 0, n = ring.length; i < n; i++) {
+      const [x1, y1] = ring[i], [x2, y2] = ring[(i + 1) % n];
+      if ((y1 > y) !== (y2 > y)) xs.push(x1 + ((y - y1) * (x2 - x1)) / (y2 - y1));
+    }
+    xs.sort((a, b2) => a - b2);
+    for (let i = 0; i + 1 < xs.length; i += 2) {
+      const m = (xs[i] + xs[i + 1]) / 2;
+      if (xs[i + 1] - xs[i] > 0 && pointInRing(m, y, ring)) return [m, y];
+    }
+  }
+  return ring[0];
+}
+
+/** Puntos de muestra en rejilla interior a distancia > 1.5·cell del borde (máx. ~12). */
+function deepPoints(ring: Ring, cell: number): Pt[] {
+  const b = bbox(ring), out: Pt[] = [];
+  const need2 = (1.5 * cell) ** 2, n = ring.length;
+  const k = 4;
+  for (let a = 0; a < k; a++) for (let c = 0; c < k; c++) {
+    const x = b.minX + ((a + 0.5) / k) * (b.maxX - b.minX), y = b.minY + ((c + 0.5) / k) * (b.maxY - b.minY);
+    if (!pointInRing(x, y, ring)) continue;
+    let ok = true;
+    for (let i = 0; i < n && ok; i++) {
+      const p = ring[i], q = ring[(i + 1) % n];
+      if (pointSegDist2(x, y, p[0], p[1], q[0], q[1]) <= need2) ok = false;
+    }
+    if (ok) out.push([x, y]);
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- motor
 
 class Nester {
@@ -189,11 +242,19 @@ class Nester {
   readonly d: number;
   readonly mb: BBox;
   private grid: SegGrid;
+  // ráster de ocupación: 1 = el centro de la celda está fuera del material, en un defecto o en una pieza
+  readonly rc: number;
+  private rnx: number;
+  private rny: number;
+  private rStatic: Uint8Array;
+  private rDyn: Uint8Array;
   private defects: Obstacle[];
   private placed: Placed[] = [];
   private baseAnchors: { x: number[]; y: number[] };
   private deadline = Infinity;
   aborted = false;
+  /** Posiciones (en el orden de la última pasada) de las piezas que no cupieron. */
+  lastFailed: number[] = [];
 
   constructor(private material: Ring, defects: Ring[], spacing: number, private now: () => number) {
     this.S = scaleOf(material);
@@ -208,6 +269,55 @@ class Nester {
     for (const [x, y] of material) { ax.push(x); ay.push(y); }
     for (const ob of this.defects) for (const [x, y] of ob.ring) { ax.push(x); ay.push(y); }
     this.baseAnchors = { x: ax, y: ay };
+    this.rc = this.S / RASTER_DIV;
+    this.rnx = Math.ceil((this.mb.maxX - this.mb.minX) / this.rc) + 1;
+    this.rny = Math.ceil((this.mb.maxY - this.mb.minY) / this.rc) + 1;
+    this.rStatic = new Uint8Array(this.rnx * this.rny);
+    for (let j = 0; j < this.rny; j++) {
+      const cy = this.mb.minY + (j + 0.5) * this.rc;
+      for (let i = 0; i < this.rnx; i++) {
+        const cx = this.mb.minX + (i + 0.5) * this.rc;
+        let blocked = !pointInRing(cx, cy, material);
+        if (!blocked) for (const ob of this.defects) {
+          const bb = ob.bb;
+          if (cx >= bb.minX && cx <= bb.maxX && cy >= bb.minY && cy <= bb.maxY && pointInRing(cx, cy, ob.ring)) { blocked = true; break; }
+        }
+        this.rStatic[j * this.rnx + i] = blocked ? 1 : 0;
+      }
+    }
+    this.rDyn = this.rStatic.slice();
+  }
+
+  private paint(ring: Ring, bb: BBox): void {
+    const i0 = Math.max(0, Math.floor((bb.minX - this.mb.minX) / this.rc - 0.5));
+    const i1 = Math.min(this.rnx - 1, Math.ceil((bb.maxX - this.mb.minX) / this.rc));
+    const j0 = Math.max(0, Math.floor((bb.minY - this.mb.minY) / this.rc - 0.5));
+    const j1 = Math.min(this.rny - 1, Math.ceil((bb.maxY - this.mb.minY) / this.rc));
+    for (let j = j0; j <= j1; j++) {
+      const cy = this.mb.minY + (j + 0.5) * this.rc;
+      for (let i = i0; i <= i1; i++) {
+        const cx = this.mb.minX + (i + 0.5) * this.rc;
+        if (pointInRing(cx, cy, ring)) this.rDyn[j * this.rnx + i] = 1;
+      }
+    }
+  }
+
+  /** Sustituye las piezas colocadas y reconstruye el ráster dinámico. */
+  setPlaced(list: Placed[]): void {
+    this.placed = list;
+    this.rDyn.set(this.rStatic);
+    for (const p of list) this.paint(p.ring, p.bb);
+  }
+
+  addPlaced(p: Placed): void {
+    this.placed.push(p);
+    this.paint(p.ring, p.bb);
+  }
+
+  private blockedAt(x: number, y: number): boolean {
+    const i = Math.floor((x - this.mb.minX) / this.rc), j = Math.floor((y - this.mb.minY) / this.rc);
+    if (i < 0 || j < 0 || i >= this.rnx || j >= this.rny) return true;
+    return this.rDyn[j * this.rnx + i] === 1;
   }
 
   /** ¿Cabe la orientación `o` con su esquina mínima en (x, y)? */
@@ -217,6 +327,18 @@ class Nester {
     if (minX < mb.minX + d || minY < mb.minY + d || maxX > mb.maxX - d || maxY > mb.maxY - d) return false;
     const eMinX = minX - d, eMinY = minY - d, eMaxX = maxX + d, eMaxY = maxY + d;
     const b0 = o.base[0];
+    for (const q of o.deep) if (this.blockedAt(q[0] + x, q[1] + y)) return false;
+    const px = o.probe[0] + x, py = o.probe[1] + y;
+    // rechazo barato: el punto interior de la pieza cae fuera del material o dentro de un obstáculo
+    if (!pointInRing(px, py, this.material)) return false;
+    for (let k = 0; k < 2; k++) {
+      const list: Obstacle[] = k === 0 ? this.placed : this.defects;
+      for (const ob of list) {
+        const bb = ob.bb;
+        if (px < bb.minX || px > bb.maxX || py < bb.minY || py > bb.maxY) continue;
+        if (pointInRing(px, py, ob.ring)) return false;
+      }
+    }
     for (let k = 0; k < 2; k++) {
       const list: Obstacle[] = k === 0 ? this.placed : this.defects;
       for (const ob of list) {
@@ -288,8 +410,8 @@ class Nester {
    * ninguna, la refina (paso/2) hasta `minStep`: las piezas grandes en materiales convexos
    * irregulares suelen tener regiones factibles más pequeñas que el paso inicial.
    */
-  *find(o: Orient, g: Gravity, bound: Score | null): Generator<void, { x: number; y: number; score: Score } | null, void> {
-    const minStep = this.S / REFINE_MIN_DIV;
+  *find(o: Orient, g: Gravity, bound: Score | null, minDiv = REFINE_MIN_DIV): Generator<void, { x: number; y: number; score: Score } | null, void> {
+    const minStep = this.S / minDiv;
     for (let step = this.step(o), level = 0; ; step /= 2, level++) {
       const r: { x: number; y: number; score: Score } | null = yield* this.scan(o, g, bound, step, level > 0);
       if (r || this.aborted || bound || step / 2 < minStep) return r;
@@ -325,26 +447,82 @@ class Nester {
     return null;
   }
 
-  /** Una pasada voraz. Devuelve las piezas colocadas (parciales si se agotó el tiempo; ver `aborted`). */
-  *pass(order: Item[], g: Gravity, deadline: number): Generator<void, Placed[], void> {
-    this.placed = [];
+  /** Mejor posición (entre orientaciones) para `item` con gravedad `g`, o null. */
+  private *placeOne(item: Item, g: Gravity, minDiv = REFINE_MIN_DIV): Generator<void, Placed | null, void> {
+    const tol = 1e-9 * this.S;
+    let best: { x: number; y: number; score: Score; o: Orient } | null = null;
+    for (const o of item.orients) {
+      const r: { x: number; y: number; score: Score } | null = yield* this.find(o, g, best ? best.score : null, minDiv);
+      if (this.aborted) return null;
+      if (r && (!best || better(r.score, best.score, tol))) best = { ...r, o };
+    }
+    if (!best) return null;
+    const ring = translateRing(best.o.base, best.x, best.y);
+    return { item, o: best.o, x: best.x, y: best.y, ring, bb: bbox(ring) };
+  }
+
+  /**
+   * Una pasada voraz; `gravs[i]` es la gravedad de la i-ésima pieza del orden.
+   * Devuelve las piezas colocadas (parciales si se agotó el tiempo; ver `aborted`).
+   */
+  *pass(order: Item[], gravs: Gravity[], deadline: number): Generator<void, Placed[], void> {
+    this.setPlaced([]);
+    this.lastFailed = [];
     this.deadline = deadline;
     this.aborted = false;
+    // El conjunto de candidatos no depende de la gravedad (solo su orden de barrido), así que si una
+    // plantilla no cupo, no cabe con ninguna gravedad, y con más piezas colocadas tampoco.
     const failed = new Set<number>();
-    const tol = 1e-9 * this.S;
-    for (const item of order) {
-      if (failed.has(item.tIdx)) continue; // más piezas colocadas ⇒ si no cupo antes, no cabe ahora
-      let best: { x: number; y: number; score: Score; o: Orient } | null = null;
-      for (const o of item.orients) {
-        const r: { x: number; y: number; score: Score } | null = yield* this.find(o, g, best ? best.score : null);
-        if (this.aborted) return this.placed;
-        if (r && (!best || better(r.score, best.score, tol))) best = { ...r, o };
-      }
-      if (!best) { failed.add(item.tIdx); continue; }
-      const ring = translateRing(best.o.base, best.x, best.y);
-      this.placed.push({ item, o: best.o, x: best.x, y: best.y, ring, bb: bbox(ring) });
+    for (let i = 0; i < order.length; i++) {
+      const item = order[i], g = gravs[i];
+      const key = item.tIdx;
+      if (failed.has(key)) { this.lastFailed.push(i); continue; }
+      const pl: Placed | null = yield* this.placeOne(item, g);
+      if (this.aborted) return this.placed;
+      if (!pl) { failed.add(key); this.lastFailed.push(i); continue; }
+      this.addPlaced(pl);
       yield;
       if (this.now() > deadline) { this.aborted = true; return this.placed; }
+    }
+    return this.placed;
+  }
+
+  /**
+   * Reparación final: intenta insertar cada pieza pendiente con una rejilla más fina; si no cabe, prueba a retirar una pieza colocada más pequeña, insertar la
+   * pendiente y volver a insertar la retirada (solo se acepta si caben ambas).
+   */
+  *insertPending(placed: Placed[], pending: Item[], deadline: number): Generator<void, Placed[], void> {
+    this.setPlaced(placed.slice());
+    this.deadline = deadline;
+    this.aborted = false;
+    // una sola gravedad basta para decidir si cabe: los candidatos no dependen de ella
+    const tryPlace = function* (self: Nester, item: Item): Generator<void, Placed | null, void> {
+      return yield* self.placeOne(item, GRAVITIES[0], REPAIR_MIN_DIV);
+    };
+    const failedT = new Set<number>();
+    for (const item of pending) {
+      if (failedT.has(item.tIdx)) continue;
+      let pl: Placed | null = yield* tryPlace(this, item);
+      if (this.aborted) break;
+      if (pl) { this.addPlaced(pl); continue; }
+      // intercambio: retirar una pieza de área menor, colocar la pendiente y recolocar la retirada
+      let done = false;
+      const victims = this.placed.map((p, i) => ({ p, i })).filter(({ p }) => p.item.area < item.area)
+        .sort((a, b) => a.p.item.area - b.p.item.area);
+      for (const { p: v } of victims) {
+        const saved = this.placed;
+        this.setPlaced(saved.filter((q) => q !== v));
+        pl = yield* tryPlace(this, item);
+        if (pl && !this.aborted) {
+          this.addPlaced(pl);
+          const back: Placed | null = yield* tryPlace(this, v.item);
+          if (back && !this.aborted) { this.addPlaced(back); done = true; break; }
+        }
+        this.setPlaced(saved);
+        if (this.aborted) break;
+      }
+      if (this.aborted) break;
+      if (!done) failedT.add(item.tIdx);
     }
     return this.placed;
   }
@@ -398,7 +576,7 @@ function buildItems(problem: Problem, nester: Nester | null): { instances: Item[
       seen.add(key);
       const base = placeShape(shape, rot, 0, 0);
       const b = bbox(base);
-      const o: Orient = { rot, base, w: b.maxX - b.minX, h: b.maxY - b.minY };
+      const o: Orient = { rot, base, w: b.maxX - b.minX, h: b.maxY - b.minY, probe: interiorPoint(base), deep: deepPoints(base, nester.rc) };
       if (o.w <= mb.maxX - mb.minX - 2 * d && o.h <= mb.maxY - mb.minY - 2 * d) orients.push(o);
     }
     if (!orients.length) return;
@@ -459,40 +637,93 @@ export function* optimizeSteps(problem: Problem, options: OptimizeOptions = {}):
   const areaTol = 1e-9 * nester.S * nester.S;
   let best: Placement[] = [];
   let bestArea = 0;
+  let bestPlaced: Placed[] = [];
+  // genoma "actual" del ascenso de colinas: se aceptan empates para poder caminar por mesetas
+  let bestGenome: { order: Item[]; gravs: Gravity[]; failed: number[] } | null = null;
+  let curCount = -1;
+  const randGrav = () => GRAVITIES[Math.floor(rng() * GRAVITIES.length)];
+
+  /** Acepta `placed` como mejor plan si mejora (nº de piezas, luego área) y pasa el verificador. */
+  const consider = (placed: Placed[]): boolean => {
+    let cand = toPlacements(placed);
+    const candArea = planArea(cand);
+    if (!(cand.length > best.length || (cand.length === best.length && candArea > bestArea + areaTol))) return false;
+    cand = repairPlacements(problem, cand);
+    const a = planArea(cand);
+    if (!(cand.length > best.length || (cand.length === best.length && a > bestArea + areaTol))) return false;
+    best = cand;
+    bestArea = a;
+    const kept = new Set(cand.map((c) => c.polygon));
+    bestPlaced = placed.filter((q) => kept.has(q.ring));
+    return true;
+  };
 
   for (let iter = 0; iter < maxIter; iter++) {
     const elapsed = now() - start;
     if (iter > 0 && elapsed > timeLimit) break;
-    let order = baseOrder, grav = GRAVITIES[iter % 4];
+    // genoma = orden de piezas + gravedad por pieza
+    let order = baseOrder;
+    let gravs: Gravity[] = order.map(() => GRAVITIES[iter % 4]);
     if (iter >= 4) {
-      grav = GRAVITIES[Math.floor(rng() * GRAVITIES.length)];
-      const noise = 0.25 + 0.75 * rng();
-      const keyed = baseOrder.map((it) => ({ it, k: it.area * (1 + noise * (rng() - 0.5)) }));
-      keyed.sort((a, b) => b.k - a.k);
-      order = keyed.map((x) => x.it);
-      if (rng() < 0.5) shuffleInPlace(order, rng, 1 + Math.floor(rng() * 3));
+      if (bestGenome && rng() < 0.5) {
+        // mutación del mejor genoma: intercambios en el orden y/o cambios de gravedad
+        order = bestGenome.order.slice();
+        gravs = bestGenome.gravs.slice();
+        if (bestGenome.failed.length && rng() < 0.6) {
+          // adelantar una pieza que no cupo (suele desbloquear el plan) y quizá cambiar su gravedad
+          const i = bestGenome.failed[Math.floor(rng() * bestGenome.failed.length)];
+          const j = Math.floor(rng() * (i + 1));
+          const [it] = order.splice(i, 1), [gv] = gravs.splice(i, 1);
+          order.splice(j, 0, it);
+          gravs.splice(j, 0, rng() < 0.5 ? gv : randGrav());
+        }
+        const swaps = Math.floor(rng() * 2) + (bestGenome.failed.length ? 0 : 1);
+        for (let k = 0; k < swaps; k++) {
+          const i = Math.floor(rng() * order.length), j = Math.floor(rng() * order.length);
+          [order[i], order[j]] = [order[j], order[i]];
+          [gravs[i], gravs[j]] = [gravs[j], gravs[i]];
+        }
+        if (rng() < 0.6) {
+          const changes = 1 + Math.floor(rng() * 2);
+          for (let k = 0; k < changes; k++) gravs[Math.floor(rng() * gravs.length)] = randGrav();
+        }
+      } else {
+        const noise = 0.25 + 0.75 * rng();
+        const keyed = baseOrder.map((it) => ({ it, k: it.area * (1 + noise * (rng() - 0.5)) }));
+        keyed.sort((x, y) => y.k - x.k);
+        order = keyed.map((x) => x.it);
+        if (rng() < 0.5) shuffleInPlace(order, rng, 1 + Math.floor(rng() * 3));
+        if (rng() < 0.5) { const g = randGrav(); gravs = order.map(() => g); } else gravs = order.map(() => randGrav());
+      }
     }
     // la primera pasada dispone de 2× el presupuesto para garantizar algún resultado
     const deadline = start + (iter === 0 ? 2 * timeLimit : timeLimit);
-    const placed = yield* nester.pass(order, grav, deadline);
+    const placed = yield* nester.pass(order, gravs, deadline);
     const aborted = nester.aborted;
     if (!aborted || iter === 0) {
-      let cand = toPlacements(placed);
-      const candArea = planArea(cand);
-      if (cand.length > best.length || (cand.length === best.length && candArea > bestArea + areaTol)) {
-        cand = repairPlacements(problem, cand);
-        const a = planArea(cand);
-        if (cand.length > best.length || (cand.length === best.length && a > bestArea + areaTol)) {
-          best = cand;
-          bestArea = a;
-        }
+      consider(placed);
+      if (placed.length >= curCount) {
+        curCount = placed.length;
+        bestGenome = { order, gravs, failed: nester.lastFailed.slice() };
       }
     }
     iterationsDone = iter + 1;
-    const done = aborted || best.length >= instances.length || iterationsDone >= maxIter;
     const el = now() - start;
-    report(done ? 1 : Math.min(0.99, Math.max(iterationsDone / maxIter, timeLimit > 0 ? el / timeLimit : 0)), best.length);
+    report(Math.min(0.99, Math.max(iterationsDone / maxIter, timeLimit > 0 ? el / timeLimit : 0)), best.length);
     if (aborted || best.length >= instances.length) break;
+  }
+
+  // reparación final: insertar pendientes en el mejor plan (rejilla fina, todas las gravedades, intercambios)
+  if (best.length < instances.length && now() - start <= timeLimit) {
+    const count = new Map<number, number>();
+    for (const p of bestPlaced) count.set(p.item.tIdx, (count.get(p.item.tIdx) ?? 0) + 1);
+    const pending: Item[] = [];
+    for (const it of baseOrder) {
+      const c = count.get(it.tIdx) ?? 0;
+      if (c > 0) count.set(it.tIdx, c - 1); else pending.push(it);
+    }
+    const placed = yield* nester.insertPending(bestPlaced, pending, start + 1.25 * timeLimit);
+    if (!nester.aborted) consider(placed);
   }
   return finish(best);
 }
