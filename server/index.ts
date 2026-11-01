@@ -17,6 +17,7 @@
  * Formato según https://dev.meta.ai/docs/sam (Responses API, stream, mask_encoding one_bit).
  */
 import express from 'express';
+import { agentTurn, AgentError } from './agent';
 import { buildObjectPrompt, decodeMaskToRaster, parseImageStream, recordsOfKind, type ResponsesEvent } from '@meta-sam/parser';
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -24,6 +25,18 @@ const SAM_API_URL = (process.env.SAM_API_URL ?? '').replace(/\/+$/, '').replace(
 const SAM_API_KEY = process.env.SAM_API_KEY;
 const SAM_MODEL = process.env.SAM_MODEL ?? 'sam-3.1';
 const TIMEOUT_MS = 45_000;
+const AGENT_MODEL = process.env.AGENT_MODEL ?? 'muse-spark-1.3';
+const API_BASE = (process.env.SAM_API_URL ?? '').replace(/\/+$/, '').replace(/\/responses$/, '');
+
+/** Límite sencillo por IP: 20 turnos de agente por minuto. */
+const hits = new Map<string, number[]>();
+function rateLimited(ip: string) {
+  const now = Date.now();
+  const recent = (hits.get(ip) ?? []).filter((t) => now - t < 60_000);
+  recent.push(now);
+  hits.set(ip, recent);
+  return recent.length > 20;
+}
 
 interface Prompt { x: number; y: number; label: 0 | 1 }
 
@@ -90,7 +103,30 @@ const app = express();
 app.use(express.json({ limit: '12mb' }));
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, sam: Boolean(SAM_API_URL && SAM_API_KEY), model: SAM_MODEL });
+  res.json({ ok: true, sam: Boolean(SAM_API_URL && SAM_API_KEY), model: SAM_MODEL, agent: Boolean(API_BASE && SAM_API_KEY), agentModel: AGENT_MODEL });
+});
+
+/** Agente de diseño (Muse Spark): la clave vive solo aquí. */
+app.post('/api/agent', async (req, res) => {
+  if (!API_BASE || !SAM_API_KEY) {
+    res.status(503).json({ code: 'AGENT_NOT_CONFIGURED', message: 'El servidor no tiene credenciales para el agente.' });
+    return;
+  }
+  if (rateLimited(req.ip ?? 'local')) {
+    res.status(429).json({ code: 'AGENT_RATE_LIMIT', message: 'Demasiadas solicitudes seguidas. Espera un momento.' });
+    return;
+  }
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 40_000);
+  try {
+    const turn = await agentTurn({ messages: req.body?.messages, context: req.body?.context }, { base: API_BASE, key: SAM_API_KEY, model: AGENT_MODEL, signal: ctl.signal });
+    res.json({ turn, model: AGENT_MODEL });
+  } catch (e) {
+    const err = e instanceof AgentError ? e : new AgentError('AGENT_UPSTREAM', 'Error inesperado del agente.');
+    res.status(err.status).json({ code: err.code, message: err.message });
+  } finally {
+    clearTimeout(timer);
+  }
 });
 
 app.post('/api/segment', async (req, res) => {
