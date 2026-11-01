@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CutSense · Rediseño UX</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+<link rel="stylesheet" href="ux.css">
+<script>
+  // ?theme=dark | ?theme=light (otherwise follows the OS)
+  (function () { var t = new URLSearchParams(location.search).get('theme'); if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t; })();
+</script>
+</head>
+<body class="cs-root cs-grid-paper">
+
+<!-- ================= Icon sprite ================= -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-poly" viewBox="0 0 24 24"><path d="M5 18L4 8l8-4 7 6-3 9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="5" cy="18" r="2" fill="currentColor"/><circle cx="12" cy="4" r="2" fill="currentColor"/><circle cx="19" cy="10" r="2" fill="currentColor"/></symbol>
+    <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v6M9 12h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M11 3l1.9 5.6L18.5 10.5l-5.6 1.9L11 18l-1.9-5.6L3.5 10.5l5.6-1.9zM18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" fill="currentColor"/></symbol>
+    <symbol id="i-ruler" viewBox="0 0 24 24"><path d="M3 16.5L16.5 3 21 7.5 7.5 21zM7 12.5l2 2M10 9.5l1.5 1.5M13 6.5l2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+    <symbol id="i-photo" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 16l5-5 4 4 3-3 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="16" cy="9" r="1.6" fill="currentColor"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 8V3h10v5M7 17H4v-8h16v8h-3M7 14h10v7H7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><path d="M4 18c3-9 7 2 9-5s5-6 7-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="4" cy="18" r="2" fill="currentColor"/></symbol>
+    <symbol id="i-contrast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></symbol>
+    <symbol id="i-kit" viewBox="0 0 24 24"><path d="M4 8h16v11H4zM9 8V5h6v3M4 13h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-shape" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-import" viewBox="0 0 24 24"><path d="M12 15V4M7 9l5-5 5 5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5zM8 3v5h7M8 21v-7h8v7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-new" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM12 10v7M8.5 13.5h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.3" fill="currentColor"/></symbol>
+    <symbol id="i-caret" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-caret-up" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-machine" viewBox="0 0 24 24"><path d="M3 6h18v8H3zM7 14v4M17 14v4M5 18h14M8 10h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+
+    <!-- piece patterns A–F + defect hatch (from design/preview.html) -->
+    <pattern id="cs-pat-a" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#F5B800"/></pattern>
+    <pattern id="cs-pat-b" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#4FC3F7"/><rect width="1.8" height="6" fill="rgba(11,15,13,.55)"/></pattern>
+    <pattern id="cs-pat-c" width="7" height="7" patternUnits="userSpaceOnUse"><rect width="7" height="7" fill="#F2609E"/><circle cx="3.5" cy="3.5" r="1.5" fill="rgba(11,15,13,.6)"/></pattern>
+    <pattern id="cs-pat-d" width="7" height="7" patternUnits="userSpaceOnUse"><rect width="7" height="7" fill="#1FB5A0"/><path d="M0 0L7 7M7 0L0 7" stroke="rgba(11,15,13,.55)" stroke-width="1.1"/></pattern>
+    <pattern id="cs-pat-defect" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="10" height="10" fill="#FFFFFF" fill-opacity=".9"/><rect width="5" height="10" fill="#FF3B30"/></pattern>
+    <pattern id="ux-pat-left" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" fill="#FFFFFF" fill-opacity=".55"/><rect width="3" height="9" fill="#1E5A43" fill-opacity=".8"/></pattern>
+    <filter id="pv-leather" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="3" seed="4" result="n"/>
+      <feColorMatrix in="n" type="saturate" values="0" result="g"/>
+      <feComponentTransfer in="g" result="g2"><feFuncA type="linear" slope=".28"/></feComponentTransfer>
+      <feComposite in="g2" in2="SourceGraphic" operator="in" result="t"/>
+      <feBlend in="SourceGraphic" in2="t" mode="multiply"/>
+    </filter>
+    <filter id="pv-table" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency=".012 .2" numOctaves="2" seed="9" result="n"/>
+      <feColorMatrix in="n" type="saturate" values="0" result="g"/>
+      <feComponentTransfer in="g" result="g2"><feFuncA type="linear" slope=".22"/></feComponentTransfer>
+      <feComposite in="g2" in2="SourceGraphic" operator="in" result="t"/>
+      <feBlend in="SourceGraphic" in2="t" mode="multiply"/>
+    </filter>
+    <radialGradient id="pv-vignette" cx="50%" cy="45%" r="75%"><stop offset="60%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".28"/></radialGradient>
+  </defs>
+</svg>
+
+<button class="cs-btn cs-btn--sm ux-themebar" id="themebtn" type="button" onclick="toggleTheme()"><svg class="ux-ico"><use href="#i-moon"/></svg> Tema</button>
+
+<main class="cs-container ux-page">
+  <header class="ux-page__intro">
+    <span class="cs-eyebrow">Rediseño UX · divulgación progresiva</span>
+    <h1 class="cs-h2">Una pantalla, una acción principal.</h1>
+    <p class="cs-body-sm" style="color:var(--cs-text-muted)">Prototype for <code>design/ux/UX-REDESIGN.md</code>. Each frame is a real state of the wizard. Annotations in English, UI copy in Spanish. Rule: one primary action per screen, 3–5 visible primary controls, everything else behind a labelled disclosure, menu, tab or dialog — and every collapsed thing shows its current value.</p>
+  </header>
+
+  <!-- ===================================================== F1 -->
+  <div class="ux-annot" id="f1"><span class="ux-annot__id">F1</span><span class="ux-annot__title">Paso 1 · antes de detectar</span>
+    <span class="ux-annot__note">One field, one primary. The four non-AI paths (guide points, local contrast, saved example mask, manual trace) live in the “Otras formas” menu, shown open here. After a SAM failure the same four become visible buttons inside the error alert (see gallery G5).</span></div>
+  <section class="ux-frame" data-frame="f1">
+    <header data-top="1"></header>
+    <div class="ux-work">
+      <div class="ux-canvas"><div class="cs-stage" data-stage="photo"></div>
+        <div class="ux-canvas__top"><span class="ux-tag">Imagen de ejemplo</span></div>
+      </div>
+      <aside class="ux-panel" aria-label="Panel del paso 1">
+        <div class="ux-sheet-handle"></div>
+        <div class="ux-panel__head">
+          <span class="ux-eyebrow">Paso 1 de 3</span>
+          <h2 class="cs-h3">Digitalizar</h2>
+          <p class="ux-muted">La IA encuentra el borde de tu material; tú lo confirmas.</p>
+        </div>
+        <div class="ux-panel__body">
+          <label class="cs-field"><span class="cs-label">¿Qué material buscar?</span>
+            <input class="cs-input cs-mono" value="brown shape" aria-describedby="f1-hint">
+            <span class="cs-hint" id="f1-hint">Frase corta en inglés, así busca SAM 3.1 (p. ej. «brown leather»).</span>
+          </label>
+        </div>
+        <div class="ux-panel__foot">
+          <button class="cs-btn cs-btn--primary cs-btn--block"><svg class="ux-ico"><use href="#i-spark"/></svg>Detectar borde con IA</button>
+          <div class="ux-foot-row" style="justify-content:space-between;align-items:center">
+            <p class="cs-caption" style="max-width:20em">Tu foto viaja a SAM 3.1 por nuestro servidor y no se guarda.</p>
+            <button class="cs-btn cs-btn--sm cs-btn--ghost" aria-haspopup="menu" aria-expanded="true">Otras formas<svg class="ux-ico"><use href="#i-caret-up"/></svg></button>
+          </div>
+        </div>
+      </aside>
+    </div>
+    <div class="ux-scrim-m"></div>
+    <div class="ux-menu ux-sheet-m ux-otherways" role="menu" aria-label="Otras formas de digitalizar">
+      <div class="ux-menu__label">Guiar a la IA</div>
+      <button class="ux-menu__item" role="menuitem" data-focus="true"><svg class="ux-ico"><use href="#i-target"/></svg><span>Marcar puntos de guía<small>Clic incluye · Shift+clic excluye</small></span><span class="cs-badge cs-badge--count">0</span></button>
+      <div class="ux-menu__sep"></div>
+      <div class="ux-menu__label">Sin IA de Meta</div>
+      <button class="ux-menu__item" role="menuitem"><svg class="ux-ico"><use href="#i-contrast"/></svg><span>Segmentar por contraste<small>Local, en tu navegador</small></span><span></span></button>
+      <button class="ux-menu__item" role="menuitem"><svg class="ux-ico"><use href="#i-file"/></svg><span>Usar máscara guardada<small>Solo imágenes de ejemplo</small></span><span></span></button>
+      <button class="ux-menu__item" role="menuitem"><svg class="ux-ico"><use href="#i-hand"/></svg><span>Trazar a mano<small>Clic por punto · clic en el primero para cerrar</small></span><span></span></button>
+    </div>
+  </section>
+
+  <!-- ===================================================== F2 -->
+  <div class="ux-annot" id="f2"><span class="ux-annot__id">F2</span><span class="ux-annot__title">Paso 1 · propuesta de la IA</span>
+    <span class="ux-annot__note">The decision is the screen: one question, accept (primary) or discard. Model, latency, confidence, prompt and vertex count move into “Detalles técnicos”. The hole count stays visible because it changes the user’s data.</span></div>
+  <section class="ux-frame" data-frame="f2">
+    <header data-top="1"></header>
+    <div class="ux-work">
+      <div class="ux-canvas"><div class="cs-stage" data-stage="proposal"></div>
+        <div class="ux-canvas__top"><span class="ux-tag ux-tag--ai"><span class="ux-tag__dash"></span>Propuesta IA</span></div>
+      </div>
+      <aside class="ux-panel" aria-label="Panel del paso 1">
+        <div class="ux-sheet-handle"></div>
+        <div class="ux-panel__head">
+          <span class="ux-eyebrow">Paso 1 de 3</span>
+          <h2 class="cs-h3">Digitalizar</h2>
+          <div class="ux-status"><span class="cs-pill cs-pill--ai">Propuesta IA · SAM 3.1</span></div>
+        </div>
+        <div class="ux-panel__body">
+          <p class="ux-question">¿Este es el borde de tu material?</p>
+          <p class="cs-body-sm">La IA propone; tú tienes la última palabra. Encontramos <b>1 hueco</b>: lo marcaremos como zona excluida.</p>
+          <details class="ux-disc"><summary>Detalles técnicos<span class="ux-disc__val">23 vértices</span></summary>
+            <div class="ux-disc__body cs-caption cs-mono">sam-3.1 · 2.140 ms · confianza 94 % · prompt «brown shape»</div></details>
+        </div>
+        <div class="ux-panel__foot">
+          <div class="ux-foot-row">
+            <button class="cs-btn cs-btn--primary">Aceptar contorno</button>
+            <button class="cs-btn cs-btn--ghost">Descartar</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================================================== F3 -->
+  <div class="ux-annot" id="f3"><span class="ux-annot__id">F3</span><span class="ux-annot__title">Paso 1 · contorno aceptado (menú Proyecto abierto)</span>
+    <span class="ux-annot__note">Editing instructions become the canvas hint; “Revertir” becomes a canvas tool. The flash alert becomes a toast. “Guardar proyecto” and “Nuevo proyecto” leave the panel for the header “Proyecto” menu — the old green header button competed with the panel’s primary.</span></div>
+  <section class="ux-frame" data-frame="f3">
+    <header data-top="1" data-avail="2" data-menu="open"></header>
+    <div class="ux-work">
+      <div class="ux-canvas"><div class="cs-stage" data-stage="edit"></div>
+        <div class="ux-canvas__top"><span class="ux-tag ux-tag--human"><span class="ux-tag__solid"></span>IA + corregido por ti</span><span class="ux-spacer"></span><span class="ux-tag">Arrastra un vértice · clic en un borde añade · Supr quita</span></div>
+        <div class="ux-toasts"><div class="cs-toast" role="status"><span class="cs-toast__mark"></span>1 hueco pasó a ser zona excluida. Revísalo en Preparar.<button class="cs-link">Cerrar</button></div></div>
+        <div class="ux-tools" role="toolbar" aria-label="Herramientas del contorno">
+          <button class="ux-tool"><svg class="ux-ico"><use href="#i-undo"/></svg>Volver al último válido</button>
+          <span class="ux-tools__sep"></span>
+          <button class="ux-tool ux-tool--ai"><svg class="ux-ico"><use href="#i-spark"/></svg>Detectar de nuevo</button>
+        </div>
+      </div>
+      <aside class="ux-panel" aria-label="Panel del paso 1">
+        <div class="ux-sheet-handle"></div>
+        <div class="ux-panel__head">
+          <span class="ux-eyebrow">Paso 1 de 3</span>
+          <h2 class="cs-h3">Contorno listo</h2>
+          <p class="ux-muted">Si algo no coincide con el borde real, corrígelo sobre la foto.</p>
+        </div>
+        <div class="ux-panel__body">
+          <dl class="ux-facts">
+            <div><dt>Origen</dt><dd><span class="cs-pill cs-pill--human">IA + corregido por ti</span></dd></div>
+            <div><dt>Área digitalizada</dt><dd class="cs-measure">1.039,7 <small>u²</small></dd></div>
+            <div><dt>Escala</dt><dd><span class="cs-unit cs-unit--relative">Sin calibrar</span></dd></div>
+          </dl>
+          <details class="ux-disc"><summary>Detalles técnicos<span class="ux-disc__val">23 vértices</span></summary>
+            <div class="ux-disc__body cs-caption cs-mono">SAM 3.1 (inferencia en vivo) · 2.140 ms · confianza 94 %</div></details>
+        </div>
+        <div class="ux-panel__foot">
+          <button class="cs-btn cs-btn--primary cs-btn--block">Continuar a Preparar</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================================================== F4 -->
+  <div class="ux-annot" id="f4"><span class="ux-annot__id">F4</span><span class="ux-annot__title">Paso 2 · checklist, Escala abierta</span>
+    <span class="ux-annot__note">Step 2 is a three-item checklist; only one item is open. Closed items show their state as a mark (✓ / ! / number, never colour alone) plus a one-line summary. Two calibration methods share one segmented control; the canvas previews what “ancho” means.</span></div>
+  <section class="ux-frame" data-frame="f4">
+    <header data-top="2"></header>
+    <div class="ux-work">
+      <div class="ux-canvas"><div class="cs-stage" data-stage="scale"></div>
+        <div class="ux-canvas__top"><span class="ux-tag ux-tag--human"><span class="ux-tag__solid"></span>Corregido por ti</span></div>
+      </div>
+      <aside class="ux-panel" aria-label="Panel del paso 2">
+        <div class="ux-sheet-handle"></div>
+        <div class="ux-panel__head">
+          <span class="ux-eyebrow">Paso 2 de 3</span>
+          <h2 class="cs-h3">Preparar</h2>
+        </div>
+        <div class="ux-panel__body">
+          <div class="ux-checklist">
+            <section class="ux-check ux-check--todo" data-open="true">
+              <button class="ux-check__head" aria-expanded="true"><span class="ux-check__mark" data-n="1"></span><span class="ux-check__title">Escala</span><span class="ux-check__summary"><span class="cs-unit cs-unit--relative">Sin calibrar</span></span><span class="ux-check__chev"></span></button>
+              <div class="ux-check__body">
+                <div class="cs-segmented" role="group" aria-label="Método de calibración" style="width:100%"><button aria-pressed="true" style="flex:1">Por ancho</button><button aria-pressed="false" style="flex:1">Con una referencia</button></div>
+                <div class="ux-foot-row" style="align-items:end">
+                  <label class="cs-field" style="flex:1"><span class="cs-label">Ancho real del material</span>
+                    <span class="cs-number"><input class="cs-input" inputmode="decimal" placeholder="36,5"><span class="cs-number__unit">cm</span></span></label>
+                  <button class="cs-btn cs-btn--secondary">Calibrar</button>
+                </div>
+                <p class="cs-hint">Mide la parte más ancha. ¿Sin regla? Una tarjeta bancaria mide 8,56 cm.</p>
+                <button class="cs-link" style="justify-self:start;font-size:var(--cs-text-sm)">Usar escala del ejemplo</button>
+              </div>
+            </section>
+            <section class="ux-check ux-check--done">
+              <button class="ux-check__head" aria-expanded="false"><span class="ux-check__mark"></span><span class="ux-check__title">Zonas excluidas</span><span class="ux-check__summary">1 zona</span><span class="ux-check__chev"></span></button>
+            </section>
+            <section class="ux-check ux-check--todo">
+              <button class="ux-check__head" aria-expanded="false"><span class="ux-check__mark" data-n="3"></span><span class="ux-check__title">Piezas</span><span class="ux-check__summary">Ninguna aún</span><span class="ux-check__chev"></span></button>
+            </section>
+          </div>
+        </div>
+        <div class="ux-panel__foot">
+          <div class="ux-sum"><span>Área útil</span><b>≈ 1.023,3 u²</b></div>
+          <button class="cs-btn cs-btn--primary cs-btn--block" disabled>Optimizar distribución</button>
+          <p class="ux-reason">Añade al menos una pieza para optimizar.</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================================================== F5 -->
+  <div class="ux-annot" id="f5"><span class="ux-annot__id">F5</span><span class="ux-annot__title">Paso 2 · Zonas excluidas, con propuestas de la IA</span>
+    <span class="ux-annot__note">Zone tools exist once, on the canvas toolbar (they were duplicated in steps 2 and 3). “Detectar con IA” opens a small popover with the phrase field (gallery G1). AI proposals appear as one review card — nothing is applied until accepted.</span></div>
+  <section class="ux-frame" data-frame="f5">
+    <header data-top="2"></header>
+    <div class="ux-work">
+      <div class="ux-canvas"><div class="cs-stage" data-stage="zones"></div>
+        <div class="ux-canvas__top"><span class="ux-tag ux-tag--ai"><span class="ux-tag__dash"></span>2 zonas propuestas</span></div>
+        <div class="ux-tools" role="toolbar" aria-label="Herramientas de zonas">
+          <button class="ux-tool"><svg class="ux-ico"><use href="#i-poly"/></svg><span>Dibujar<span class="ux-hide-m"> zona</span></span></button>
+          <button class="ux-tool"><svg class="ux-ico"><use href="#i-circle"/></svg>Círculo</button>
+          <span class="ux-tools__sep"></span>
+          <button class="ux-tool ux-tool--ai" aria-haspopup="dialog" aria-expanded="false"><svg class="ux-ico"><use href="#i-spark"/></svg><span>Detectar<span class="ux-hide-m"> con IA</span></span></button>
+        </div>
+      </div>
+      <aside class="ux-panel" aria-label="Panel del paso 2">
+        <div class="ux-sheet-handle"></div>
+        <div class="ux-panel__head">
+          <span class="ux-eyebrow">Paso 2 de 3</span>
+          <h2 class="cs-h3">Preparar</h2>
+        </div>
+        <div class="ux-panel__body">
+          <div class="ux-checklist">
+            <section class="ux-check ux-check--done">
+              <button class="ux-check__head" aria-expanded="false"><span class="ux-check__mark"></span><span class="ux-check__title">Escala</span><span class="ux-check__summary"><span class="cs-unit cs-unit--calibrated">Calibrado · cm</span></span><span class="ux-check__chev"></span></button>
+            </section>
+            <section class="ux-check ux-check--done" data-open="true">
+              <button class="ux-check__head" aria-expanded="true"><span class="ux-check__mark"></span><span class="ux-check__title">Zonas excluidas</span><span class="ux-check__summary">1 zona</span><span class="ux-check__chev"></span></button>
+              <div class="ux-check__body">
+                <p class="cs-hint">Ninguna pieza caerá sobre estas zonas. Usa las herramientas sobre la foto.</p>
+                <div class="ux-zone"><span class="cs-swatch cs-swatch--defect"></span><span style="line-height:1.2"><span class="ux-zone__name">Zona 1</span><br><span class="cs-caption">del hueco de la máscara</span></span><span class="cs-measure" style="font-size:12px">16,4 <small>cm²</small></span><button class="ux-iconbtn" aria-label="Eliminar zona 1"><svg class="ux-ico"><use href="#i-trash"/></svg></button></div>
+                <div class="cs-alert cs-alert--ai" role="status">
+                  <svg class="cs-alert__icon"><use href="#i-spark"/></svg>
+                  <div><span class="cs-alert__title">La IA propone 2 zonas</span><br>«scar», «stain» · punteadas en azul sobre la foto.</div>
+                  <div class="cs-alert__actions"><button class="cs-btn cs-btn--sm cs-btn--secondary">Añadir las 2</button><button class="cs-btn cs-btn--sm cs-btn--ghost">Descartar</button></div>
+                </div>
+              </div>
+            </section>
+            <section class="ux-check ux-check--done">
+              <button class="ux-check__head" aria-expanded="false"><span class="ux-check__mark"></span><span class="ux-check__title">Piezas</span><span class="ux-check__summary">Tarjetero · 5 por juego</span><span class="ux-check__chev"></span></button>
+            </section>
+          </div>
+        </div>
+        <div class="ux-panel__foot">
+          <div class="ux-sum"><span>Área útil</span><b>1.023,3 cm²</b></div>
+          <button class="cs-btn cs-btn--primary cs-btn--block">Optimizar distribución</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================================================== F6 -->
+  <div class="ux-annot" id="f6"><span class="ux-annot__id">F6</span><span class="ux-annot__title">Paso 2 · Piezas, estado vacío</span>
+    <span class="ux-annot__note">The five competing entry points (kit select, AI design, add, draw, import SVG) become three clear choices. Once there are pieces, the same choices live in the “Añadir pieza” menu (gallery G2). Kits explain their cm requirement instead of failing after the pick.</span></div>
+  <section class="ux-frame" data-frame="f6">
+    <header data-top="2"></header>
+    <div class="ux-work">
+      <div class="ux-canvas"><div class="cs-stage" data-stage="prep"></div>
+        <div class="ux-canvas__top"><span class="ux-tag ux-tag--human"><span class="ux-tag__solid"></span>Corregido por ti</span></div>
+      </div>
+      <aside class="ux-panel" aria-label="Panel del paso 2">
+        <div class="ux-sheet-handle"></div>
+        <div class="ux-panel__head">
+          <span class="ux-eyebrow">Paso 2 de 3</span>
+          <h2 class="cs-h3">Preparar</h2>
+        </div>
+        <div class="ux-panel__body">
+          <div class="ux-checklist">
+            <section class="ux-check ux-check--done"><button class="ux-check__head" aria-expanded="false"><span class="ux-check__mark"></span><span class="ux-check__title">Escala</span><span class="ux-check__summary"><span class="cs-unit cs-unit--calibrated">Calibrado · cm</span></span><span class="ux-check__chev"></span></button></section>
+            <section class="ux-check ux-check--done"><button class="ux-check__head" aria-expanded="false"><span class="ux-check__mark"></span><span class="ux-check__title">Zonas excluidas</span><span class="ux-check__summary">1 zona</span><span class="ux-check__chev"></span></button></section>
+            <section class="ux-check ux-check--todo" data-open="true">
+              <button class="ux-check__head" aria-expanded="true"><span class="ux-check__mark" data-n="3"></span><span class="ux-check__title">Piezas</span><span class="ux-check__summary">Ninguna aún</span><span class="ux-check__chev"></span></button>
+              <div class="ux-check__body">
+                <div class="ux-options">
+                  <button class="ux-option"><span class="ux-option__icon"><svg class="ux-ico"><use href="#i-kit"/></svg></span><span><span class="ux-option__title">Usar un producto</span><br><span class="ux-option__meta">Tarjetero, cartera, llaveros… medidas en cm</span></span><span class="ux-chev"></span></button>
+                  <button class="ux-option"><span class="ux-option__icon ux-option__icon--ai"><svg class="ux-ico"><use href="#i-spark"/></svg></span><span><span class="ux-option__title">Diseñar con IA</span><br><span class="ux-option__meta">Descríbelo; tú apruebas las piezas</span></span><span class="ux-chev"></span></button>
+                  <button class="ux-option"><span class="ux-option__icon"><svg class="ux-ico"><use href="#i-shape"/></svg></span><span><span class="ux-option__title">Pieza a medida</span><br><span class="ux-option__meta">Forma básica, dibujada o desde SVG</span></span><span class="ux-chev"></span></button>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <div class="ux-panel__foot">
+          <div class="ux-sum"><span>Área útil</span><b>1.023,3 cm²</b></div>
+          <button class="cs-btn cs-btn--primary cs-btn--block" disabled>Optimizar distribución</button>
+          <p class="ux-reason">Añade al menos una pieza para optimizar.</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================================================== F7 -->
+  <div class="ux-annot" id="f7"><span class="ux-annot__id">F7</span><span class="ux-annot__title">Paso 2 · Piezas, una pieza en edición</span>
+    <span class="ux-annot__note">Pieces are one-line rows (letter swatch, name, size, quantity). Clicking a row opens the only editor on screen; rotations become four pressed-state chips inside it. Spacing lives in “Opciones”, whose summary shows the value. The 17-checkbox wall is gone.</span></div>
+  <section class="ux-frame" data-frame="f7">
+    <header data-top="2"></header>
+    <div class="ux-work">
+      <div class="ux-canvas"><div class="cs-stage" data-stage="prep"></div>
+        <div class="ux-canvas__top"><span class="ux-tag ux-tag--human"><span class="ux-tag__solid"></span>Corregido por ti</span></div>
+      </div>
+      <aside class="ux-panel" aria-label="Panel del paso 2">
+        <div class="ux-sheet-handle"></div>
+        <div class="ux-panel__head">
+          <span class="ux-eyebrow">Paso 2 de 3</span>
+          <h2 class="cs-h3">Preparar</h2>
+        </div>
+        <div class="ux-panel__body">
+          <div class="ux-checklist">
+            <section class="ux-check ux-check--done"><button class="ux-check__head" aria-expanded="false"><span class="ux-check__mark"></span><span class="ux-check__title">Escala</span><span class="ux-check__summary"><span class="cs-unit cs-unit--calibrated">Calibrado · cm</span></span><span class="ux-check__chev"></span></button></section>
+            <section class="ux-check ux-check--done"><button class="ux-check__head" aria-expanded="false"><span class="ux-check__mark"></span><span class="ux-check__title">Zonas excluidas</span><span class="ux-check__summary">1 zona</span><span class="ux-check__chev"></span></button></section>
+            <section class="ux-check ux-check--done" data-open="true">
+              <button class="ux-check__head" aria-expanded="true"><span class="ux-check__mark"></span><span class="ux-check__title">Piezas</span><span class="ux-check__summary">Tarjetero · 5 por juego</span><span class="ux-check__chev"></span></button>
+              <div class="ux-check__body">
+                <div class="cs-segmented" role="group" aria-label="Qué buscar" style="width:100%"><button aria-pressed="true" style="flex:1">Juegos completos</button><button aria-pressed="false" style="flex:1">Cantidad exacta</button></div>
+                <p class="cs-hint" style="margin-top:-4px">Cantidades de <b>un</b> juego; buscamos cuántos juegos caben.</p>
+                <div class="ux-rows" role="list">
+                  <button class="ux-row" aria-expanded="false"><span class="cs-swatch cs-swatch--a" data-letter="A"></span><span class="ux-row__name">Cuerpo</span><span class="ux-row__dim">9,5 × 6,5</span><span class="ux-row__qty">×1</span></button>
+                  <button class="ux-row" aria-expanded="false"><span class="cs-swatch cs-swatch--b" data-letter="B"></span><span class="ux-row__name">Bolsillo frontal</span><span class="ux-row__dim">9,5 × 6</span><span class="ux-row__qty">×1</span></button>
+                  <button class="ux-row" aria-expanded="true"><span class="cs-swatch cs-swatch--c" data-letter="C"></span><span class="ux-row__name">Bolsillo de tarjeta</span><span class="ux-row__dim">9,5 × 4,5</span><span class="ux-row__qty">×2</span></button>
+                  <div class="ux-editor" role="group" aria-label="Editar Bolsillo de tarjeta">
+                    <div class="ux-foot-row">
+                      <label class="cs-field" style="flex:1"><span class="cs-label" style="font-size:12px">Nombre</span><input class="cs-input" value="Bolsillo de tarjeta" style="min-height:40px"></label>
+                      <label class="cs-field" style="flex:1"><span class="cs-label" style="font-size:12px">Forma</span><select class="cs-select" style="min-height:40px;font-size:14px"><option>Redondeado</option><option>Rectángulo</option><option>Círculo</option><option>Trapezoide</option><option>Silueta en L</option></select></label>
+                    </div>
+                    <div class="cs-fields-3">
+                      <label class="cs-field"><span class="cs-label">Ancho</span><span class="cs-number"><input class="cs-input" value="9,5" style="min-height:40px"><span class="cs-number__unit">cm</span></span></label>
+                      <label class="cs-field"><span class="cs-label">Alto</span><span class="cs-number"><input class="cs-input" value="4,5" style="min-height:40px"><span class="cs-number__unit">cm</span></span></label>
+                      <label class="cs-field"><span class="cs-label">Por juego</span><input class="cs-input cs-mono" value="2" style="min-height:40px"></label>
+                    </div>
+                    <div class="ux-rot"><span class="cs-label" style="font-size:12px">Giros permitidos</span>
+                      <div class="cs-chip-group" role="group" aria-label="Giros permitidos"><button class="cs-chip" aria-pressed="true">0°</button><button class="cs-chip" aria-pressed="false">90°</button><button class="cs-chip" aria-pressed="true">180°</button><button class="cs-chip" aria-pressed="false">270°</button></div></div>
+                    <div class="ux-editor__foot"><button class="cs-btn cs-btn--danger-quiet cs-btn--sm"><svg class="ux-ico"><use href="#i-trash"/></svg>Quitar pieza</button><button class="cs-btn cs-btn--sm cs-btn--secondary">Listo</button></div>
+                  </div>
+                  <button class="ux-row" aria-expanded="false"><span class="cs-swatch cs-swatch--d" data-letter="D"></span><span class="ux-row__name">Pestaña</span><span class="ux-row__dim">6 × 3</span><span class="ux-row__qty">×1</span></button>
+                </div>
+                <div class="ux-foot-row" style="justify-content:space-between;align-items:center">
+                  <button class="cs-btn cs-btn--sm" aria-haspopup="menu"><svg class="ux-ico"><use href="#i-plus"/></svg>Añadir pieza<svg class="ux-ico"><use href="#i-caret"/></svg></button>
+                  <button class="cs-btn cs-btn--sm cs-btn--ghost" aria-haspopup="dialog" aria-label="Opciones: separación 0,2 cm">Opciones <span class="ux-disc__val" style="margin:0">· 0,2 cm</span></button>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <div class="ux-panel__foot">
+          <div class="ux-sum"><span>Área útil</span><b>1.023,3 cm²</b></div>
+          <button class="cs-btn cs-btn--primary cs-btn--block">Optimizar distribución</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================================================== F8 -->
+  <div class="ux-annot" id="f8"><span class="ux-annot__id">F8</span><span class="ux-annot__title">Paso 3 · Resultado, menú Exportar abierto</span>
+    <span class="ux-annot__note">Hero = what the user came for (complete sets) + three numbers + the honesty line. Six metric rows, the per-piece table and the JSON download sit in “Detalles”. Every export (SVG, PNG, photo toggle, 1:1 print with paper, SVG in cm, DXF + reference toggle) is one menu; long captions became one-line hints.</span></div>
+  <section class="ux-frame" data-frame="f8">
+    <header data-top="3"></header>
+    <div class="ux-work">
+      <div class="ux-canvas"><div class="cs-stage" data-stage="result"></div>
+        <div class="ux-canvas__top"><span class="ux-tag ux-tag--ok">✓ Verificado</span></div>
+        <div class="ux-tools" role="toolbar" aria-label="Herramientas del resultado">
+          <button class="ux-tool" aria-pressed="true"><svg class="ux-ico"><use href="#i-photo"/></svg>Foto</button>
+          <span class="ux-tools__sep"></span>
+          <button class="ux-tool"><svg class="ux-ico"><use href="#i-poly"/></svg>Marcar zona</button>
+        </div>
+      </div>
+      <aside class="ux-panel" aria-label="Panel del resultado">
+        <div class="ux-sheet-handle"></div>
+        <div class="ux-panel__head">
+          <span class="ux-eyebrow">Paso 3 de 3</span>
+          <h2 class="cs-h3">Resultado</h2>
+          <div class="ux-tabs" role="tablist"><button class="ux-tab" role="tab" aria-selected="true">Plan</button><button class="ux-tab" role="tab" aria-selected="false">Sobrante</button></div>
+        </div>
+        <div class="ux-panel__body">
+          <div class="ux-hero">
+            <div class="cs-seal" data-seal></div>
+            <div><div class="ux-hero__value">3<small>juegos</small></div><div class="ux-hero__label">completos · 15 piezas, todas verificadas</div></div>
+          </div>
+          <div class="ux-trio">
+            <div><b>63,5<small>%</small></b><span>del área útil</span></div>
+            <div><b>649,6<small>cm²</small></b><span>ocupada</span></div>
+            <div><b>1.023<small>cm²</small></b><span>útil</span></div>
+          </div>
+          <p class="ux-honest">Mejor distribución encontrada (cs-nest-1.0 · semilla 2654435762). No es un óptimo demostrado.</p>
+          <details class="ux-disc"><summary>Detalles<span class="ux-disc__val">áreas · piezas · JSON</span></summary></details>
+        </div>
+        <div class="ux-panel__foot">
+          <div class="ux-foot-row">
+            <button class="cs-btn cs-btn--primary" aria-haspopup="menu" aria-expanded="true"><svg class="ux-ico"><use href="#i-down"/></svg>Exportar<svg class="ux-ico"><use href="#i-caret-up"/></svg></button>
+            <button class="cs-btn" aria-haspopup="menu" aria-label="Más acciones"><svg class="ux-ico"><use href="#i-more"/></svg></button>
+          </div>
+        </div>
+      </aside>
+    </div>
+    <div class="ux-scrim-m"></div>
+    <div class="ux-menu ux-export" role="menu" aria-label="Exportar plano">
+      <div class="ux-menu__head"><span class="ux-menu__title">Exportar plano</span><button class="ux-iconbtn" aria-label="Cerrar"><svg class="ux-ico"><use href="#i-x"/></svg></button></div>
+      <div class="ux-menu__label">Imagen</div>
+      <button class="ux-menu__item" role="menuitem" data-focus="true"><svg class="ux-ico"><use href="#i-file"/></svg><span>SVG<small>Vectorial, para ver o editar</small></span><span class="cs-badge">.svg</span></button>
+      <button class="ux-menu__item" role="menuitem"><svg class="ux-ico"><use href="#i-photo"/></svg><span>PNG<small>Imagen para compartir</small></span><span class="cs-badge">.png</span></button>
+      <div class="ux-switch" role="menuitemcheckbox" aria-checked="true"><span>Incluir fotografía</span><span style="display:flex;align-items:center"><span class="ux-switch__state">SÍ</span><span class="ux-switch__track"></span></span></div>
+      <div class="ux-menu__sep"></div>
+      <div class="ux-menu__label">A escala real 1:1</div>
+      <button class="ux-menu__item" role="menuitem"><svg class="ux-ico"><use href="#i-print"/></svg><span>Imprimir<small>Imprime al 100 % y mide el cuadro de 5 cm</small></span><select class="cs-select" aria-label="Tamaño de papel" style="min-height:32px;width:auto;font-size:13px;padding-left:8px"><option>A4</option><option>Carta</option></select></button>
+      <button class="ux-menu__item" role="menuitem"><svg class="ux-ico"><use href="#i-file"/></svg><span>SVG en centímetros</span><span class="cs-badge">.svg</span></button>
+      <button class="ux-menu__item" role="menuitem"><svg class="ux-ico"><use href="#i-machine"/></svg><span>DXF para máquina<small>R12 · mm · piezas en capa CUT</small></span><span class="cs-badge">.dxf</span></button>
+      <div class="ux-switch" role="menuitemcheckbox" aria-checked="false"><span>DXF: borde y zonas como referencia</span><span style="display:flex;align-items:center"><span class="ux-switch__state">NO</span><span class="ux-switch__track"></span></span></div>
+      <div class="ux-menu__note"><svg class="ux-ico" style="flex:none;color:var(--cs-stale-fg)"><use href="#i-warn"/></svg><span>Planos de referencia: revisa una medida antes de cortar. Tu máquina decide kerf, velocidad y potencia.</span></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== F9 -->
+  <div class="ux-annot" id="f9"><span class="ux-annot__id">F9</span><span class="ux-annot__title">Paso 3 · pestaña Sobrante</span>
+    <span class="ux-annot__note">Opening the tab draws the leftover on the canvas (replaces “Ver / Ocultar sobrante”). The tab has its own single primary: “Calcular con el sobrante”. Fragment planning and the real-leftover photo are two clear rows.</span></div>
+  <section class="ux-frame" data-frame="f9">
+    <header data-top="3"></header>
+    <div class="ux-work">
+      <div class="ux-canvas"><div class="cs-stage" data-stage="leftover"></div>
+        <div class="ux-canvas__top"><span class="ux-tag ux-tag--ok"><span class="ux-tag__solid"></span>Sobrante · 1 fragmento</span></div>
+        <div class="ux-tools" role="toolbar" aria-label="Herramientas del resultado">
+          <button class="ux-tool" aria-pressed="true"><svg class="ux-ico"><use href="#i-photo"/></svg>Foto</button>
+          <span class="ux-tools__sep"></span>
+          <button class="ux-tool"><svg class="ux-ico"><use href="#i-poly"/></svg>Marcar zona</button>
+        </div>
+      </div>
+      <aside class="ux-panel" aria-label="Panel del resultado">
+        <div class="ux-sheet-handle"></div>
+        <div class="ux-panel__head">
+          <span class="ux-eyebrow">Paso 3 de 3</span>
+          <h2 class="cs-h3">Resultado</h2>
+          <div class="ux-tabs" role="tablist"><button class="ux-tab" role="tab" aria-selected="false">Plan</button><button class="ux-tab" role="tab" aria-selected="true">Sobrante</button></div>
+        </div>
+        <div class="ux-panel__body">
+          <div class="ux-trio">
+            <div><b>373,7<small>cm²</small></b><span>sobrante</span></div>
+            <div><b>35,9<small>%</small></b><span>del material</span></div>
+            <div><b>1</b><span>fragmento</span></div>
+          </div>
+          <p class="ux-honest">Estimación digital: el sobrante real tendrá los bordes del corte.</p>
+          <label class="cs-field"><span class="cs-label">Otro producto con lo que sobró</span>
+            <select class="cs-select"><option>Llaveros · 7 × 3 cm</option><option>Posavasos · ⌀ 9 cm</option><option>Marcapáginas · 4 × 14 cm</option><option>Tarjetero de cuero (juego)</option></select>
+            <span class="cs-hint">El plan actual queda fijo.</span></label>
+          <div class="ux-zone" style="grid-template-columns:auto 1fr auto"><span class="cs-badge cs-badge--ink">+</span><span><b>Posavasos</b> <span class="cs-caption">· 2 piezas añadidas</span></span><button class="cs-btn cs-btn--danger-quiet cs-btn--sm">Quitar</button></div>
+          <span class="ux-section-title" style="margin-top:4px">Reutilizar el retazo</span>
+          <button class="ux-linkrow"><svg class="ux-ico"><use href="#i-layers"/></svg><span>Planificar sobre el fragmento 1<small>373,7 cm² · vuelve a Preparar</small></span><span class="ux-chev"></span></button>
+          <button class="ux-linkrow"><svg class="ux-ico"><use href="#i-photo"/></svg><span>Subir foto del sobrante real<small>Proyecto nuevo · conserva tus piezas</small></span><span class="ux-chev"></span></button>
+        </div>
+        <div class="ux-panel__foot">
+          <button class="cs-btn cs-btn--primary cs-btn--block">Calcular con el sobrante</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================================================== F10 -->
+  <div class="ux-annot" id="f10"><span class="ux-annot__id">F10</span><span class="ux-annot__title">Paso 3 · plan desactualizado</span>
+    <span class="ux-annot__note">Stale is a state of the whole screen, not one more paragraph: step rail “!”, amber dotted outline, grey pieces, faded hero, the warning, and the primary flips from Exportar to Reoptimizar. Export is disabled with a visible reason.</span></div>
+  <section class="ux-frame" data-frame="f10">
+    <header data-top="3" data-stale="1"></header>
+    <div class="ux-work">
+      <div class="ux-canvas"><div class="cs-stage" data-stage="stale"></div>
+        <div class="ux-canvas__top"><span class="ux-tag ux-tag--stale"><span class="ux-tag__dot"></span>Desactualizado · reoptimiza</span></div>
+        <div class="ux-tools" role="toolbar" aria-label="Herramientas del resultado">
+          <button class="ux-tool" aria-pressed="true"><svg class="ux-ico"><use href="#i-photo"/></svg>Foto</button>
+          <span class="ux-tools__sep"></span>
+          <button class="ux-tool"><svg class="ux-ico"><use href="#i-poly"/></svg>Marcar zona</button>
+        </div>
+      </div>
+      <aside class="ux-panel" aria-label="Panel del resultado">
+        <div class="ux-sheet-handle"></div>
+        <div class="ux-panel__head">
+          <span class="ux-eyebrow">Paso 3 de 3</span>
+          <h2 class="cs-h3">Resultado</h2>
+          <div class="ux-tabs" role="tablist"><button class="ux-tab" role="tab" aria-selected="true">Plan</button><button class="ux-tab" role="tab" aria-selected="false" disabled style="opacity:.6">Sobrante</button></div>
+        </div>
+        <div class="ux-panel__body">
+          <div class="cs-alert cs-alert--warn" role="status">
+            <svg class="cs-alert__icon"><use href="#i-warn"/></svg>
+            <div><span class="cs-alert__title">Cambiaste algo después de optimizar</span><br>Marcaste una zona nueva. Este plan ya no corresponde a tus datos y no se puede exportar.</div>
+          </div>
+          <div class="ux-hero ux-hero--stale" aria-label="Plan anterior, desactualizado">
+            <div class="cs-seal" data-seal></div>
+            <div><div class="ux-hero__value">3<small>juegos</small></div><div class="ux-hero__label">plan anterior</div></div>
+          </div>
+          <details class="ux-disc"><summary>Detalles<span class="ux-disc__val">del plan anterior</span></summary></details>
+        </div>
+        <div class="ux-panel__foot">
+          <div class="ux-foot-row">
+            <button class="cs-btn cs-btn--primary"><svg class="ux-ico"><use href="#i-redo"/></svg>Reoptimizar</button>
+            <button class="cs-btn" disabled aria-describedby="f10-r"><svg class="ux-ico"><use href="#i-down"/></svg>Exportar</button>
+          </div>
+          <p class="ux-reason" id="f10-r">Reoptimiza para exportar un plano vigente.</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================================================== Gallery -->
+  <div class="ux-annot" id="gallery"><span class="ux-annot__id">G</span><span class="ux-annot__title">Piezas sueltas: popovers, menús, estados</span>
+    <span class="ux-annot__note">Components shown out of context so every disclosure target is specified.</span></div>
+  <section class="ux-gallery" data-frame="gallery">
+    <div class="ux-gallery__cell"><span class="ux-annot__id" style="justify-self:start">G1 · DetectDefectsPopover</span>
+      <div class="ux-pop" role="dialog" aria-label="Detectar defectos con IA">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="cs-pill cs-pill--ai">Detectar con IA</span><button class="ux-iconbtn" aria-label="Cerrar"><svg class="ux-ico"><use href="#i-x"/></svg></button></div>
+        <label class="cs-field"><span class="cs-label">¿Qué buscar? (en inglés)</span><input class="cs-input cs-mono" value="scar, stain, hole"></label>
+        <p class="cs-hint">Hasta 4 frases separadas por comas. Nada se aplica hasta que lo aceptes.</p>
+        <button class="cs-btn cs-btn--secondary">Buscar con SAM</button>
+      </div></div>
+    <div class="ux-gallery__cell"><span class="ux-annot__id" style="justify-self:start">G2 · AddPieceMenu</span>
+      <div class="ux-menu" role="menu">
+        <div class="ux-menu__label">Producto (medidas en cm)</div>
+        <button class="ux-menu__item" role="menuitem"><svg class="ux-ico"><use href="#i-kit"/></svg><span>Tarjetero de cuero<small>5 piezas por juego</small></span><span></span></button>
+        <button class="ux-menu__item" role="menuitem"><svg class="ux-ico"><use href="#i-kit"/></svg><span>Cartera bifold<small>7 piezas por juego</small></span><span></span></button>
+        <div class="ux-menu__sep"></div>
+        <button class="ux-menu__item" role="menuitem"><svg class="ux-ico" style="color:var(--cs-ai-fg)"><use href="#i-spark"/></svg><span>Diseñar con IA…</span><span class="cs-caption">en curso</span></button>
+        <div class="ux-menu__sep"></div>
+        <button class="ux-menu__item" role="menuitem"><svg class="ux-ico"><use href="#i-shape"/></svg><span>Forma básica</span><span></span></button>
+        <button class="ux-menu__item" role="menuitem"><svg class="ux-ico"><use href="#i-pen"/></svg><span>Dibujar forma…</span><span></span></button>
+        <button class="ux-menu__item" role="menuitem"><svg class="ux-ico"><use href="#i-import"/></svg><span>Importar SVG…</span><span></span></button>
+      </div></div>
+    <div class="ux-gallery__cell"><span class="ux-annot__id" style="justify-self:start">G3 · ResultMoreMenu + Detalles abierto</span>
+      <div class="ux-menu" role="menu">
+        <button class="ux-menu__item" role="menuitem"><svg class="ux-ico"><use href="#i-redo"/></svg><span>Volver a calcular<small>Mismos datos y semilla: mismo plan</small></span><span></span></button>
+        <button class="ux-menu__item" role="menuitem"><svg class="ux-ico"><use href="#i-pen"/></svg><span>Editar piezas</span><span></span></button>
+      </div>
+      <details class="ux-disc" open style="background:var(--cs-surface);padding:0 12px;border-radius:8px;border:1px solid var(--cs-line)"><summary>Detalles<span class="ux-disc__val">áreas · piezas · JSON</span></summary>
+        <div class="ux-disc__body">
+          <dl class="cs-metrics">
+            <div><dt>Área digitalizada</dt><dd>1.039,7 cm²</dd></div>
+            <div><dt>Excluida (sin doble conteo)</dt><dd>16,4 cm²</dd></div>
+            <div class="cs-metrics__total"><dt>Útil (total − excluida)</dt><dd>1.023,3 cm²</dd></div>
+            <div><dt>Ocupada</dt><dd>649,6 cm²</dd></div>
+            <div><dt>Ocupada ÷ útil</dt><dd>63,5 %</dd></div>
+            <div><dt>Ocupada ÷ total</dt><dd>62,5 %</dd></div>
+          </dl>
+          <p class="cs-caption"><span class="cs-unit cs-unit--calibrated">Calibrado · cm</span> escala física por calibración manual.</p>
+          <dl class="cs-metrics">
+            <div><dt><span class="cs-swatch cs-swatch--a" data-letter="A" style="width:18px;height:18px;vertical-align:-4px"></span> Cuerpo</dt><dd>3/3</dd></div>
+            <div><dt><span class="cs-swatch cs-swatch--c" data-letter="C" style="width:18px;height:18px;vertical-align:-4px"></span> Bolsillo de tarjeta</dt><dd>6/6</dd></div>
+          </dl>
+          <button class="cs-link" style="justify-self:start;font-size:13px">Descargar problema + solución (JSON)</button>
+        </div></details>
+    </div>
+    <div class="ux-gallery__cell"><span class="ux-annot__id" style="justify-self:start">G4 · Sin solución válida</span>
+      <div class="cs-empty" style="padding:24px 16px">
+        <div class="cs-empty__title" style="font-size:18px">Ninguna pieza entra sin tocar una zona excluida</div>
+        <p class="cs-empty__body">Las piezas son más grandes que el área libre o la separación es muy alta.</p>
+        <div class="cs-btn-row"><button class="cs-btn cs-btn--primary cs-btn--sm">Revisar piezas</button><button class="cs-btn cs-btn--sm">Ver zonas</button></div>
+      </div></div>
+    <div class="ux-gallery__cell"><span class="ux-annot__id" style="justify-self:start">G5 · Falló la IA (paso 1)</span>
+      <div class="cs-alert cs-alert--danger" role="alert">
+        <svg class="cs-alert__icon"><use href="#i-warn"/></svg>
+        <div><span class="cs-alert__title">La IA no pudo leer el borde esta vez</span><br>SAM tardó demasiado. Tu foto sigue aquí.</div>
+        <div class="cs-alert__actions"><button class="cs-btn cs-btn--sm cs-btn--secondary">Reintentar</button><button class="cs-btn cs-btn--sm">Por contraste</button><button class="cs-btn cs-btn--sm">Trazar a mano</button></div>
+      </div></div>
+    <div class="ux-gallery__cell"><span class="ux-annot__id" style="justify-self:start">G6 · Qué cambió (tras reoptimizar)</span>
+      <div class="cs-alert cs-alert--info" role="status" style="box-shadow:inset 4px 0 0 var(--cs-human-solid)">
+        <svg class="cs-alert__icon"><use href="#i-redo"/></svg>
+        <div><span class="cs-alert__title">Qué cambió</span>
+          <ul><li>Nueva zona excluida: 6,2 cm²</li><li>2 piezas se movieron</li><li>Área útil: 1.023,3 → 1.017,1 cm²</li></ul>
+          <span class="cs-caption">El área útil cambió: no comparamos porcentajes como “mejora”.</span></div>
+        <div class="cs-alert__actions"><button class="cs-link">Entendido</button></div>
+      </div></div>
+  </section>
+</main>
+
+<script>
+function toggleTheme() {
+  const r = document.documentElement, dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  r.dataset.theme = dark ? 'light' : 'dark';
+}
+
+/* ---------- Header: brand · StepRail · Proyecto menu ---------- */
+const WORD = `<svg class="ux-brand__word" viewBox="0 0 274 56" role="img" aria-label="CutSense"><g transform="scale(1.17)"><path d="M9.2 5.4L29.6 4.2Q33.4 4 33.6 7.6L33.8 10.4Q34 13.4 31 13.4L17.6 13.4L17.6 34.6L39.8 34.6Q43.6 34.6 43 38.2L42.5 41.2Q42 44.2 38.9 44.3L12.2 44.9Q7.9 45 6.7 40.9L4.2 32.4Q3.6 30.3 4.3 28.3L5.6 24.4Q6.2 22.6 5.8 20.8L4.9 12.1Q4.4 6 9.2 5.4Z" fill="var(--cs-primary)"/><rect x="24.6" y="16.4" width="15.6" height="15.6" rx="1.6" transform="rotate(-10 32.4 24.2)" fill="var(--cs-accent)"/></g><g fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round"><path d="M99.51 15.22A17.2 17.2 0 1 0 99.51 40.78M108.61 24.8V37.7A7.5 7.5 0 0 0 123.61 37.7V24.8M123.61 37.7V45.2M135.71 15.8V39.2A6 6 0 0 0 141.71 45.2H143.71M169.59 14.47A9.5 8.6 0 1 0 161.81 28A9.5 8.6 0 1 1 154.03 41.53M180.41 35H196.41A8 10.2 0 1 0 194.71 41.28M205.51 24.8V45.2M205.51 32.3A7.5 7.5 0 0 1 220.51 32.3V45.2M241.89 26.97A6.75 5.1 0 1 0 236.36 35A6.75 5.1 0 1 1 230.83 43.03M252.21 35H268.21A8 10.2 0 1 0 266.51 41.28"/></g><path d="M132.21 24.8H144.21" fill="none" stroke="var(--cs-accent)" stroke-width="5.6" stroke-linecap="round"/></svg>`;
+const MARK = `<svg class="ux-brand__mark" viewBox="0 0 48 48" aria-hidden="true"><path d="M9.2 5.4L29.6 4.2Q33.4 4 33.6 7.6L33.8 10.4Q34 13.4 31 13.4L17.6 13.4L17.6 34.6L39.8 34.6Q43.6 34.6 43 38.2L42.5 41.2Q42 44.2 38.9 44.3L12.2 44.9Q7.9 45 6.7 40.9L4.2 32.4Q3.6 30.3 4.3 28.3L5.6 24.4Q6.2 22.6 5.8 20.8L4.9 12.1Q4.4 6 9.2 5.4Z" fill="var(--cs-primary)"/><rect x="24.6" y="16.4" width="15.6" height="15.6" rx="1.6" transform="rotate(-10 32.4 24.2)" fill="var(--cs-accent)"/></svg>`;
+const STEPS = ['Digitalizar', 'Preparar', 'Resultado'];
+document.querySelectorAll('[data-top]').forEach((h) => {
+  const avail = +(h.dataset.avail || h.dataset.top), cur = +h.dataset.top, stale = !!h.dataset.stale, open = h.dataset.menu === 'open';
+  h.className = 'ux-top';
+  const steps = STEPS.map((s, i) => {
+    const n = i + 1;
+    let cls = n < cur ? 'cs-step--done' : n === cur ? 'cs-step--current' : n <= avail ? '' : 'cs-step--locked';
+    if (stale && n === cur) cls = 'cs-step--current cs-step--attention';
+    return `<button class="cs-step ${cls}" ${n === cur ? 'aria-current="step"' : ''} ${n > avail ? 'disabled' : ''}><span class="cs-step__dot"></span><span class="cs-step__label">${s}</span></button>`;
+  }).join('');
+  h.innerHTML = `<span class="ux-brand">${WORD}${MARK}</span>
+    <nav aria-label="Pasos" style="display:contents"><div class="cs-stepper">${steps}</div></nav>
+    <div class="ux-top__right">
+      <button class="ux-menubtn" aria-haspopup="menu" aria-expanded="${open}"><span>Proyecto</span><svg class="ux-ico"><use href="#i-more"/></svg></button>
+    </div>
+    ${open ? `<div class="ux-menu ux-project-menu" role="menu" aria-label="Proyecto">
+      <button class="ux-menu__item" role="menuitem" data-focus="true"><svg class="ux-ico"><use href="#i-save"/></svg><span>Guardar proyecto<small>Archivo .json con tu foto: tratarlo como privado</small></span><span class="ux-kbd" style="color:var(--cs-text-muted);border-color:var(--cs-line-strong)">Ctrl S</span></button>
+      <button class="ux-menu__item" role="menuitem"><svg class="ux-ico"><use href="#i-moon"/></svg><span>Tema oscuro</span><span></span></button>
+      <div class="ux-menu__sep"></div>
+      <button class="ux-menu__item ux-menu__item--danger" role="menuitem"><svg class="ux-ico"><use href="#i-new"/></svg><span>Nuevo proyecto…<small>Pide confirmar si hay cambios sin guardar</small></span><span></span></button>
+    </div>` : ''}`;
+});
+
+/* ---------- Canvas mock (geometry from design/preview.html) ---------- */
+const MAT = 'M70,90 C120,40 260,50 330,60 C410,70 500,40 545,95 C580,140 560,220 570,290 C578,350 520,385 450,380 C380,375 330,395 250,388 C170,382 90,392 62,330 C40,280 70,230 55,170 C48,135 50,110 70,90 Z';
+const POLY = [[70,88],[130,58],[200,52],[270,56],[330,60],[400,62],[470,50],[530,72],[560,120],[562,200],[568,280],[556,345],[505,378],[440,380],[360,388],[280,390],[200,386],[120,388],[72,350],[58,290],[64,230],[54,170],[56,120]];
+const DEF = 'M300,195 Q330,172 362,198 Q380,230 350,252 Q318,264 300,240 Q286,215 300,195Z';
+const PROP1 = 'M150,250 Q170,238 188,252 Q194,272 176,280 Q156,282 150,266 Z';
+const PROP2 = 'M470,300 Q492,292 500,310 Q502,330 484,334 Q466,332 464,316 Z';
+const NEWDEF = 'M440,178 Q472,160 494,186 Q506,214 478,232 Q448,240 436,214 Q430,192 440,178Z';
+const ringPath = (pts) => 'M' + pts.map((p) => p.join(',')).join('L') + 'Z';
+const tri = (d, core, w, extra = '') => `<path d="${d}" fill="none" stroke="rgba(255,255,255,.78)" stroke-width="${w + 5}" stroke-linejoin="round" ${extra}/><path d="${d}" fill="none" stroke="#0B0F0D" stroke-width="${w + 2.5}" stroke-linejoin="round" ${extra}/><path d="${d}" fill="none" stroke="${core}" stroke-width="${w}" stroke-linejoin="round" ${extra}/>`;
+const defect = (d) => `<path d="${d}" fill="url(#cs-pat-defect)"/>${tri(d, '#FF3B30', 2, 'stroke-dasharray="6 4"')}`;
+const aiZone = (d) => `<path d="${d}" fill="#4D7CFF" fill-opacity=".18"/>${tri(d, '#4D7CFF', 2, 'stroke-dasharray="7 5"')}`;
+const handles = (pts) => pts.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="6" fill="#fff" stroke="#0B0F0D" stroke-width="2"/>`).join('');
+function photo() {
+  return `<rect width="600" height="420" fill="#E9E6E0" filter="url(#pv-table)"/><path d="${MAT}" fill="#000" fill-opacity=".14" transform="translate(4,7)"/><path d="${MAT}" fill="#A86A3D" filter="url(#pv-leather)"/><path d="M180,180 q40,-20 90,10" stroke="#8a5530" stroke-width="3" fill="none"/><path d="${DEF}" fill="#4a2e18" fill-opacity=".6" transform="translate(8,6) scale(.96)"/><path d="${PROP1}" fill="#6b4022" fill-opacity=".55"/><path d="${PROP2}" fill="#6b4022" fill-opacity=".45"/><rect width="600" height="420" fill="url(#pv-vignette)" opacity=".5"/>`;
+}
+// Tarjetero × 3: A Cuerpo, B Bolsillo frontal, C Bolsillo de tarjeta ×2, D Pestaña
+const LAY = [
+  [95,95,105,72,'a','A·1'],[95,173,105,66,'b','B·1'],[95,245,105,50,'c','C·1'],[95,301,105,50,'c','C·2'],
+  [206,80,105,72,'a','A·2'],[206,158,105,66,'b','B·2'],[206,230,105,50,'c','C·3'],[206,286,105,50,'c','C·4'],[225,342,66,33,'d','D·1'],
+  [317,72,105,72,'a','A·3'],[317,272,105,66,'b','B·3'],[337,344,66,33,'d','D·2'],
+  [428,80,105,50,'c','C·5'],[428,136,105,50,'c','C·6'],[447,192,66,33,'d','D·3'],
+];
+function piece([x, y, w, h, t, l]) {
+  const d = t === 'd' ? `M${x},${y}h${w}l-12,${h}h-${w - 24}z` : `M${x + 7},${y}h${w - 14}a7,7 0 0 1 7,7v${h - 14}a7,7 0 0 1 -7,7h-${w - 14}a7,7 0 0 1 -7,-7v-${h - 14}a7,7 0 0 1 7,-7z`;
+  return `<g><path d="${d}" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="4.5"/><path d="${d}" fill="url(#cs-pat-${t})" stroke="#0B0F0D" stroke-width="1.6"/><text x="${x + w / 2}" y="${y + h / 2}" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono, monospace" font-weight="700" font-size="13" fill="#0B0F0D" stroke="#fff" stroke-width="3.5" paint-order="stroke" stroke-linejoin="round">${l}</text></g>`;
+}
+function stage(kind) {
+  let s = photo();
+  const human = tri(ringPath(POLY), '#FF5A1F', 2.5);
+  switch (kind) {
+    case 'photo': break;
+    case 'proposal': s += `<path d="${ringPath(POLY)}" fill="#4D7CFF" fill-opacity=".16"/>` + tri(ringPath(POLY), '#4D7CFF', 2.5, 'stroke-dasharray="9 6"') + `<path d="${DEF}" fill="none" stroke="#fff" stroke-width="4"/><path d="${DEF}" fill="none" stroke="#4D7CFF" stroke-width="2" stroke-dasharray="4 4"/>`; break;
+    case 'edit': s += human + defect(DEF) + handles(POLY); break;
+    case 'scale': s += human + defect(DEF) + `<g><line x1="54" y1="408" x2="568" y2="408" stroke="#fff" stroke-width="5"/><line x1="54" y1="408" x2="568" y2="408" stroke="#0B0F0D" stroke-width="2" stroke-dasharray="6 4"/>${[54, 568].map((x) => `<line x1="${x}" y1="398" x2="${x}" y2="418" stroke="#fff" stroke-width="5"/><line x1="${x}" y1="398" x2="${x}" y2="418" stroke="#0B0F0D" stroke-width="2.5"/>`).join('')}<rect x="247" y="394" width="128" height="26" rx="4" fill="rgba(11,15,13,.86)"/><text x="311" y="411" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="13" font-weight="600" fill="#fff">ancho = ? cm</text></g>`; break;
+    case 'zones': s += human + defect(DEF) + aiZone(PROP1) + aiZone(PROP2); break;
+    case 'prep': s += human + defect(DEF); break;
+    case 'result': s += tri(MAT, '#5BD69A', 3) + defect(DEF) + LAY.map(piece).join(''); break;
+    case 'leftover': s += `<path d="${MAT}" fill="url(#ux-pat-left)"/>` + tri(MAT, '#5BD69A', 3) + defect(DEF) + `<g style="filter:grayscale(.9) brightness(1.15)">${LAY.map(piece).join('')}</g>`; break;
+    case 'stale': s += tri(MAT, '#F2B544', 3, 'stroke-dasharray="1 7" stroke-linecap="round"') + `<g style="filter:grayscale(1)" opacity=".45">${LAY.map(piece).join('')}</g>` + defect(DEF) + defect(NEWDEF); break;
+  }
+  return `<svg viewBox="0 0 600 420" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Lienzo: ${kind}">${s}</svg>`;
+}
+document.querySelectorAll('[data-stage]').forEach((el) => { el.innerHTML = stage(el.dataset.stage); });
+
+/* ---------- Verified seal ---------- */
+const seal = (() => {
+  const pts = []; for (let i = 0; i < 56; i++) { const a = i * Math.PI / 28, r = i % 2 ? 52.5 : 57; pts.push((60 + r * Math.cos(a)).toFixed(2) + ' ' + (60 + r * Math.sin(a)).toFixed(2)); }
+  return `<svg viewBox="0 0 120 120" role="img" aria-label="Plan verificado"><defs><path id="ux-seal-ring" d="M60 60m-38 0a38 38 0 1 1 76 0a38 38 0 1 1 -76 0"/></defs><g transform="rotate(-10 60 60)"><path d="M${pts.join('L')}Z" fill="var(--cs-verified-solid)"/><circle cx="60" cy="60" r="48" fill="none" stroke="var(--cs-surface)" stroke-width="1.6" stroke-dasharray="3.2 2.6"/><text font-family="JetBrains Mono, monospace" font-size="10" font-weight="700" fill="var(--cs-surface)"><textPath href="#ux-seal-ring" textLength="236" lengthAdjust="spacing">VERIFICADO · GEOMETRÍA · PLAN ·</textPath></text><circle cx="60" cy="60" r="27" fill="var(--cs-surface)"/><path d="M47.5 61l8.5 8.5 17.5-18.5" fill="none" stroke="var(--cs-verified-solid)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></g></svg>`;
+})();
+document.querySelectorAll('[data-seal]').forEach((el) => { el.innerHTML = seal; });
+if (new URLSearchParams(location.search).has('shot')) document.getElementById('themebtn').style.display = 'none';
+// F7: opening a row scrolls its editor into view inside the panel (desktop)
+(() => { const f = document.querySelector('[data-frame="f7"]'); const body = f.querySelector('.ux-panel__body'); const row = f.querySelector('.ux-row[aria-expanded="true"]'); if (getComputedStyle(body).overflowY === 'auto') body.scrollTop = row.offsetTop - body.offsetTop - 104; })();
+</script>
+</body>
+</html>
