@@ -15,34 +15,34 @@ interface Props {
   p: Project;
   setP: (f: (p: Project) => Project) => void;
   onReset: () => void;
-  /** Proyecto abierto desde un archivo: plan ya verificado y paso en el que se guardó. */
+  /** Project opened from a file: already verified plan and the step it was saved at. */
   restored?: LoadedProject | null;
-  /** Empieza un proyecto nuevo con la foto del sobrante, conservando el pedido. */
+  /** Starts a new project with the photo of the leftover, keeping the order. */
   onLeftoverPhoto: (f: File, defs: TemplateDef[], spacing: number) => void;
-  /** Hueco de la cabecera de App donde van los pasos y el menú «Proyecto». */
+  /** App header slot for the steps and the “Project” menu. */
   headerSlot: HTMLElement | null;
   isDark: boolean;
   onTheme: () => void;
 }
 
-const STEP_NAME = ['Digitalizar', 'Preparar', 'Resultado'];
+const STEP_NAME = ['Digitize', 'Prepare', 'Result'];
 
-/** Espacio de trabajo: lienzo + un panel. El estado y la lógica viven en useWorkspace. */
+/** Workspace: canvas + one panel. State and logic live in useWorkspace. */
 export default function Workspace({ p, setP, onReset, onLeftoverPhoto, restored, headerSlot, isDark, onTheme }: Props) {
   const w = useWorkspace(p, setP, restored);
   const title = useRef<HTMLHeadingElement>(null);
   const [announce, setAnnounce] = useState('');
   const first = useRef(true);
 
-  // Al cambiar de paso, el foco va al título del panel y se anuncia el paso (sin robarlo al cargar).
+  // On step change, focus moves to the panel title and the step is announced (without stealing focus on load).
   useEffect(() => {
     if (first.current) { first.current = false; return; }
     title.current?.focus({ preventScroll: true });
-    setAnnounce(`Paso ${w.step} de 3: ${STEP_NAME[w.step - 1]}`);
+    setAnnounce(`Step ${w.step} of 3: ${STEP_NAME[w.step - 1]}`);
   }, [w.step]);
 
   const canGo = (n: number) => !((n >= 2 && !!w.contourErr) || (n === 3 && !w.result && w.busy !== 'opt'));
-  const onNew = () => { if (confirm('¿Descartar este proyecto? Se perderán los cambios no guardados.')) onReset(); };
+  const onNew = () => { if (confirm('Discard this project? Unsaved changes will be lost.')) onReset(); };
 
   return (
     <section className="ux-ws" data-step={w.step}>
@@ -64,7 +64,7 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto, restored,
         {w.step === 3 && <ResultPanel ref={title} w={w} p={p} onLeftoverPhoto={(f) => onLeftoverPhoto(f, p.defs, p.spacing)} />}
       </div>
       {w.agentOpen && (
-        <AgentDialog entries={w.agentChat} setEntries={w.setAgentChat} context={w.agentContext} seed={w.agentSeed} approveBlocked={w.agentBlocked} onApprove={w.approveAgent} approveLabel={w.agentFor === 'leftover' ? 'Probar en el sobrante' : undefined} onClose={() => w.setAgentOpen(false)} />
+        <AgentDialog entries={w.agentChat} setEntries={w.setAgentChat} context={w.agentContext} seed={w.agentSeed} approveBlocked={w.agentBlocked} onApprove={w.approveAgent} approveLabel={w.agentFor === 'leftover' ? 'Try it on the leftover' : undefined} onClose={() => w.setAgentOpen(false)} />
       )}
       {w.pieceDialog && (
         <PieceDialog

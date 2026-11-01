@@ -15,7 +15,7 @@ function readFile(f: File): Promise<string> {
   return new Promise((res, rej) => {
     const r = new FileReader();
     r.onload = () => res(String(r.result));
-    r.onerror = () => rej(new Error('No se pudo leer el archivo.'));
+    r.onerror = () => rej(new Error('Could not read the file.'));
     r.readAsDataURL(f);
   });
 }
@@ -25,7 +25,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [key, setKey] = useState(0);
   const [restored, setRestored] = useState<LoadedProject | null>(null);
-  // Hueco de la cabecera donde el espacio de trabajo pone sus pasos y el menú «Proyecto».
+  // Header slot where the workspace puts its steps and the “Project” menu.
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark' | null>(() => {
     try { const t = localStorage.getItem('cs-theme'); return t === 'light' || t === 'dark' ? t : null; } catch { return null; }
@@ -45,7 +45,7 @@ export default function App() {
   };
 
   const onOpenProject = async (f: File) => {
-    if (f.size > MAX_FILE_BYTES) return setError('El archivo es demasiado grande para ser un proyecto de CutSense.');
+    if (f.size > MAX_FILE_BYTES) return setError('This file is too large to be a CutSense project.');
     try {
       const loaded = parseProjectFile(await f.text());
       setP(loaded.project);
@@ -61,11 +61,11 @@ export default function App() {
   };
 
   const onFile = async (f: File, keep?: { defs: Project['defs']; spacing: number }) => {
-    if (!OK_TYPES.includes(f.type)) return setError('Formato no admitido. Usa JPG, PNG o WebP.');
-    if (f.size > MAX_BYTES) return setError(`El archivo pesa ${(f.size / 1048576).toFixed(1)} MB; el límite es 10 MB.`);
+    if (!OK_TYPES.includes(f.type)) return setError('Unsupported format. Use JPG, PNG or WebP.');
+    if (f.size > MAX_BYTES) return setError(`The file is ${(f.size / 1048576).toFixed(1)} MB; the limit is 10 MB.`);
     try {
       const src = await readFile(f);
-      const im = await loadImage(src); // falla si el archivo está corrupto
+      const im = await loadImage(src); // fails if the file is corrupt
       const k = Math.min(1, 1600 / Math.max(im.naturalWidth, im.naturalHeight));
       if (k === 1) return start({ src, w: im.naturalWidth, h: im.naturalHeight, name: f.name }, null, undefined, keep);
       const c = document.createElement('canvas');
@@ -73,7 +73,7 @@ export default function App() {
       c.getContext('2d')!.drawImage(im, 0, 0, c.width, c.height);
       start({ src: c.toDataURL('image/jpeg', 0.9), w: c.width, h: c.height, name: f.name }, null, undefined, keep);
     } catch (e) {
-      setError(`No se pudo abrir la imagen: ${(e as Error).message}`);
+      setError(`Could not open the image: ${(e as Error).message}`);
     }
   };
 
@@ -81,14 +81,14 @@ export default function App() {
     <>
       <header className={`nav ${p.image ? 'nav--app' : ''}`}>
         <div className={p.image ? 'nav-in nav-in--app' : 'container nav-in'}>
-          <a className="logo" href="/" onClick={(e) => { if (p.image) { e.preventDefault(); if (confirm('¿Volver al inicio? Se perderán los cambios no guardados.')) setP(emptyProject()); } }}>
+          <a className="logo" href="/" onClick={(e) => { if (p.image) { e.preventDefault(); if (confirm('Back to the start? Unsaved changes will be lost.')) setP(emptyProject()); } }}>
             {p.image ? <><span className="logo-word"><Logo height={26} /></span><span className="logo-mark" role="img" aria-label="CutSense"><LogoMark size={30} /></span></> : <Logo height={30} />}
           </a>
           {p.image
             ? <div className="nav-slot" ref={setSlot} />
             : <>
-              <span className="nav-note">Dale sentido a cada retazo</span>
-              <button className="theme-toggle" aria-label={isDark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'} onClick={() => setTheme(isDark ? 'light' : 'dark')}>{isDark ? '☀' : '☾'}</button>
+              <span className="nav-note">Make sense of every offcut</span>
+              <button className="theme-toggle" aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'} onClick={() => setTheme(isDark ? 'light' : 'dark')}>{isDark ? '☀' : '☾'}</button>
             </>}
         </div>
       </header>

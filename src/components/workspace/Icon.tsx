@@ -1,4 +1,4 @@
-/** Iconos de trazo (24×24, currentColor) del prototipo de design/ux. Decorativos: el texto del control los nombra. */
+/** Stroke icons (24×24, currentColor) from the design/ux prototype. Decorative: the control's text names them. */
 const P: Record<string, React.ReactNode> = {
   undo: <path d="M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   poly: <><path d="M5 18L4 8l8-4 7 6-3 9z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><circle cx="5" cy="18" r="2" fill="currentColor" /><circle cx="12" cy="4" r="2" fill="currentColor" /><circle cx="19" cy="10" r="2" fill="currentColor" /></>,

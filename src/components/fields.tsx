@@ -5,14 +5,14 @@ interface NumProps {
   value: number;
   onCommit: (n: number) => void;
   min?: number;
-  /** true: exige > min; false: exige >= min */
+  /** true: requires > min; false: requires >= min */
   exclusive?: boolean;
   int?: boolean;
   step?: number;
   suffix?: string;
 }
 
-/** Campo numérico que solo confirma valores válidos y marca los inválidos (sin silenciarlos). */
+/** Number field that only commits valid values and flags invalid ones (without hiding them). */
 export function NumField({ label, value, onCommit, min = 0, exclusive, int, step = 0.5, suffix }: NumProps) {
   const [txt, setTxt] = useState(String(value));
   useEffect(() => setTxt(String(Math.round(value * 100) / 100)), [value]);
@@ -29,7 +29,7 @@ export function NumField({ label, value, onCommit, min = 0, exclusive, int, step
         />
         {suffix && <em>{suffix}</em>}
       </span>
-      {!ok && <small className="err">{int ? 'Entero' : 'Valor'} {exclusive ? '>' : '≥'} {min}</small>}
+      {!ok && <small className="err">{int ? 'Integer' : 'Value'} {exclusive ? '>' : '≥'} {min}</small>}
     </label>
   );
 }

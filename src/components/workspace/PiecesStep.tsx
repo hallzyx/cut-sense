@@ -10,7 +10,7 @@ import { Icon } from './Icon';
 import { MenuItem, MenuLabel, MenuSep, Popover } from './Menu';
 import type { WS } from './useWorkspace';
 
-/** ③ Piezas: modo de llenado, lista de piezas con un solo editor abierto, «Añadir pieza ▾» y «Opciones». */
+/** ③ Pieces: fill mode, piece list with a single open editor, “Add piece ▾” and “Options”. */
 
 const SW = 'abcdef';
 export function Swatch({ i, color, size }: { i: number; color: string; size?: number }) {
@@ -22,21 +22,21 @@ const MAX = 6;
 function KitItems({ w, cm }: { w: WS; cm: boolean }) {
   return (
     <>
-      <MenuLabel>Producto (medidas en cm)</MenuLabel>
+      <MenuLabel>Product (sizes in cm)</MenuLabel>
       {KITS.map((k) => (
-        <MenuItem key={k.id} icon="kit" label={k.name} hint={cm ? k.blurb : `${k.blurb} · requiere calibrar en cm`} onSelect={() => w.applyKit(k.id)} testId={`kit-${k.id}`} />
+        <MenuItem key={k.id} icon="kit" label={k.name} hint={cm ? k.blurb : `${k.blurb} · needs calibration in cm`} onSelect={() => w.applyKit(k.id)} testId={`kit-${k.id}`} />
       ))}
     </>
   );
 }
 
 function ShapeItems({ w, full }: { w: WS; full: boolean }) {
-  const hint = full ? 'Máximo 6 tipos de pieza.' : undefined;
+  const hint = full ? 'At most 6 piece types.' : undefined;
   return (
     <>
-      <MenuItem icon="shape" label="Forma básica" hint={hint ?? 'Rectángulo, círculo, trapecio…'} disabled={full} onSelect={w.addDef} testId="add-basic" />
-      <MenuItem icon="pen" label="Dibujar forma…" hint={hint} disabled={full} onSelect={() => w.setPieceDialog('draw')} testId="add-draw" />
-      <MenuItem icon="import" label="Importar SVG…" hint={hint} disabled={full} onSelect={() => w.setPieceDialog('svg')} testId="add-svg" />
+      <MenuItem icon="shape" label="Basic shape" hint={hint ?? 'Rectangle, circle, trapezoid…'} disabled={full} onSelect={w.addDef} testId="add-basic" />
+      <MenuItem icon="pen" label="Draw a shape…" hint={hint} disabled={full} onSelect={() => w.setPieceDialog('draw')} testId="add-draw" />
+      <MenuItem icon="import" label="Import SVG…" hint={hint} disabled={full} onSelect={() => w.setPieceDialog('svg')} testId="add-svg" />
     </>
   );
 }
@@ -49,13 +49,13 @@ function AddPieceMenu({ w, p }: { w: WS; p: Project }) {
   return (
     <>
       <button ref={btn} type="button" className="cs-btn cs-btn--sm" aria-haspopup="menu" aria-expanded={open} data-testid="add-piece" onClick={() => setOpen((o) => !o)}>
-        <Icon name="plus" />Añadir pieza<Icon name={open ? 'caretUp' : 'caret'} />
+        <Icon name="plus" />Add piece<Icon name={open ? 'caretUp' : 'caret'} />
       </button>
-      <Popover open={open} onClose={() => setOpen(false)} anchorRef={btn} label="Añadir pieza" align="start" width={320} testId="add-piece-menu">
-        <div className="ux-menu__count cs-caption">{p.defs.length} de {MAX} tipos{full && ' · los productos reemplazan el pedido'}</div>
+      <Popover open={open} onClose={() => setOpen(false)} anchorRef={btn} label="Add piece" align="start" width={320} testId="add-piece-menu">
+        <div className="ux-menu__count cs-caption">{p.defs.length} of {MAX} types{full && ' · products replace the order'}</div>
         <KitItems w={w} cm={cm} />
         <MenuSep />
-        <MenuItem icon="spark" iconClass="ux-ai-ico" label="Diseñar con IA…" hint={cm ? 'Reemplaza el pedido cuando apruebes' : 'Requiere calibrar en cm'} trailing={w.agentChat.length ? <span className="cs-caption">en curso</span> : undefined} onSelect={w.openAgent} testId="add-agent" />
+        <MenuItem icon="spark" iconClass="ux-ai-ico" label="Design with AI…" hint={cm ? 'Replaces the order when you approve' : 'Needs calibration in cm'} trailing={w.agentChat.length ? <span className="cs-caption">in progress</span> : undefined} onSelect={w.openAgent} testId="add-agent" />
         <MenuSep />
         <ShapeItems w={w} full={full} />
       </Popover>
@@ -68,13 +68,13 @@ function OptionsPopover({ w, p }: { w: WS; p: Project }) {
   const btn = useRef<HTMLButtonElement>(null);
   return (
     <>
-      <button ref={btn} type="button" className="cs-btn cs-btn--sm cs-btn--ghost" aria-haspopup="dialog" aria-expanded={open} data-testid="options" aria-label={`Opciones: separación ${fmt(p.spacing, 2)} ${w.unit}`} onClick={() => setOpen((o) => !o)}>
-        Opciones <span className="ux-disc__val">· {fmt(p.spacing, 2)} {w.unit}</span>
+      <button ref={btn} type="button" className="cs-btn cs-btn--sm cs-btn--ghost" aria-haspopup="dialog" aria-expanded={open} data-testid="options" aria-label={`Options: spacing ${fmt(p.spacing, 2)} ${w.unit}`} onClick={() => setOpen((o) => !o)}>
+        Options <span className="ux-disc__val">· {fmt(p.spacing, 2)} {w.unit}</span>
       </button>
-      <Popover open={open} onClose={() => setOpen(false)} anchorRef={btn} role="dialog" label="Opciones de colocación" title="Opciones" width={280}>
+      <Popover open={open} onClose={() => setOpen(false)} anchorRef={btn} role="dialog" label="Placement options" title="Options" width={280}>
         <div className="ux-pop-body">
-          <NumField label="Separación mínima" value={p.spacing} min={0} suffix={w.unit} onCommit={w.setSpacing} />
-          <p className="cs-hint">Entre piezas, con las zonas excluidas y con el borde. Los giros se eligen en cada pieza.</p>
+          <NumField label="Minimum spacing" value={p.spacing} min={0} suffix={w.unit} onCommit={w.setSpacing} />
+          <p className="cs-hint">Between pieces, from excluded zones and from the edge. Rotations are chosen per piece.</p>
         </div>
       </Popover>
     </>
@@ -83,11 +83,11 @@ function OptionsPopover({ w, p }: { w: WS; p: Project }) {
 
 function RotationChips({ d, onToggle }: { d: TemplateDef; onToggle: (r: number) => void }) {
   return (
-    <div className="ux-rot"><span className="cs-label ux-label-sm" id={`rot-${d.id}`}>Giros permitidos</span>
+    <div className="ux-rot"><span className="cs-label ux-label-sm" id={`rot-${d.id}`}>Allowed rotations</span>
       <div className="cs-chip-group" role="group" aria-labelledby={`rot-${d.id}`}>
         {[0, 90, 180, 270].map((r) => {
           const on = d.rotations.includes(r);
-          return <button key={r} type="button" className="cs-chip" aria-pressed={on} aria-label={`${r}°${on && d.rotations.length === 1 ? ' (mínimo uno)' : ''}`} onClick={() => onToggle(r)}>{r}°</button>;
+          return <button key={r} type="button" className="cs-chip" aria-pressed={on} aria-label={`${r}°${on && d.rotations.length === 1 ? ' (at least one)' : ''}`} onClick={() => onToggle(r)}>{r}°</button>;
         })}
       </div>
     </div>
@@ -96,29 +96,29 @@ function RotationChips({ d, onToggle }: { d: TemplateDef; onToggle: (r: number) 
 
 function PieceEditor({ w, d, unit, fill, onDone }: { w: WS; d: TemplateDef; unit: string; fill: Project['fill']; onDone: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
-  // Un solo editor abierto: se desplaza a la vista dentro del panel al abrirse.
+  // A single open editor: scrolls into view inside the panel when it opens.
   useEffect(() => { ref.current?.scrollIntoView({ block: 'nearest' }); }, []);
   return (
-    <div ref={ref} className="ux-editor" role="group" aria-label={`Editar ${d.name}`} onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onDone(); } }}>
+    <div ref={ref} className="ux-editor" role="group" aria-label={`Edit ${d.name}`} onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onDone(); } }}>
       <div className="ux-foot-row">
-        <label className="cs-field ux-grow"><span className="cs-label ux-label-sm">Nombre</span>
+        <label className="cs-field ux-grow"><span className="cs-label ux-label-sm">Name</span>
           <input className="cs-input ux-input-sm" value={d.name} aria-invalid={!d.name.trim() || undefined} onChange={(e) => w.setDef(d.id, { name: e.target.value })} data-testid="piece-name" />
         </label>
-        <label className="cs-field ux-grow"><span className="cs-label ux-label-sm">Forma</span>
+        <label className="cs-field ux-grow"><span className="cs-label ux-label-sm">Shape</span>
           <select className="cs-select ux-input-sm" value={d.kind} onChange={(e) => w.setDef(d.id, { kind: e.target.value as TemplateKind })}>
             {(Object.keys(KIND_LABEL) as TemplateKind[]).filter((k) => k !== 'custom' || d.kind === 'custom').map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
           </select>
         </label>
       </div>
       <div className={`cs-fields-3 ux-num3 ${unit === 'u' ? 'ux-relative' : ''}`}>
-        <NumField label="Ancho" value={d.w} min={0} exclusive suffix={unit} onCommit={(n) => w.setDef(d.id, { w: n })} />
-        <NumField label="Alto" value={d.h} min={0} exclusive suffix={unit} onCommit={(n) => w.setDef(d.id, { h: n })} />
-        <NumField label={fill === 'maxKits' ? 'Por juego' : 'Cantidad'} value={d.qty} min={0} int step={1} onCommit={(n) => w.setDef(d.id, { qty: n })} />
+        <NumField label="Width" value={d.w} min={0} exclusive suffix={unit} onCommit={(n) => w.setDef(d.id, { w: n })} />
+        <NumField label="Height" value={d.h} min={0} exclusive suffix={unit} onCommit={(n) => w.setDef(d.id, { h: n })} />
+        <NumField label={fill === 'maxKits' ? 'Per set' : 'Quantity'} value={d.qty} min={0} int step={1} onCommit={(n) => w.setDef(d.id, { qty: n })} />
       </div>
       <RotationChips d={d} onToggle={(r) => w.toggleRot(d, r)} />
       <div className="ux-editor__foot">
-        <button type="button" className="cs-btn cs-btn--danger-quiet cs-btn--sm" data-testid="piece-remove" onClick={() => w.removeDef(d.id)}><Icon name="trash" />Quitar pieza</button>
-        <button type="button" className="cs-btn cs-btn--sm cs-btn--secondary" data-testid="piece-done" onClick={onDone}>Listo</button>
+        <button type="button" className="cs-btn cs-btn--danger-quiet cs-btn--sm" data-testid="piece-remove" onClick={() => w.removeDef(d.id)}><Icon name="trash" />Remove piece</button>
+        <button type="button" className="cs-btn cs-btn--sm cs-btn--secondary" data-testid="piece-done" onClick={onDone}>Done</button>
       </div>
     </div>
   );
@@ -133,18 +133,18 @@ function PiecesEmpty({ w, p }: { w: WS; p: Project }) {
     <div className="ux-options">
       <button ref={kitBtn} type="button" className="ux-option" aria-haspopup="menu" aria-expanded={menu === 'kit'} data-testid="opt-product" onClick={() => setMenu(menu === 'kit' ? null : 'kit')}>
         <span className="ux-option__icon"><Icon name="kit" /></span>
-        <span><span className="ux-option__title">Usar un producto</span><br /><span className="ux-option__meta">{cm ? 'Tarjetero, cartera, llaveros… medidas en cm' : 'Requiere calibrar en cm'}</span></span><span className="ux-chev" aria-hidden="true" />
+        <span><span className="ux-option__title">Use a product</span><br /><span className="ux-option__meta">{cm ? 'Cardholder, wallet, keychains… sizes in cm' : 'Needs calibration in cm'}</span></span><span className="ux-chev" aria-hidden="true" />
       </button>
       <button type="button" className="ux-option" data-testid="opt-agent" onClick={w.openAgent}>
         <span className="ux-option__icon ux-option__icon--ai"><Icon name="spark" /></span>
-        <span><span className="ux-option__title">Diseñar con IA{w.agentChat.length ? ' · en curso' : ''}</span><br /><span className="ux-option__meta">{cm ? 'Descríbelo; tú apruebas las piezas' : 'Requiere calibrar en cm'}</span></span><span className="ux-chev" aria-hidden="true" />
+        <span><span className="ux-option__title">Design with AI{w.agentChat.length ? ' · in progress' : ''}</span><br /><span className="ux-option__meta">{cm ? 'Describe it; you approve the pieces' : 'Needs calibration in cm'}</span></span><span className="ux-chev" aria-hidden="true" />
       </button>
       <button ref={customBtn} type="button" className="ux-option" aria-haspopup="menu" aria-expanded={menu === 'custom'} data-testid="opt-custom" onClick={() => setMenu(menu === 'custom' ? null : 'custom')}>
         <span className="ux-option__icon"><Icon name="shape" /></span>
-        <span><span className="ux-option__title">Pieza a medida</span><br /><span className="ux-option__meta">Forma básica, dibujada o desde SVG</span></span><span className="ux-chev" aria-hidden="true" />
+        <span><span className="ux-option__title">Custom piece</span><br /><span className="ux-option__meta">Basic shape, drawn or from SVG</span></span><span className="ux-chev" aria-hidden="true" />
       </button>
-      <Popover open={menu === 'kit'} onClose={() => setMenu(null)} anchorRef={kitBtn} label="Usar un producto" width={320}><KitItems w={w} cm={cm} /></Popover>
-      <Popover open={menu === 'custom'} onClose={() => setMenu(null)} anchorRef={customBtn} label="Pieza a medida" width={300}><ShapeItems w={w} full={p.defs.length >= MAX} /></Popover>
+      <Popover open={menu === 'kit'} onClose={() => setMenu(null)} anchorRef={kitBtn} label="Use a product" width={320}><KitItems w={w} cm={cm} /></Popover>
+      <Popover open={menu === 'custom'} onClose={() => setMenu(null)} anchorRef={customBtn} label="Custom piece" width={300}><ShapeItems w={w} full={p.defs.length >= MAX} /></Popover>
     </div>
   );
 }
@@ -156,12 +156,12 @@ export function PiecesStep({ w, p }: { w: WS; p: Project }) {
   const done = (id: string) => { w.setEditPiece(null); rowRefs.current[id]?.focus(); };
   return (
     <>
-      <div className="cs-segmented ux-seg" role="group" aria-label="Qué buscar">
-        <button type="button" aria-pressed={maxKits} data-testid="fill-maxkits" onClick={() => w.setFill('maxKits')}>Juegos completos</button>
-        <button type="button" aria-pressed={!maxKits} data-testid="fill-fixed" onClick={() => w.setFill('fixed')}>Cantidad exacta</button>
+      <div className="cs-segmented ux-seg" role="group" aria-label="What to look for">
+        <button type="button" aria-pressed={maxKits} data-testid="fill-maxkits" onClick={() => w.setFill('maxKits')}>Complete sets</button>
+        <button type="button" aria-pressed={!maxKits} data-testid="fill-fixed" onClick={() => w.setFill('fixed')}>Exact quantity</button>
       </div>
-      {p.image?.exampleId && <p className="cs-hint ux-tight">Pedido de demostración: cámbialo o quítalo cuando quieras.</p>}
-      <p className="cs-hint ux-tight">{maxKits ? <>Cantidades de <b>un</b> juego; buscamos cuántos juegos caben.</> : 'Se colocan exactamente las cantidades pedidas.'}</p>
+      {p.image?.exampleId && <p className="cs-hint ux-tight">Demo order: change or remove it whenever you like.</p>}
+      <p className="cs-hint ux-tight">{maxKits ? <>Quantities for <b>one</b> set; we find how many sets fit.</> : 'Exactly the requested quantities are placed.'}</p>
       <div className="ux-rows">
         {p.defs.map((d, i) => {
           const open = w.editPiece === d.id;
@@ -172,7 +172,7 @@ export function PiecesStep({ w, p }: { w: WS; p: Project }) {
                 onClick={() => w.setEditPiece(open ? null : d.id)}
               >
                 <Swatch i={i} color={d.color} />
-                <span className="ux-row__name">{d.name || 'Sin nombre'}</span>
+                <span className="ux-row__name">{d.name || 'Untitled'}</span>
                 <span className="ux-row__dim">{fmt(d.w)} × {fmt(d.h)}{w.unit === 'u' && <i> u</i>}</span>
                 <span className="ux-row__qty">×{d.qty}</span>
               </button>

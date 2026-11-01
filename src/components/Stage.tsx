@@ -19,7 +19,7 @@ interface Props {
   onDefects: (d: Ring[]) => void;
   selDefect: number | null;
   onSelDefect: (i: number | null) => void;
-  /** Polígono en trazado (null = no se está dibujando). */
+  /** Polygon being traced (null = not drawing). */
   draft: Pt[] | null;
   onDraft: (d: Pt[] | null) => void;
   onCloseDraft: () => void;
@@ -30,17 +30,17 @@ interface Props {
   placements: Placement[];
   templates: Template[];
   stale: boolean;
-  /** Piezas por juego de cada plantilla (modo máximo de juegos): etiqueta «A1·2». */
+  /** Pieces per set of each template (max sets mode): label “A1·2”. */
   kitQty?: Record<string, number>;
-  /** Zonas propuestas por la IA, pendientes de confirmar. */
+  /** Zones proposed by the AI, pending confirmation. */
   defectProposals?: Ring[];
-  /** Fragmentos del material que sobran tras el plan. */
+  /** Material fragments left over after the plan. */
   leftover?: Ring[];
   /** Provenance of the material outline: AI proposal, human-corrected, or verified plan. */
   outlineKind: 'ai' | 'human' | 'verified' | 'stale';
-  /** Piezas desaturadas (vista de sobrante). */
+  /** Desaturated pieces (leftover view). */
   dimPieces?: boolean;
-  /** Línea de cota sobre el lienzo (p. ej. «ancho = ? cm» al calibrar por ancho). */
+  /** Dimension line on the canvas (e.g. “width = ? cm” when calibrating by width). */
   guide?: { x0: number; x1: number; y: number; label: string } | null;
   selPlacement: number | null;
   onSelPlacement: (i: number | null) => void;
@@ -91,7 +91,7 @@ export default function Stage(p: Props) {
     const q = new DOMPoint(e.clientX, e.clientY).matrixTransform(m);
     return [Math.max(0, Math.min(p.w, q.x)), Math.max(0, Math.min(p.h, q.y))];
   };
-  const k = () => svgRef.current?.getScreenCTM()?.a ?? 1; // px de pantalla por unidad de imagen
+  const k = () => svgRef.current?.getScreenCTM()?.a ?? 1; // screen px per image unit
   const hr = () => 7 / k();
 
   const onDown = (e: React.PointerEvent) => {
@@ -156,7 +156,7 @@ export default function Stage(p: Props) {
       onPointerLeave={() => setHover(null)}
       onContextMenu={(e) => { if (p.mode === 'points') { e.preventDefault(); p.onSamPoints([...p.samPoints, { p: pt(e), label: 0 }]); } }}
       role="img"
-      aria-label="Lienzo del material con contorno, zonas excluidas y piezas colocadas"
+      aria-label="Material canvas with outline, excluded zones and placed pieces"
     >
       <defs>
         {p.templates.map((t, i) => (
@@ -196,7 +196,7 @@ export default function Stage(p: Props) {
           style={{ cursor: p.mode === 'defects' ? 'pointer' : undefined }}
           onPointerDown={(e) => { if (p.mode === 'defects' && !drawing) { e.stopPropagation(); p.onSelDefect(i); } }}
         >
-          <title>{`Zona excluida ${i + 1}`}</title>
+          <title>{`Excluded zone ${i + 1}`}</title>
         </path>
       ))}
 
@@ -234,7 +234,7 @@ export default function Stage(p: Props) {
               className="handle"
               tabIndex={0}
               role="button"
-              aria-label={`Vértice ${i + 1} de ${editRing.length}. Flechas para mover, Supr para eliminar`}
+              aria-label={`Vertex ${i + 1} of ${editRing.length}. Arrow keys to move, Delete to remove`}
               onPointerDown={(e) => { e.stopPropagation(); setDrag(i); (e.target as Element).setPointerCapture?.(e.pointerId); }}
               onDoubleClick={() => removeVertex(i)}
               onKeyDown={(e) => nudge(e, i)}

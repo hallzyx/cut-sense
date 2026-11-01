@@ -3,9 +3,9 @@ import { createPortal } from 'react-dom';
 import { Icon, type IconName } from './Icon';
 
 /**
- * Menú / popover anclado a su botón (UX-REDESIGN.md §10): abre con foco en el primer elemento,
- * ↑/↓/Inicio/Fin mueven, Esc, Tab o clic fuera cierran y devuelven el foco al botón.
- * En pantallas < 1000 px se muestra como hoja inferior con velo.
+ * Menu / popover anchored to its button (UX-REDESIGN.md §10): opens with focus on the first item,
+ * ↑/↓/Home/End move, Esc, Tab or an outside click close it and return focus to the button.
+ * On screens < 1000 px it shows as a bottom sheet with a scrim.
  */
 
 const MOBILE = '(max-width: 999px)';
@@ -19,10 +19,10 @@ interface PopoverProps {
   anchorRef: RefObject<HTMLElement | null>;
   label: string;
   role?: 'menu' | 'dialog';
-  /** Título visible (cabecera con ✕); en móvil siempre se muestra. */
+  /** Visible title (header with ✕); always shown on mobile. */
   title?: string;
   className?: string;
-  /** Hacia dónde abre en escritorio. */
+  /** Which way it opens on desktop. */
   placement?: 'up' | 'down';
   align?: 'start' | 'end';
   width?: number;
@@ -62,7 +62,7 @@ export function Popover({ open, onClose, anchorRef, label, role = 'menu', title,
   useEffect(() => {
     if (!open) return;
     const el = ref.current;
-    // Tras colocarlo (primer cuadro oculto mientras se mide), el foco va al primer elemento.
+    // After placing it (first frame hidden while measuring), focus moves to the first item.
     const raf = requestAnimationFrame(() => {
       el?.querySelector<HTMLElement>(role === 'menu' ? '[role^="menuitem"]:not([aria-disabled="true"])' : 'input, select, textarea, button:not(.ux-pop__close)')?.focus();
     });
@@ -71,7 +71,7 @@ export function Popover({ open, onClose, anchorRef, label, role = 'menu', title,
       if (el?.contains(t) || anchorRef.current?.contains(t)) return;
       closeRef.current();
     };
-    // Esc cierra aunque el foco no esté dentro (p. ej. sigue en el botón que lo abrió).
+    // Esc closes even when focus is not inside (e.g. still on the button that opened it).
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape' && !el?.contains(e.target as Node)) { closeRef.current(); anchorRef.current?.focus(); } };
     document.addEventListener('pointerdown', down, true);
     document.addEventListener('keydown', esc);
@@ -105,7 +105,7 @@ export function Popover({ open, onClose, anchorRef, label, role = 'menu', title,
         {(title || sheet) && (
           <div className="ux-menu__head">
             <span className="ux-menu__title">{title ?? label}</span>
-            <button type="button" className="ux-iconbtn ux-pop__close" aria-label="Cerrar" onClick={close}><Icon name="x" /></button>
+            <button type="button" className="ux-iconbtn ux-pop__close" aria-label="Close" onClick={close}><Icon name="x" /></button>
           </div>
         )}
         {children}
@@ -125,7 +125,7 @@ interface ItemProps {
   onSelect: () => void;
   disabled?: boolean;
   danger?: boolean;
-  /** No cerrar el menú al activar. */
+  /** Do not close the menu on activation. */
   keepOpen?: boolean;
   testId?: string;
   iconClass?: string;
@@ -153,7 +153,7 @@ export function MenuSwitch({ label, checked, onToggle, disabled, testId }: { lab
       className="ux-switch" onClick={() => { if (!disabled) onToggle(); }}
     >
       <span>{label}</span>
-      <span className="ux-switch__ctl"><span className="ux-switch__state">{checked ? 'SÍ' : 'NO'}</span><span className="ux-switch__track" /></span>
+      <span className="ux-switch__ctl"><span className="ux-switch__state">{checked ? 'ON' : 'OFF'}</span><span className="ux-switch__track" /></span>
     </button>
   );
 }

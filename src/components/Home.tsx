@@ -9,10 +9,10 @@ interface Props {
 }
 
 const FAQ = [
-  ['¿Garantiza el óptimo matemático?', 'No. Mostramos la mejor solución encontrada por una búsqueda heurística, verificada geométricamente. No es un óptimo demostrado.'],
-  ['¿Las medidas son físicas?', 'Solo si calibras con una longitud de referencia. Sin calibración trabajamos en unidades relativas (1 u = 1 % del ancho de la foto) y lo indicamos en pantalla y en el archivo exportado.'],
-  ['¿Qué pasa con mi fotografía?', 'Para la segmentación con SAM la imagen se envía al servicio de inferencia a través de nuestro servidor. Si el servicio no está disponible, puedes usar un contorno local o trazarlo a mano. Los proyectos son efímeros: no se guardan.'],
-  ['¿Detecta defectos automáticamente?', 'No en esta versión. Los defectos los marcas tú; el optimizador garantiza que ninguna pieza los invada.'],
+  ['Does it guarantee the mathematical optimum?', 'No. We show the best solution a heuristic search found, geometrically verified. It is not a proven optimum.'],
+  ['Are the measurements physical?', 'Only if you calibrate with a reference length. Without calibration we work in relative units (1 u = 1% of the photo width) and say so on screen and in the exported file.'],
+  ['What happens to my photo?', 'For SAM segmentation the image is sent to the inference service through our server. If the service is unavailable, you can use a local outline or trace it by hand. Projects are ephemeral: nothing is stored.'],
+  ['Does it detect defects automatically?', 'Not in this version. You mark the defects; the optimizer guarantees no piece overlaps them.'],
 ];
 
 export default function Home({ onFile, onExample, onOpenProject, error }: Props) {
@@ -24,36 +24,36 @@ export default function Home({ onFile, onExample, onOpenProject, error }: Props)
       <section className="band mint hero">
         <div className="container hero-grid">
           <div>
-            <p className="eyebrow">Sentido de corte</p>
-            <h1 className="display">Dale sentido a cada <span className="hl">retazo</span>.</h1>
-            <p className="lead">Fotografía tu retazo. La IA propone el contorno, tú lo corriges, y la geometría verifica cada plano antes de mostrártelo.</p>
+            <p className="eyebrow">Sense of the cut</p>
+            <h1 className="display">Make sense of every <span className="hl">offcut</span>.</h1>
+            <p className="lead">Photograph your offcut. AI proposes the outline, you correct it, and geometry verifies every plan before showing it to you.</p>
             <div className="cta-row">
-              <button className="btn primary" onClick={() => input.current?.click()}>Subir fotografía</button>
-              <button className="btn green" onClick={() => onExample(EXAMPLES[0].id)}>Probar con un ejemplo</button>
-              <input ref={input} type="file" hidden accept="image/jpeg,image/png,image/webp" aria-label="Subir imagen JPG, PNG o WebP"
+              <button className="btn primary" onClick={() => input.current?.click()}>Upload a photo</button>
+              <button className="btn green" onClick={() => onExample(EXAMPLES[0].id)}>Try an example</button>
+              <input ref={input} type="file" hidden accept="image/jpeg,image/png,image/webp" aria-label="Upload a JPG, PNG or WebP image"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }} />
             </div>
-            <p className="caption"><button className="link" onClick={() => projectInput.current?.click()}>Abrir un proyecto guardado (.json)</button></p>
-            <input ref={projectInput} type="file" hidden accept="application/json,.json" aria-label="Abrir proyecto guardado"
+            <p className="caption"><button className="link" onClick={() => projectInput.current?.click()}>Open a saved project (.json)</button></p>
+            <input ref={projectInput} type="file" hidden accept="application/json,.json" aria-label="Open saved project"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) onOpenProject(f); e.target.value = ''; }} />
             {error && <p className="alert error" role="alert">{error}</p>}
-            <p className="caption">JPG, PNG o WebP · hasta 10 MB · material plano, fondo contrastante, luz uniforme y cámara cenital.</p>
+            <p className="caption">JPG, PNG or WebP · up to 10 MB · flat material, contrasting background, even light and an overhead camera.</p>
           </div>
           <div className="video-card" aria-hidden="true">
             <img src={EXAMPLES[0].src} alt="" />
-            <span className="chip">Ejemplo</span>
+            <span className="chip">Example</span>
           </div>
         </div>
       </section>
 
       <section className="band white">
         <div className="container">
-          <h2 className="h2">Cómo funciona</h2>
+          <h2 className="h2">How it works</h2>
           <div className="grid3">
             {[
-              ['1', 'Digitaliza', 'SAM 3.1 propone una máscara del material. Aceptas, rechazas o la editas punto a punto.'],
-              ['2', 'Restringe', 'Marca zonas que no se pueden cortar, calibra la escala si quieres medidas físicas y define tus piezas.'],
-              ['3', 'Optimiza', 'El motor geométrico coloca las piezas; un verificador independiente valida cada plano antes de mostrarlo.'],
+              ['1', 'Digitize', 'SAM 3.1 proposes a mask of the material. Accept it, reject it or edit it point by point.'],
+              ['2', 'Constrain', 'Mark zones that cannot be cut, calibrate the scale if you want physical measurements and define your pieces.'],
+              ['3', 'Optimize', 'The geometry engine places the pieces; an independent verifier validates every plan before showing it.'],
             ].map(([n, t, d]) => (
               <article className="feature-card" key={n}>
                 <span className="score-ring">{n}</span>
@@ -67,15 +67,15 @@ export default function Home({ onFile, onExample, onOpenProject, error }: Props)
 
       <section className="band mint">
         <div className="container">
-          <h2 className="h2">Elige un ejemplo</h2>
-          <p className="lead">Imágenes de demostración identificadas como ejemplos. El flujo usa la misma lógica que una foto propia.</p>
+          <h2 className="h2">Pick an example</h2>
+          <p className="lead">Demo images, labeled as examples. The flow uses the same logic as your own photo.</p>
           <div className="grid2">
             {EXAMPLES.map((ex) => (
               <article className="feature-card example" key={ex.id}>
-                <img src={ex.src} alt={`Vista previa: ${ex.title}`} />
+                <img src={ex.src} alt={`Preview: ${ex.title}`} />
                 <h3 className="h4">{ex.title}</h3>
                 <p>{ex.blurb}</p>
-                <button className="btn primary sm" onClick={() => onExample(ex.id)}>Usar este ejemplo</button>
+                <button className="btn primary sm" onClick={() => onExample(ex.id)}>Use this example</button>
               </article>
             ))}
           </div>
@@ -84,7 +84,7 @@ export default function Home({ onFile, onExample, onOpenProject, error }: Props)
 
       <section className="band white">
         <div className="container narrow">
-          <h2 className="h2">Preguntas honestas</h2>
+          <h2 className="h2">Honest questions</h2>
           {FAQ.map(([q, a], i) => (
             <div className="faq" key={q}>
               <button aria-expanded={open === i} onClick={() => setOpen(open === i ? null : i)}>
@@ -98,13 +98,13 @@ export default function Home({ onFile, onExample, onOpenProject, error }: Props)
 
       <section className="band black">
         <div className="container narrow center">
-          <p className="quote">«La IA propone la forma; el verificador geométrico decide si un plano es válido.»</p>
-          <p className="caption light">Principio de producto #1 de CutSense</p>
+          <p className="quote">“AI proposes the shape; the geometric verifier decides whether a plan is valid.”</p>
+          <p className="caption light">CutSense product principle #1</p>
         </div>
       </section>
 
       <footer className="footer">
-        <div className="container">CutSense · Los planos exportados son referenciales y no sustituyen instrucciones certificadas para maquinaria.</div>
+        <div className="container">CutSense · Exported plans are for reference and do not replace certified machinery instructions.</div>
       </footer>
     </>
   );

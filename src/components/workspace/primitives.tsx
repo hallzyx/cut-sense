@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
 import { Icon, type IconName } from './Icon';
 
-/* ---------- Disclosure: el resumen siempre muestra el valor oculto (regla R5) ---------- */
+/* ---------- Disclosure: the summary always shows the hidden value (rule R5) ---------- */
 export function Disclosure({ summary, value, children, storageKey, forceOpen, testId }: { summary: string; value: ReactNode; children: ReactNode; storageKey?: string; forceOpen?: boolean; testId?: string }) {
   const [open, setOpen] = useState(() => {
     if (!storageKey) return false;
@@ -12,7 +12,7 @@ export function Disclosure({ summary, value, children, storageKey, forceOpen, te
     <details className="ux-disc" open={open} data-testid={testId} onToggle={(e) => {
       const o = (e.currentTarget as HTMLDetailsElement).open;
       setOpen(o);
-      if (storageKey) try { sessionStorage.setItem(storageKey, o ? '1' : '0'); } catch { /* sin almacenamiento */ }
+      if (storageKey) try { sessionStorage.setItem(storageKey, o ? '1' : '0'); } catch { /* no storage */ }
     }}>
       <summary>{summary}<span className="ux-disc__val">{value}</span></summary>
       <div className="ux-disc__body">{children}</div>
@@ -20,11 +20,11 @@ export function Disclosure({ summary, value, children, storageKey, forceOpen, te
   );
 }
 
-/* ---------- Barra de herramientas del lienzo: role=toolbar, foco itinerante con ←/→ ---------- */
+/* ---------- Canvas toolbar: role=toolbar, roving focus with ←/→ ---------- */
 export interface Tool {
   id: string;
   label: string;
-  /** Parte del texto que se oculta en móvil. */
+  /** Part of the text hidden on mobile. */
   more?: string;
   icon: IconName;
   pressed?: boolean;
@@ -71,14 +71,14 @@ export function CanvasToolbar({ label, tools }: { label: string; tools: (Tool | 
   );
 }
 
-/* ---------- Panel: cabecera · cuerpo (la decisión actual) · pie con UNA acción principal ---------- */
+/* ---------- Panel: header · body (the current decision) · footer with ONE main action ---------- */
 interface ShellProps { step: number; title: string; lead?: ReactNode; status?: ReactNode; tabs?: ReactNode; children: ReactNode; footer: ReactNode; label: string }
 export const PanelShell = forwardRef<HTMLHeadingElement, ShellProps>(function PanelShell({ step, title, lead, status, tabs, children, footer, label }, ref) {
   return (
     <aside className="ux-panel" aria-label={label}>
       <div className="ux-sheet-handle" aria-hidden="true" />
       <div className="ux-panel__head">
-        <span className="ux-eyebrow">Paso {step} de 3</span>
+        <span className="ux-eyebrow">Step {step} of 3</span>
         <h2 className="cs-h3" ref={ref} tabIndex={-1} data-testid="panel-title">{title}</h2>
         {lead && <p className="ux-muted">{lead}</p>}
         {status && <div className="ux-status">{status}</div>}
@@ -90,12 +90,12 @@ export const PanelShell = forwardRef<HTMLHeadingElement, ShellProps>(function Pa
   );
 });
 
-/** Línea con el motivo de una acción deshabilitada (nunca solo un botón gris). */
+/** Line with the reason an action is disabled (never just a grey button). */
 export const Reason = ({ id, children }: { id?: string; children: ReactNode }) => <p className="ux-reason" id={id} data-testid="disabled-reason">{children}</p>;
 
-/** Insignia de unidades: calibrado (sólido) o relativo (punteado, ≈). */
+/** Units badge: calibrated (solid) or relative (dotted, ≈). */
 export const UnitBadge = ({ calibrated, unit }: { calibrated: boolean; unit: string }) =>
-  <span className={`cs-unit ${calibrated ? 'cs-unit--calibrated' : 'cs-unit--relative'}`}>{calibrated ? `Calibrado · ${unit}` : 'Sin calibrar'}</span>;
+  <span className={`cs-unit ${calibrated ? 'cs-unit--calibrated' : 'cs-unit--relative'}`}>{calibrated ? `Calibrated · ${unit}` : 'Not calibrated'}</span>;
 
 export function Alert({ tone, icon, title, children, actions, role = 'status', testId, focusRef }: { tone: 'info' | 'ai' | 'warn' | 'danger' | 'success'; icon?: IconName; title?: ReactNode; children?: ReactNode; actions?: ReactNode; role?: 'status' | 'alert'; testId?: string; focusRef?: Ref<HTMLDivElement> }) {
   return (

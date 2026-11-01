@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
- * Avisos pasajeros (reemplazan el «flash» del panel). Máx. 2 a la vez; se cierran solos a los 8 s
- * salvo los que cambian datos del usuario (sticky). La cuenta se pausa con el ratón o el foco encima.
+ * Transient notices (they replace the panel “flash”). At most 2 at a time; they close on their own after 8 s
+ * except those that change user data (sticky). The countdown pauses while hovered or focused.
  */
 export interface Toast { id: number; text: string; sticky?: boolean; tone?: 'ok' | 'warn' | 'human' }
 
@@ -32,14 +32,14 @@ function ToastItem({ t, onDismiss }: { t: Toast; onDismiss: (id: number) => void
     >
       <span className="cs-toast__mark" aria-hidden="true" />
       <span>{t.text}</span>
-      <button type="button" className="cs-link" onClick={() => onDismiss(t.id)}>Cerrar</button>
+      <button type="button" className="cs-link" onClick={() => onDismiss(t.id)}>Close</button>
     </div>
   );
 }
 
 export function ToastRegion({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: number) => void }) {
   return (
-    <div className="ux-toasts" role="status" aria-live="polite" aria-label="Avisos">
+    <div className="ux-toasts" role="status" aria-live="polite" aria-label="Notifications">
       {toasts.map((t) => <ToastItem key={t.id} t={t} onDismiss={onDismiss} />)}
     </div>
   );

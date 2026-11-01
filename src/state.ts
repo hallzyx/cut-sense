@@ -7,12 +7,12 @@ export interface TemplateDef {
   name: string;
   color: string;
   kind: TemplateKind;
-  /** Dimensiones en unidades de visualización (u relativas o unidad física calibrada). */
+  /** Dimensions in display units (relative u or a calibrated physical unit). */
   w: number;
   h: number;
   qty: number;
   rotations: number[];
-  /** Forma propia normalizada a [0,1]² (solo kind === 'custom'). */
+  /** Custom shape normalized to [0,1]² (only kind === 'custom'). */
   custom?: Ring;
 }
 
@@ -30,9 +30,9 @@ export interface Project {
   defects: Ring[];
   calib: Calib | null;
   defs: TemplateDef[];
-  /** Separación mínima en unidades de visualización. */
+  /** Minimum spacing in display units. */
   spacing: number;
-  /** fixed: se coloca el pedido tal cual · maxKits: se busca el máximo de juegos completos del pedido. */
+  /** fixed: place the order as is · maxKits: find the maximum number of complete sets of the order. */
   fill: 'fixed' | 'maxKits';
 }
 
@@ -40,9 +40,9 @@ export interface Result {
   solution: Solution;
   verify: VerifyResult;
   problemKey: string;
-  /** Presente con fill = 'maxKits': juegos completos colocados y piezas por juego. */
+  /** Present with fill = 'maxKits': complete sets placed and pieces per set. */
   kits?: { n: number; perKit: Record<string, number> };
-  /** Productos añadidos con el material sobrante (después del pedido principal). */
+  /** Products added with the leftover material (after the main order). */
   extras?: ExtraProduct[];
   ppu: number;
   unit: string;
@@ -50,7 +50,7 @@ export interface Result {
   problem: Problem;
 }
 
-/** Producto adicional planificado sobre el sobrante. Sus plantillas siguen a las del pedido principal. */
+/** Additional product planned on the leftover. Its templates follow those of the main order. */
 export interface ExtraProduct {
   id: string;
   name: string;
@@ -59,10 +59,10 @@ export interface ExtraProduct {
   kits: { n: number; perKit: Record<string, number> };
 }
 
-/** Plantillas del pedido y de los productos añadidos, en el mismo orden que result.problem.templates. */
+/** Templates of the order and of the added products, in the same order as result.problem.templates. */
 export const allDefs = (p: Project, r?: Pick<Result, 'extras'> | null): TemplateDef[] => [...p.defs, ...(r?.extras?.flatMap((e) => e.defs) ?? [])];
 
-/** Piezas por juego de una plantilla cuando hay varios juegos (para etiquetar «A1·2»), si aplica. */
+/** Pieces per set of a template when there are several sets (to label “A1·2”), if any. */
 export function kitQtyFor(r: Pick<Result, 'kits' | 'extras'>, templateId: string): number | undefined {
   if (r.kits && r.kits.n > 1 && templateId in r.kits.perKit) return r.kits.perKit[templateId];
   const e = r.extras?.find((x) => x.kind === 'kit' && x.kits.n > 1 && templateId in x.kits.perKit);
@@ -74,7 +74,7 @@ export const emptyProject = (): Project => ({
   defects: [], calib: null, defs: [], spacing: 0, fill: 'fixed',
 });
 
-/** Etiqueta de una pieza: letra de plantilla + nº de copia dentro de su juego (+ juego si hay varios). */
+/** Piece label: template letter + copy number within its set (+ set number if there are several). */
 export function pieceLabel(templateIndex: number, instance: number, perKit?: number): string {
   const letter = String.fromCharCode(65 + templateIndex);
   if (!perKit) return `${letter}${instance + 1}`;
@@ -82,7 +82,7 @@ export function pieceLabel(templateIndex: number, instance: number, perKit?: num
 }
 
 export const calibPx = (c: Calib) => Math.hypot(c.a[0] - c.b[0], c.a[1] - c.b[1]);
-/** Píxeles por unidad de visualización. Sin calibración: 1 u = 1 % del ancho de la imagen. */
+/** Pixels per display unit. Without calibration: 1 u = 1% of the image width. */
 export const pxPerUnit = (c: Calib | null, imgW: number) => (c ? calibPx(c) / c.dist : imgW / 100);
 export const unitLabel = (c: Calib | null) => (c ? c.unit : 'u');
 
@@ -118,7 +118,7 @@ export function buildProblem(p: Project): Problem | null {
 
 export const problemKey = (pr: Problem | null, calib: Calib | null) => JSON.stringify([pr, calib && [calib.a, calib.b, calib.dist, calib.unit]]);
 
-export const fmt = (n: number, d = 1) => n.toLocaleString('es-PE', { maximumFractionDigits: d, minimumFractionDigits: 0 });
+export const fmt = (n: number, d = 1) => n.toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: 0 });
 
 export const centroid = (r: Ring): Pt => {
   let x = 0, y = 0;
@@ -128,16 +128,16 @@ export const centroid = (r: Ring): Pt => {
 
 export interface Change { label: string; detail: string }
 
-/** Diferencias entre dos soluciones/problemas para el panel "Qué cambió". */
+/** Differences between two solutions/problems for the "What changed" panel. */
 export function diffResults(prev: Result, next: Result): { changes: Change[]; moved: number } {
   const changes: Change[] = [];
   const a = prev.problem, b = next.problem;
-  if (a.defects.length !== b.defects.length) changes.push({ label: 'Zonas excluidas', detail: `${a.defects.length} → ${b.defects.length}` });
-  else if (JSON.stringify(a.defects) !== JSON.stringify(b.defects)) changes.push({ label: 'Zonas excluidas', detail: 'geometría modificada' });
-  if (JSON.stringify(a.material) !== JSON.stringify(b.material)) changes.push({ label: 'Contorno del material', detail: 'modificado' });
+  if (a.defects.length !== b.defects.length) changes.push({ label: 'Excluded zones', detail: `${a.defects.length} → ${b.defects.length}` });
+  else if (JSON.stringify(a.defects) !== JSON.stringify(b.defects)) changes.push({ label: 'Excluded zones', detail: 'geometry changed' });
+  if (JSON.stringify(a.material) !== JSON.stringify(b.material)) changes.push({ label: 'Material outline', detail: 'changed' });
   const dem = (p: Problem) => p.templates.map((t) => `${t.name}×${t.qty}[${t.rotations.join('/')}]${Math.round(t.w)}x${Math.round(t.h)}`).join(' · ');
-  if (dem(a) !== dem(b)) changes.push({ label: 'Pedido / plantillas', detail: 'modificado' });
-  if (a.spacing !== b.spacing) changes.push({ label: 'Separación mínima', detail: `${fmt(a.spacing / prev.ppu)} → ${fmt(b.spacing / next.ppu)} ${next.unit}` });
+  if (dem(a) !== dem(b)) changes.push({ label: 'Order / templates', detail: 'changed' });
+  if (a.spacing !== b.spacing) changes.push({ label: 'Minimum spacing', detail: `${fmt(a.spacing / prev.ppu)} → ${fmt(b.spacing / next.ppu)} ${next.unit}` });
   const pm = prev.solution.metrics, nm = next.solution.metrics;
   const key = (p: Placement) => `${p.templateId}#${p.instance}`;
   const old = new Map(prev.solution.placements.map((p) => [key(p), p]));
@@ -148,6 +148,6 @@ export function diffResults(prev: Result, next: Result): { changes: Change[]; mo
     const c1 = centroid(o.polygon), c2 = centroid(p.polygon);
     if (Math.hypot(c1[0] - c2[0], c1[1] - c2[1]) > 1 || o.rotation !== p.rotation) moved++;
   }
-  if (pm.placedCount !== nm.placedCount) changes.push({ label: 'Piezas colocadas', detail: `${pm.placedCount} → ${nm.placedCount}` });
+  if (pm.placedCount !== nm.placedCount) changes.push({ label: 'Pieces placed', detail: `${pm.placedCount} → ${nm.placedCount}` });
   return { changes, moved };
 }

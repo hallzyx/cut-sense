@@ -10,9 +10,9 @@ export interface NewPiece { name: string; shape: Ring; w: number; h: number }
 interface Props {
   mode: 'draw' | 'svg';
   unit: string;
-  /** Ancho sugerido para la pieza, en la unidad actual. */
+  /** Suggested piece width, in the current unit. */
   defaultWidth: number;
-  /** Convierte milímetros a la unidad actual (cm o mm); null si la foto no está calibrada. */
+  /** Converts millimetres to the current unit (cm or mm); null if the photo is not calibrated. */
   mmToCurrent?: (mm: number) => number | null;
   onCancel: () => void;
   onSave: (p: NewPiece) => void;
@@ -25,7 +25,7 @@ export default function PieceDialog({ mode, unit, defaultWidth, mmToCurrent, onC
   const [ring, setRing] = useState<Ring | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const [name, setName] = useState('Pieza propia');
+  const [name, setName] = useState('Custom piece');
   const [w, setW] = useState(defaultWidth);
   const [h, setH] = useState(defaultWidth);
   const [aspect, setAspect] = useState(1);
@@ -42,7 +42,7 @@ export default function PieceDialog({ mode, unit, defaultWidth, mmToCurrent, onC
 
   const accept = (r: Ring, suggestedW?: number) => {
     const bad = customShapeProblem(r);
-    if (bad) { setErr(`${bad} Corrige la forma e inténtalo de nuevo.`); return false; }
+    if (bad) { setErr(`${bad} Fix the shape and try again.`); return false; }
     const { aspect: a } = normalizeRing(r);
     const nw = suggestedW && suggestedW > 0 ? Math.round(suggestedW * 10) / 10 : defaultWidth;
     setRing(r); setAspect(a); setW(nw); setH(Math.round(nw * a * 10) / 10); setErr(null);
@@ -61,13 +61,13 @@ export default function PieceDialog({ mode, unit, defaultWidth, mmToCurrent, onC
   const onFile = async (f: File | undefined) => {
     if (!f) return;
     setErr(null); setNote(null);
-    if (f.size > 1024 * 1024) { setErr('El SVG pesa más de 1 MB.'); return; }
+    if (f.size > 1024 * 1024) { setErr('The SVG is larger than 1 MB.'); return; }
     try {
       const res = ringFromSvg(await f.text());
       const suggested = mmToCurrent?.(res.widthMm) ?? undefined;
       if (accept(res.ring, suggested ?? undefined)) {
-        setName(f.name.replace(/\.svg$/i, '') || 'Pieza propia');
-        setNote(`${res.ring.length} vértices${res.found > 1 ? ` · el archivo tenía ${res.found} formas: usé la de mayor área` : ''}. Los huecos interiores se ignoran.${suggested ? ' Tamaño sugerido según las dimensiones del SVG; ajústalo si hace falta.' : ''}`);
+        setName(f.name.replace(/\.svg$/i, '') || 'Custom piece');
+        setNote(`${res.ring.length} vertices${res.found > 1 ? ` · the file had ${res.found} shapes: I used the largest one` : ''}. Inner holes are ignored.${suggested ? ' Size suggested from the SVG dimensions; adjust it if needed.' : ''}`);
       }
     } catch (e) { setErr((e as Error).message); }
   };
@@ -78,52 +78,52 @@ export default function PieceDialog({ mode, unit, defaultWidth, mmToCurrent, onC
 
   return (
     <div className="modal-backdrop" onPointerDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
-      <div className="modal feature-card" role="dialog" aria-modal="true" aria-label={mode === 'draw' ? 'Dibujar pieza propia' : 'Importar pieza desde SVG'}>
-        <h2 className="h4">{mode === 'draw' ? 'Dibujar pieza propia' : 'Importar pieza desde SVG'}</h2>
+      <div className="modal feature-card" role="dialog" aria-modal="true" aria-label={mode === 'draw' ? 'Draw a custom piece' : 'Import a piece from SVG'}>
+        <h2 className="h4">{mode === 'draw' ? 'Draw a custom piece' : 'Import a piece from SVG'}</h2>
         {err && <p className="alert error" role="alert">{err}</p>}
 
         {!ring && mode === 'svg' && (
           <div className="stack">
-            <p className="caption">Sube un SVG con la silueta de la pieza (path, polygon, rect, circle o ellipse). Se usa el contorno exterior de la forma más grande; las curvas se convierten en polígonos.</p>
-            <input type="file" accept=".svg,image/svg+xml" aria-label="Archivo SVG" onChange={(e) => onFile(e.target.files?.[0])} />
+            <p className="caption">Upload an SVG with the piece silhouette (path, polygon, rect, circle or ellipse). The outer outline of the largest shape is used; curves become polygons.</p>
+            <input type="file" accept=".svg,image/svg+xml" aria-label="SVG file" onChange={(e) => onFile(e.target.files?.[0])} />
           </div>
         )}
 
         {!ring && mode === 'draw' && (
           <div className="stack">
-            <p className="caption">Haz clic para añadir puntos alrededor de la pieza. Cierra la forma haciendo clic en el primer punto (verde).</p>
-            <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="draw-area" onPointerDown={pointer} role="img" aria-label="Área de dibujo de la pieza">
+            <p className="caption">Click to add points around the piece. Close the shape by clicking the first point (green).</p>
+            <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="draw-area" onPointerDown={pointer} role="img" aria-label="Piece drawing area">
               <rect width={W} height={H} fill="var(--cs-surface-sunk)" />
               {draft.length > 1 && <polyline points={draft.map((p) => p.join(',')).join(' ')} fill="none" stroke="var(--cs-text)" strokeWidth="2" strokeDasharray="6 4" />}
               {draft.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={i === 0 ? 7 : 4} fill={i === 0 ? '#5BD69A' : '#fff'} stroke="#0B0F0D" strokeWidth="1.5" />)}
             </svg>
             <div className="row wrap">
-              <button className="btn ghost sm" disabled={!draft.length} onClick={() => setDraft(draft.slice(0, -1))}>Deshacer punto</button>
-              <button className="btn dark sm" disabled={draft.length < 3} onClick={() => accept(draft)}>Cerrar forma</button>
+              <button className="btn ghost sm" disabled={!draft.length} onClick={() => setDraft(draft.slice(0, -1))}>Undo point</button>
+              <button className="btn dark sm" disabled={draft.length < 3} onClick={() => accept(draft)}>Close shape</button>
             </div>
           </div>
         )}
 
         {ring && (
           <div className="stack">
-            <svg viewBox={`0 0 400 ${prevH}`} className="draw-area" aria-label="Vista previa de la pieza">
+            <svg viewBox={`0 0 400 ${prevH}`} className="draw-area" aria-label="Piece preview">
               <rect width="400" height={prevH} fill="var(--cs-surface-sunk)" />
               <path d={ringPath(preview)} fill="var(--cs-piece-a)" fillOpacity=".9" stroke="var(--cs-ov-casing)" strokeWidth="2" strokeLinejoin="round" />
             </svg>
             {note && <p className="caption">{note}</p>}
-            <label className="field"><span>Nombre</span><span className="input-wrap"><input value={name} onChange={(e) => setName(e.target.value)} aria-invalid={!name.trim()} /></span></label>
+            <label className="field"><span>Name</span><span className="input-wrap"><input value={name} onChange={(e) => setName(e.target.value)} aria-invalid={!name.trim()} /></span></label>
             <div className="row3">
-              <NumField label="Ancho" value={w} min={0} exclusive suffix={unit} onCommit={(n) => { setW(n); if (keep) setH(Math.round(n * aspect * 10) / 10); }} />
-              <NumField label="Alto" value={h} min={0} exclusive suffix={unit} onCommit={(n) => { setH(n); if (keep) setW(Math.round((n / aspect) * 10) / 10); }} />
+              <NumField label="Width" value={w} min={0} exclusive suffix={unit} onCommit={(n) => { setW(n); if (keep) setH(Math.round(n * aspect * 10) / 10); }} />
+              <NumField label="Height" value={h} min={0} exclusive suffix={unit} onCommit={(n) => { setH(n); if (keep) setW(Math.round((n / aspect) * 10) / 10); }} />
             </div>
-            <label className="check"><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} /> Mantener proporción</label>
+            <label className="check"><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} /> Keep proportions</label>
           </div>
         )}
 
         <div className="row wrap modal-foot">
-          {ring && <button className="btn primary sm" disabled={!sizeOk} onClick={() => onSave({ name: name.trim(), shape: normalizeRing(ring).shape, w, h })}>Añadir al pedido</button>}
-          {ring && <button className="btn ghost sm" onClick={() => { setRing(null); setDraft([]); setNote(null); }}>Empezar de nuevo</button>}
-          <button ref={first} className="btn ghost sm" onClick={onCancel}>Cancelar</button>
+          {ring && <button className="btn primary sm" disabled={!sizeOk} onClick={() => onSave({ name: name.trim(), shape: normalizeRing(ring).shape, w, h })}>Add to order</button>}
+          {ring && <button className="btn ghost sm" onClick={() => { setRing(null); setDraft([]); setNote(null); }}>Start over</button>}
+          <button ref={first} className="btn ghost sm" onClick={onCancel}>Cancel</button>
         </div>
       </div>
     </div>

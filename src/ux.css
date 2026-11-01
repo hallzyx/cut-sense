@@ -10,7 +10,7 @@
 .ux-tight { margin-top: -6px; }
 .ux-ico { width: 18px; height: 18px; flex: none; }
 
-/* ---------- App header: brand · StepRail · Proyecto ---------- */
+/* ---------- App header: brand · StepRail · Project ---------- */
 .nav--app { background: var(--cs-surface); }
 .nav-in--app { display: flex; align-items: center; gap: 20px; min-height: 60px; padding: 0 20px; }
 .nav-in--app .logo-mark { display: none; }
@@ -182,7 +182,7 @@
 .ux-zone__area { font-size: 12px; }
 .ux-extra { grid-template-columns: auto 1fr auto; }
 
-/* Option cards (Piezas, empty) */
+/* Option cards (Pieces, empty) */
 .ux-options { display: grid; gap: 8px; }
 .ux-option { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; width: 100%; padding: 9px 12px; border: 1.5px solid var(--cs-line); border-radius: var(--cs-radius-md); background: var(--cs-surface); color: var(--cs-text); text-align: left; cursor: pointer; }
 .ux-option:hover, .ux-option[aria-expanded='true'] { border-color: var(--cs-text); }
