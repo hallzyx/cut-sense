@@ -2,6 +2,7 @@ import type { Project, Result } from '../state';
 import { fmt, calibPx } from '../state';
 import { ringPath } from './poly';
 import { templateLetter } from '../components/Stage';
+import { pieceLabel } from '../state';
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const PAT = [
@@ -26,7 +27,7 @@ export function buildSvg(p: Project, r: Result, includePhoto: boolean): { svg: s
     const cx = pl.polygon.reduce((s, q) => s + q[0], 0) / pl.polygon.length;
     const cy = pl.polygon.reduce((s, q) => s + q[1], 0) / pl.polygon.length;
     return `<path d="${ringPath(pl.polygon)}" fill="url(#p${ti})" stroke="#000" stroke-width="1.5"/>` +
-      `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">${templateLetter(ti)}${pl.instance + 1}</text>`;
+      `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">${pieceLabel(ti, pl.instance, r.kits && r.kits.n > 1 ? r.kits.perKit[pl.templateId] : undefined)}</text>`;
   }).join('');
   const legend = p.defs.map((d, i) => {
     const y = img.h + 70 + i * 22;

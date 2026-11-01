@@ -80,4 +80,4 @@ export interface VerifyResult {
 }
 
 /** sam = inferencia SAM en vivo · example = máscara precalculada del ejemplo · local = contraste local (no es Meta AI) */
-export type ContourSource = 'sam' | 'example' | 'local' | 'manual';
+export type ContourSource = 'sam' | 'example' | 'local' | 'manual' | 'leftover';

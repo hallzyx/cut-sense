@@ -1,5 +1,5 @@
 import type { Pt, Ring } from '../types';
-import type { Project, Result } from '../state';
+import { pieceLabel, type Project, type Result } from '../state';
 import { bbox, ringPath } from './poly';
 
 /** Plano a escala real (1:1): SVG en centímetros y hojas imprimibles con marcas de ensamblaje. */
@@ -37,7 +37,7 @@ export function planInCm(p: Project, r: Result): PlanCm | null {
   const cm = (q: Pt): Pt => [(q[0] - b.x0) / k + MARGIN, (q[1] - b.y0) / k + MARGIN];
   const pieces = r.solution.placements.map((pl) => {
     const tpl = p.defs.findIndex((d) => d.id === pl.templateId);
-    return { ring: pl.polygon.map(cm), label: `${letter(tpl)}${pl.instance + 1}`, tpl };
+    return { ring: pl.polygon.map(cm), label: pieceLabel(tpl, pl.instance, r.kits && r.kits.n > 1 ? r.kits.perKit[pl.templateId] : undefined), tpl };
   });
   return { w: b.w / k + 2 * MARGIN, h: b.h / k + 2 * MARGIN, material: p.contour.map(cm), defects: p.defects.map((d) => d.map(cm)), pieces, k };
 }

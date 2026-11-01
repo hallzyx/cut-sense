@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { Placement, Pt, Ring, Template } from '../types';
-import { centroid } from '../state';
+import { centroid, pieceLabel } from '../state';
 import { nearestEdge, ringPath } from '../lib/poly';
 
 export type Mode = 'view' | 'contour' | 'defects' | 'calib' | 'points';
@@ -30,6 +30,12 @@ interface Props {
   placements: Placement[];
   templates: Template[];
   stale: boolean;
+  /** Piezas por juego de cada plantilla (modo máximo de juegos): etiqueta «A1·2». */
+  kitQty?: Record<string, number>;
+  /** Zonas propuestas por la IA, pendientes de confirmar. */
+  defectProposals?: Ring[];
+  /** Fragmentos del material que sobran tras el plan. */
+  leftover?: Ring[];
   /** Provenance of the material outline: AI proposal, human-corrected, or verified plan. */
   outlineKind: 'ai' | 'human' | 'verified';
   selPlacement: number | null;
@@ -155,6 +161,10 @@ export default function Stage(p: Props) {
             {PATTERN_SHAPES[i % PATTERN_SHAPES.length]?.('rgba(11,15,13,.55)')}
           </pattern>
         ))}
+ <pattern id="pat-left" width="10" height="10" patternUnits="userSpaceOnUse">
+          <rect width="10" height="10" fill="#ffffff" fillOpacity=".35" />
+          <path d="M0,10 L10,0" stroke="#5A615B" strokeWidth="1.2" />
+        </pattern>
         <pattern id="pat-defect" width="8" height="8" patternUnits="userSpaceOnUse">
           <rect width="8" height="8" fill="#ffffff" fillOpacity=".55" />
           <path d="M-1,5 L5,-1 M3,9 L9,3" stroke="#FF3B30" strokeWidth="3" />
@@ -186,6 +196,14 @@ export default function Stage(p: Props) {
         </path>
       ))}
 
+      {p.leftover?.map((l, i) => (
+        <path key={`l${i}`} d={ringPath(l)} fill="url(#pat-left)" stroke="#5A615B" strokeWidth={sw * 1.4} strokeDasharray={`${4 / k()} ${3 / k()}`} />
+      ))}
+
+      {p.defectProposals?.map((d, i) => (
+        <Tri key={`dp${i}`} d={ringPath(d)} color={OV.ai} sw={sw * 1.3} dash={`${6 / k()} ${4 / k()}`} fill={OV.ai} fillOpacity={0.3} />
+      ))}
+
       <g opacity={p.stale ? 0.4 : 1}>
         {p.placements.map((pl, i) => {
           const ti = p.templates.findIndex((t) => t.id === pl.templateId);
@@ -195,7 +213,7 @@ export default function Stage(p: Props) {
             <g key={i} onPointerDown={(e) => { e.stopPropagation(); p.onSelPlacement(sel ? null : i); }} style={{ cursor: 'pointer' }}>
               <path d={ringPath(pl.polygon)} fill={`url(#pat-${pl.templateId})`} stroke={sel ? '#000' : '#0b0b0b'} strokeWidth={sel ? sw * 3 : sw} strokeLinejoin="round" />
               <text x={c[0]} y={c[1]} textAnchor="middle" dominantBaseline="central" fontSize={15 / k()} fontWeight="700" fill="#000" stroke="#fff" strokeWidth={3 / k()} paintOrder="stroke">
-                {templateLetter(ti)}{pl.instance + 1}
+                {pieceLabel(ti, pl.instance, p.kitQty?.[pl.templateId])}
               </text>
             </g>
           );

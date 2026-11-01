@@ -32,12 +32,16 @@ export interface Project {
   defs: TemplateDef[];
   /** Separación mínima en unidades de visualización. */
   spacing: number;
+  /** fixed: se coloca el pedido tal cual · maxKits: se busca el máximo de juegos completos del pedido. */
+  fill: 'fixed' | 'maxKits';
 }
 
 export interface Result {
   solution: Solution;
   verify: VerifyResult;
   problemKey: string;
+  /** Presente con fill = 'maxKits': juegos completos colocados y piezas por juego. */
+  kits?: { n: number; perKit: Record<string, number> };
   ppu: number;
   unit: string;
   calibrated: boolean;
@@ -46,8 +50,15 @@ export interface Result {
 
 export const emptyProject = (): Project => ({
   image: null, contour: [], lastValid: [], source: null, edited: false, samInfo: null,
-  defects: [], calib: null, defs: [], spacing: 0,
+  defects: [], calib: null, defs: [], spacing: 0, fill: 'fixed',
 });
+
+/** Etiqueta de una pieza: letra de plantilla + nº de copia dentro de su juego (+ juego si hay varios). */
+export function pieceLabel(templateIndex: number, instance: number, perKit?: number): string {
+  const letter = String.fromCharCode(65 + templateIndex);
+  if (!perKit) return `${letter}${instance + 1}`;
+  return `${letter}${(instance % perKit) + 1}·${Math.floor(instance / perKit) + 1}`;
+}
 
 export const calibPx = (c: Calib) => Math.hypot(c.a[0] - c.b[0], c.a[1] - c.b[1]);
 /** Píxeles por unidad de visualización. Sin calibración: 1 u = 1 % del ancho de la imagen. */
