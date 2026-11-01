@@ -17,11 +17,14 @@ import { buildDxf } from '../lib/dxf';
 import { buildPlanSvgCm, buildPrintHtml, PAPERS, pxPerCm, type PaperKey } from '../lib/print';
 import { KITS } from '../lib/kits';
 import { addProduct, removeProduct } from '../lib/products';
+import { serializeProject, type LoadedProject } from '../lib/projectFile';
 
 interface Props {
   p: Project;
   setP: (f: (p: Project) => Project) => void;
   onReset: () => void;
+  /** Proyecto abierto desde un archivo: plan ya verificado y paso en el que se guardó. */
+  restored?: LoadedProject | null;
   /** Empieza un proyecto nuevo con la foto del sobrante, conservando el pedido. */
   onLeftoverPhoto: (f: File, defs: TemplateDef[], spacing: number) => void;
 }
@@ -54,10 +57,10 @@ const SAM_MSG: Record<string, string> = {
   NETWORK: 'No se pudo contactar con el servidor de segmentación.',
 };
 
-export default function Workspace({ p, setP, onReset, onLeftoverPhoto }: Props) {
+export default function Workspace({ p, setP, onReset, onLeftoverPhoto, restored }: Props) {
   const img = p.image!;
-  const [step, setStep] = useState(1);
-  const [mode, setMode] = useState<Mode>(p.contour.length ? 'contour' : 'view');
+  const [step, setStep] = useState<number>(restored?.step ?? 1);
+  const [mode, setMode] = useState<Mode>(!restored?.step || restored.step === 1 ? (p.contour.length ? 'contour' : 'view') : 'view');
   const [draft, setDraft] = useState<Pt[] | null>(null);
   const [drawTarget, setDrawTarget] = useState<'contour' | 'defect'>('defect');
   const [selDefect, setSelDefect] = useState<number | null>(null);
@@ -79,12 +82,12 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto }: Props) 
   const [progress, setProgress] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const [samFailed, setSamFailed] = useState(false);
-  const [result, setResult] = useState<Result | null>(null);
+  const [result, setResult] = useState<Result | null>(restored?.result ?? null);
   const [prev, setPrev] = useState<Result | null>(null);
   const [selPlacement, setSelPlacement] = useState<number | null>(null);
   const [showImage, setShowImage] = useState(true);
   const [withPhoto, setWithPhoto] = useState(true);
-  const [flash, setFlash] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string | null>(restored ? (restored.notice ?? 'Proyecto abierto. El plan se volvió a verificar al cargarlo.') : null);
   const abort = useRef<AbortController | null>(null);
 
   const ppu = pxPerUnit(p.calib, img.w);
@@ -395,6 +398,7 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto }: Props) 
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (e) { setErr((e as Error).message); }
   };
+  const saveProject = () => download('cutsense-proyecto.json', new Blob([serializeProject(p, result, step)], { type: 'application/json' }));
   const downloadJson = () => result && download('cutsense-problema.json', new Blob([JSON.stringify({ problem: result.problem, solution: result.solution, verify: result.verify }, null, 2)], { type: 'application/json' }));
 
   const m = result?.solution.metrics;
@@ -770,6 +774,7 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto }: Props) 
               </>
             )}
 
+            <button className="link" onClick={saveProject}>Guardar proyecto (.json)</button>
             <button className="link danger" onClick={() => { if (confirm('¿Descartar este proyecto? Se perderán los cambios no guardados.')) onReset(); }}>Nuevo proyecto</button>
           </aside>
         </div>

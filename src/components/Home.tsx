@@ -4,6 +4,7 @@ import { EXAMPLES } from '../lib/examples';
 interface Props {
   onFile: (f: File) => void;
   onExample: (id: string) => void;
+  onOpenProject: (f: File) => void;
   error: string | null;
 }
 
@@ -14,8 +15,9 @@ const FAQ = [
   ['¿Detecta defectos automáticamente?', 'No en esta versión. Los defectos los marcas tú; el optimizador garantiza que ninguna pieza los invada.'],
 ];
 
-export default function Home({ onFile, onExample, error }: Props) {
+export default function Home({ onFile, onExample, onOpenProject, error }: Props) {
   const input = useRef<HTMLInputElement>(null);
+  const projectInput = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState<number | null>(0);
   return (
     <>
@@ -31,6 +33,9 @@ export default function Home({ onFile, onExample, error }: Props) {
               <input ref={input} type="file" hidden accept="image/jpeg,image/png,image/webp" aria-label="Subir imagen JPG, PNG o WebP"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }} />
             </div>
+            <p className="caption"><button className="link" onClick={() => projectInput.current?.click()}>Abrir un proyecto guardado (.json)</button></p>
+            <input ref={projectInput} type="file" hidden accept="application/json,.json" aria-label="Abrir proyecto guardado"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) onOpenProject(f); e.target.value = ''; }} />
             {error && <p className="alert error" role="alert">{error}</p>}
             <p className="caption">JPG, PNG o WebP · hasta 10 MB · material plano, fondo contrastante, luz uniforme y cámara cenital.</p>
           </div>

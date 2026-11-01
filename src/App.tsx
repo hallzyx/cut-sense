@@ -5,6 +5,7 @@ import Workspace from './components/Workspace';
 import { EXAMPLES } from './lib/examples';
 import { loadImage } from './lib/mask';
 import { KITS } from './lib/kits';
+import { MAX_FILE_BYTES, parseProjectFile, type LoadedProject } from './lib/projectFile';
 import { defaultDefs, emptyProject, kitToDefs, type Project } from './state';
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -23,6 +24,7 @@ export default function App() {
   const [p, setP] = useState<Project>(emptyProject());
   const [error, setError] = useState<string | null>(null);
   const [key, setKey] = useState(0);
+  const [restored, setRestored] = useState<LoadedProject | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark' | null>(() => {
     try { const t = localStorage.getItem('cs-theme'); return t === 'light' || t === 'dark' ? t : null; } catch { return null; }
   });
@@ -36,7 +38,19 @@ export default function App() {
     const kit = KITS.find((k) => k.id === kitId);
     setP({ ...emptyProject(), image, calib, defs: keep?.defs ?? (kit ? kitToDefs(kit) : defaultDefs()), spacing: keep?.spacing ?? 0, fill: keep || kit ? 'maxKits' : 'fixed' });
     setKey((k) => k + 1);
+    setRestored(null);
     setError(null);
+  };
+
+  const onOpenProject = async (f: File) => {
+    if (f.size > MAX_FILE_BYTES) return setError('El archivo es demasiado grande para ser un proyecto de CutSense.');
+    try {
+      const loaded = parseProjectFile(await f.text());
+      setP(loaded.project);
+      setRestored(loaded);
+      setKey((k) => k + 1);
+      setError(null);
+    } catch (e) { setError((e as Error).message); }
   };
 
   const onExample = (id: string) => {
@@ -75,8 +89,8 @@ export default function App() {
       </header>
       <main>
         {p.image
-          ? <Workspace key={key} p={p} setP={setP} onReset={() => setP(emptyProject())} onLeftoverPhoto={(f, defs, spacing) => onFile(f, { defs, spacing })} />
-          : <Home onFile={onFile} onExample={onExample} error={error} />}
+          ? <Workspace key={key} p={p} setP={setP} restored={restored} onReset={() => setP(emptyProject())} onLeftoverPhoto={(f, defs, spacing) => onFile(f, { defs, spacing })} />
+          : <Home onFile={onFile} onExample={onExample} onOpenProject={onOpenProject} error={error} />}
       </main>
     </>
   );
