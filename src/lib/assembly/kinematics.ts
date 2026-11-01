@@ -5,7 +5,7 @@ import { DEFAULT_THICKNESS, findPiece, pieceOutline } from './pieces';
 
 /**
  * Kinematics of the assembly: turns an explicit scene into a rig and evaluates it at any
- * "armar" progress t ∈ [0,1]. Pure (no three.js), so the sanity checks and the tests use
+ * "assemble" progress t ∈ [0,1]. Pure (no three.js), so the sanity checks and the tests use
  * exactly what the viewer draws.
  *
  * Timeline: phase A (t 0→0.5) moves each stacked piece from the flat layout onto its parent;

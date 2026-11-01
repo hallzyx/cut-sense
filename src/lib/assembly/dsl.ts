@@ -11,7 +11,7 @@
  *  - The node tree is a flat list with parent ids (the strict schema forbids recursion).
  *  - "joint" says how a node hangs from its parent: stacked on a face, hinged on an edge,
  *    sewn edge to edge in the parent's plane (seam), or root. A hinge or a fold angle animates
- *    from 0 (flat) to its target ("armar").
+ *    from 0 (flat) to its target ("assemble").
  */
 export const CATEGORIES = [
   'wallet', 'cardholder', 'coin_pouch', 'zip_pouch', 'glasses_case', 'phone_sleeve', 'bag', 'keychain', 'coaster_set', 'box', 'sleeve', 'garment', 'other',

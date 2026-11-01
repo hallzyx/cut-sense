@@ -10,29 +10,30 @@ import { DEFAULT_THICKNESS, findPiece, normName } from './pieces';
  */
 export interface Inst { name: string; instance: number; w: number; h: number; kind: AgentPiece['kind']; role: Role }
 
+/** Piece names may be Spanish or English (the kits, the people and the agent use both): every rule lists both. */
 const RULES: [Role, RegExp][] = [
-  // Garment parts first: "Manga delantera" is a sleeve, "Cuello trasero" a collar.
+  // Garment parts first: "Manga delantera" / "Front sleeve" is a sleeve, "Cuello trasero" / "Back collar" a collar.
   ['sleeve', /\bmanga|sleeve/],
   ['cuff', /\bpuno|cuff/],
   ['hood', /capucha|hood/],
   ['collar', /cuello|collar|\bsolapa de cuello|lapel/],
-  ['waistband', /pretina|cinturilla|waistband|\bhem\b|dobladillo|bajo de la prenda/],
+  ['waistband', /pretina|cinturilla|waistband|\bhem\b|hem band|dobladillo|bajo de la prenda|ribbing/],
   ['card_pocket', /tarjet|card|ranura|slot/],
-  ['bill_pocket', /billete|bill|cash|dinero/],
+  ['bill_pocket', /billete|bill|cash|dinero|banknote|currency/],
   ['coin_pocket', /moneda|monedero|coin/],
   ['handle', /\basa|handle|correa|manija|strap|asidero/],
-  ['flap', /solapa|flap|cierre|tapeta/],
+  ['flap', /solapa|flap|cierre|tapeta|closure/],
   ['tab', /pestana|lengueta|tirador|presilla|trabilla|\btab\b|pull/],
   ['lining', /forro|lining/],
-  ['lid', /tapa\b|\btapa |lid|cover/],
-  ['base', /\bbase|fondo|suela|bottom/],
+  ['lid', /tapa\b|\btapa |\blid\b|cover/],
+  ['base', /\bbase|fondo|suela|bottom|\bsole\b/],
   ['gusset', /fuelle|gusset|banda/],
   ['wall', /lateral|pared|costado|\bside|wall|canto/],
-  ['back', /traser|posterior|espalda|\bback|dorso|reverso/],
+  ['back', /traser|posterior|espalda|\bback|dorso|reverso|\brear\b/],
   ['front', /frente|frontal|delanter|\bfront|cara/],
   ['pocket', /bolsillo|pocket|compartiment/],
-  ['item', /posavaso|coaster|llavero|marcapagina|keychain|tag\b|etiqueta/],
-  ['body', /cuerpo|exterior|body|principal|cubierta|carcasa|funda|panel|pieza/],
+  ['item', /posavaso|coaster|llavero|marcapagina|keychain|key ?ring|key ?fob|bookmark|tag\b|etiqueta|label/],
+  ['body', /cuerpo|exterior|body|principal|cubierta|carcasa|funda|panel|pieza|piece|outer|shell|\bmain\b|\bcase\b|\bsleeve\b/],
 ];
 
 const GARMENT_ROLES: Role[] = ['sleeve', 'cuff', 'hood', 'collar', 'waistband'];
@@ -40,7 +41,7 @@ const GARMENT_ROLES: Role[] = ['sleeve', 'cuff', 'hood', 'collar', 'waistband'];
 /** Role from the piece name. Garment roles are only guessed for garments (a "Sleeve" of a phone case is its body). */
 export function guessRole(pieceName: string, garment = true): Role {
   const n = normName(pieceName);
-  // "Bolsillo frontal" is a pocket, not the front panel.
+  // "Bolsillo frontal" / "Front pocket" is a pocket, not the front panel.
   if (/bolsillo|pocket/.test(n) && !/tarjet|card|billete|bill|moneda|coin/.test(n)) return 'pocket';
   for (const [role, re] of RULES) if ((garment || !GARMENT_ROLES.includes(role)) && re.test(n)) return role;
   return 'other';
@@ -544,6 +545,6 @@ export function expandMacro(spec: SceneSpec, pieces: AgentPiece[], warnings: str
   if (explicitRoot) {
     for (const n of ctx.nodes) if (n.joint === 'root') { n.joint = 'stack'; n.parent = explicitRoot.id; }
   }
-  if (ctx.pool.length) warnings.push(`sin colocar por la macro: ${[...new Set(ctx.pool.map((i) => i.name))].join(', ')}`);
+  if (ctx.pool.length) warnings.push(`not placed by the macro: ${[...new Set(ctx.pool.map((i) => i.name))].join(', ')}`);
   return ctx.nodes;
 }

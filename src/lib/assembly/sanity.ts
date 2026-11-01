@@ -24,7 +24,7 @@ export interface Sanity {
   score: number;
 }
 
-const fmt = (x: number) => String(Math.round(x * 10) / 10).replace('.', ',');
+const fmt = (x: number) => String(Math.round(x * 10) / 10);
 const W_SEVERE = 3, W_STRUCT = 2, W_MINOR = 1;
 
 /** Roles of the scene's panels: the macro binding when there is one, otherwise guessed from the name. */
@@ -40,7 +40,7 @@ export function sanityCheck(rig: Rig): Sanity {
   const severe = (s: string) => { issues.push(s); penalty += W_SEVERE; disconnected++; };
   const struct = (s: string) => { issues.push(s); penalty += W_STRUCT; structural++; };
   const minor = (s: string) => { issues.push(s); penalty += W_MINOR; };
-  const name = (i: number) => `«${rig.nodes[i].spec.piece}» (${rig.nodes[i].spec.id})`;
+  const name = (i: number) => `“${rig.nodes[i].spec.piece}” (${rig.nodes[i].spec.id})`;
   const step = 0.8;
   const samples = samplePanels(ps, step);
   const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
@@ -88,10 +88,10 @@ export function sanityCheck(rig: Rig): Sanity {
     if (count >= Math.max(2, minN * 0.04)) {
       intersections++;
       penalty += W_SEVERE;
-      if (intersections <= 6) issues.push(`${name(samples[ai].node)} y ${name(samples[bi].node)} se atraviesan en el modelo armado (${Math.round((100 * count) / Math.max(1, minN))} % de la pieza menor).`);
+      if (intersections <= 6) issues.push(`${name(samples[ai].node)} and ${name(samples[bi].node)} pass through each other in the assembled model (${Math.round((100 * count) / Math.max(1, minN))} % of the smaller piece).`);
     }
   }
-  if (intersections > 6) issues.push(`…y ${intersections - 6} cruces más entre piezas.`);
+  if (intersections > 6) issues.push(`…and ${intersections - 6} more crossings between pieces.`);
 
   // Attachment: which pieces touch which (samples closer than a seam's reach), and what is reachable from the root.
   const contact = contacts(rig, samples, step);
@@ -115,7 +115,7 @@ export function sanityCheck(rig: Rig): Sanity {
       let best = Infinity;
       for (let k = 0; k < s.pts.length; k += 4) for (const q of anchorPts) best = Math.min(best, (s.pts[k][0] - q[0]) ** 2 + (s.pts[k][1] - q[1]) ** 2 + (s.pts[k][2] - q[2]) ** 2);
       best = Math.sqrt(best);
-      severe(`${name(s.node)} flota separada ${fmt(best)} cm del resto del modelo: no está unida a ninguna pieza.`);
+      severe(`${name(s.node)} floats ${fmt(best)} cm away from the rest of the model: it is not attached to any piece.`);
     }
   }
 
@@ -128,41 +128,41 @@ export function sanityCheck(rig: Rig): Sanity {
       const ox = Math.max(0, Math.min(cx + n.Wr / 2, p.W / 2) - Math.max(cx - n.Wr / 2, -p.W / 2));
       const oy = Math.max(0, Math.min(cy + n.Hr / 2, p.H / 2) - Math.max(cy - n.Hr / 2, -p.H / 2));
       const frac = (ox * oy) / (n.Wr * n.Hr);
-      if (frac < 0.5) struct(`${name(n.i)} queda casi fuera de ${name(p.i)} (solo ${Math.round(frac * 100)} % encima): parece flotar.`);
+      if (frac < 0.5) struct(`${name(n.i)} sits almost off ${name(p.i)} (only ${Math.round(frac * 100)} % on top): it looks like it is floating.`);
       // A fanned pile of identical pieces (coasters) overhangs on purpose.
-      else if (frac < 0.75 && s.piece !== p.spec.piece) minor(`${name(n.i)} sobresale de ${name(p.i)} (${Math.round(frac * 100)} % encima).`);
-      if (s.offset_mm > 3) minor(`${name(n.i)} está separada ${fmt(s.offset_mm)} mm de su base: no toca la pieza.`);
+      else if (frac < 0.75 && s.piece !== p.spec.piece) minor(`${name(n.i)} overhangs ${name(p.i)} (${Math.round(frac * 100)} % on top).`);
+      if (s.offset_mm > 3) minor(`${name(n.i)} is ${fmt(s.offset_mm)} mm away from its base: it does not touch the piece.`);
     }
     if (s.type === 'panel' && s.joint === 'seam') {
       const along = s.hinge_edge === 'top' || s.hinge_edge === 'bottom' ? s.anchor_x : s.anchor_y;
-      if (Math.abs(along) > 0.52) struct(`${name(n.i)} se cose fuera del borde ${s.hinge_edge} de ${name(p.i)} (ancla ${fmt(along)}; debe estar entre -0,5 y 0,5).`);
+      if (Math.abs(along) > 0.52) struct(`${name(n.i)} is sewn outside the ${s.hinge_edge} edge of ${name(p.i)} (anchor ${fmt(along)}; it must be between -0.5 and 0.5).`);
     }
     if (s.type === 'panel' && s.joint === 'hinge') {
       const edgeLen = s.hinge_edge === 'top' || s.hinge_edge === 'bottom' ? p.W : p.H;
-      if (n.Wr > edgeLen * 1.15) minor(`${name(n.i)} (${fmt(n.Wr)} cm) es más ancha que el borde de ${name(p.i)} al que se une (${fmt(edgeLen)} cm).`);
+      if (n.Wr > edgeLen * 1.15) minor(`${name(n.i)} (${fmt(n.Wr)} cm) is wider than the edge of ${name(p.i)} it joins (${fmt(edgeLen)} cm).`);
     }
     // A reached piece that does not touch its own parent hangs from the wrong place; a hinge or seam touching at a point is barely sewn.
     if (s.type === 'panel' && sampled.has(n.i) && sampled.has(p.i) && reached.has(n.i)) {
       const c = touch(n.i, p.i);
-      if (c === 0) struct(`${name(n.i)} no toca a ${name(p.i)}, la pieza a la que debería estar unida.`);
-      else if ((s.joint === 'hinge' || s.joint === 'seam') && c * step < Math.min(2.5, 0.3 * Math.min(n.W, n.H))) struct(`${name(n.i)} apenas toca a ${name(p.i)} (unión de unos ${fmt(c * step)} cm): parece suelta.`);
+      if (c === 0) struct(`${name(n.i)} does not touch ${name(p.i)}, the piece it should be attached to.`);
+      else if ((s.joint === 'hinge' || s.joint === 'seam') && c * step < Math.min(2.5, 0.3 * Math.min(n.W, n.H))) struct(`${name(n.i)} barely touches ${name(p.i)} (a joint of about ${fmt(c * step)} cm): it looks detached.`);
     }
     if (s.type === 'strap') {
       const st = ps.strap(n.i, 2);
       if (st) {
         const [a, , b] = st.pts;
         const chord = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-        if (chord > n.strapLen) struct(`${name(n.i)} mide ${fmt(n.strapLen)} cm y no alcanza entre sus extremos (${fmt(chord)} cm).`);
+        if (chord > n.strapLen) struct(`${name(n.i)} is ${fmt(n.strapLen)} cm long and does not reach between its ends (${fmt(chord)} cm).`);
       }
     }
   }
   for (const n of rig.nodes) {
     if (n.spec.type !== 'panel') continue;
-    for (const f of n.spec.folds) if (Math.abs(f.angle_deg) > 200 && f.radius_mm === 0) minor(`${name(n.i)} se enrolla más de 200° sin radio: revisa el pliegue.`);
+    for (const f of n.spec.folds) if (Math.abs(f.angle_deg) > 200 && f.radius_mm === 0) minor(`${name(n.i)} rolls more than 200° with no radius: check the fold.`);
   }
   if (rig.loose.length) {
     const names = [...new Set(rig.loose.map((l) => l.piece))];
-    issues.push(`Piezas sin colocar en el armado: ${names.map((x) => `«${x}» ×${rig.loose.filter((l) => l.piece === x).length}`).join(', ')}.`);
+    issues.push(`Pieces left out of the assembly: ${names.map((x) => `“${x}” ×${rig.loose.filter((l) => l.piece === x).length}`).join(', ')}.`);
     penalty += W_STRUCT * rig.loose.length;
   }
 
@@ -264,38 +264,38 @@ function garmentChecks(rig: Rig, ps: Pose, samples: Samples, step: number, rootN
     const inside = s.pts.filter((p) => Math.abs(uOf(p)) < half * 0.92).length / s.pts.length;
     const meanU = s.pts.reduce((a, p) => a + uOf(p), 0) / s.pts.length;
     sides.push(Math.sign(meanU));
-    if (inside > 0.6) { out.struct(`La manga ${out.name(s.node)} queda encima del cuerpo, no a un costado: debe coserse a la sisa (borde lateral, junto al hombro) y colgar hacia abajo.`); continue; }
-    if (!att.length) { out.struct(`La manga ${out.name(s.node)} no está unida al cuerpo de la prenda: debe coserse a la sisa, junto al hombro.`); continue; }
+    if (inside > 0.6) { out.struct(`The sleeve ${out.name(s.node)} lies on top of the body, not at one side: it must be sewn to the armhole (side edge, next to the shoulder) and hang down.`); continue; }
+    if (!att.length) { out.struct(`The sleeve ${out.name(s.node)} is not attached to the body of the garment: it must be sewn to the armhole, next to the shoulder.`); continue; }
     const A = [0, 1, 2].map((k) => att.reduce((a, p) => a + p[k], 0) / att.length);
-    if (vOf(A) < vTop - 0.4 * Ht) out.struct(`La manga ${out.name(s.node)} se une demasiado abajo (a ${fmt(vTop - vOf(A))} cm del hombro): debe empezar junto al hombro.`);
+    if (vOf(A) < vTop - 0.4 * Ht) out.struct(`The sleeve ${out.name(s.node)} joins too low (${fmt(vTop - vOf(A))} cm below the shoulder): it must start next to the shoulder.`);
     let F = A, best = -1;
     for (const p of s.pts) { const d = Math.hypot(p[0] - A[0], p[1] - A[1], p[2] - A[2]); if (d > best) { best = d; F = p; } }
     const down = -(vOf(F) - vOf(A)) / Math.max(1e-6, best);
-    if (down < 0.5) out.struct(`La manga ${out.name(s.node)} sale ${down < -0.2 ? 'hacia arriba' : 'horizontal'} (${Math.round((Math.asin(Math.max(-1, Math.min(1, down))) * 180) / Math.PI)}° bajo la horizontal): debería colgar desde el hombro hacia abajo.`);
+    if (down < 0.5) out.struct(`The sleeve ${out.name(s.node)} sticks out ${down < -0.2 ? 'upward' : 'horizontally'} (${Math.round((Math.asin(Math.max(-1, Math.min(1, down))) * 180) / Math.PI)}° below horizontal): it should hang down from the shoulder.`);
   }
-  if (sides.length >= 2 && (sides.every((x) => x > 0) || sides.every((x) => x < 0))) out.struct('Las mangas están del mismo lado del cuerpo: debe haber una a cada lado.');
+  if (sides.length >= 2 && (sides.every((x) => x > 0) || sides.every((x) => x < 0))) out.struct('The sleeves are on the same side of the body: there must be one on each side.');
 
   const fronts = panels.filter((s) => roles.get(s.node) === 'front' && s.node !== rootNode);
   if (fronts.length >= 2) {
     const spans = fronts.map((s) => { let a = Infinity, b = -Infinity; for (const p of s.pts) { const u = uOf(p); a = Math.min(a, u); b = Math.max(b, u); } return { a, b, c: (a + b) / 2 }; }).sort((x, y) => x.c - y.c);
     for (let k = 1; k < spans.length; k++) {
       const gap = spans[k].a - spans[k - 1].b;
-      if (gap > 1.5) out.struct(`Los delanteros no se juntan en el centro (hueco de ${fmt(gap)} cm): deben encontrarse o cruzarse en el centro del cuerpo.`);
+      if (gap > 1.5) out.struct(`The fronts do not meet at the centre (a ${fmt(gap)} cm gap): they must meet or cross over at the centre of the body.`);
     }
   }
   const backs = panels.filter((s) => roles.get(s.node) === 'back');
   if (fronts.length && backs.length) {
     const mean = (ss: Samples) => { const pts = ss.flatMap((s) => s.pts); return pts.reduce((a, p) => a + nOf(p), 0) / Math.max(1, pts.length); };
-    if (mean(fronts) < mean(backs) - 0.05) out.struct('El panel trasero queda por delante de los delanteros: la espalda debe ir detrás.');
+    if (mean(fronts) < mean(backs) - 0.05) out.struct('The back panel sits in front of the fronts: the back must go behind.');
   }
   for (const s of panels) {
     if (roles.get(s.node) !== 'collar' || s.node === rootNode) continue;
     const top = Math.max(...s.pts.map(vOf));
-    if (top < vTop - 0.2 * Ht) out.struct(`El cuello ${out.name(s.node)} no está en el escote: debe ir en el borde superior del cuerpo.`);
+    if (top < vTop - 0.2 * Ht) out.struct(`The collar ${out.name(s.node)} is not at the neckline: it must go on the top edge of the body.`);
   }
 }
 
 export function sanityText(s: Sanity): string {
-  const head = `Medidas del modelo armado: ${fmt(s.size[0])} × ${fmt(s.size[2])} cm en planta, ${fmt(s.size[1])} cm de alto.`;
-  return s.issues.length ? `${head}\n- ${s.issues.join('\n- ')}` : `${head}\nSin problemas geométricos detectados.`;
+  const head = `Assembled model size: ${fmt(s.size[0])} × ${fmt(s.size[2])} cm footprint, ${fmt(s.size[1])} cm tall.`;
+  return s.issues.length ? `${head}\n- ${s.issues.join('\n- ')}` : `${head}\nNo geometric problems found.`;
 }

@@ -23,41 +23,41 @@ const oneOf = <T extends string>(vals: readonly T[], v: unknown, dflt: T): T => 
 export function parseScene(raw: unknown): ParseResult {
   const warnings: string[] = [];
   const bad = (error: string): ParseResult => ({ ok: false, error });
-  if (!isObj(raw)) return bad('la escena no es un objeto');
+  if (!isObj(raw)) return bad('the scene is not an object');
   const clamp = (v: unknown, lo: number, hi: number, dflt: number, what: string) => {
-    if (typeof v !== 'number' || !Number.isFinite(v)) { warnings.push(`${what}: no es un número`); return dflt; }
-    if (v < lo || v > hi) { warnings.push(`${what} fuera de rango (${lo}..${hi})`); return Math.min(hi, Math.max(lo, v)); }
+    if (typeof v !== 'number' || !Number.isFinite(v)) { warnings.push(`${what}: not a number`); return dflt; }
+    if (v < lo || v > hi) { warnings.push(`${what} out of range (${lo}..${hi})`); return Math.min(hi, Math.max(lo, v)); }
     return v;
   };
   const text = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]+/g, ' ').trim().slice(0, max) : '');
   const enumOrWarn = <T extends string>(vals: readonly T[], v: unknown, dflt: T, what: string): T => {
-    if (!vals.includes(v as T)) warnings.push(`${what}: valor no admitido`);
+    if (!vals.includes(v as T)) warnings.push(`${what}: value not supported`);
     return oneOf(vals, v, dflt);
   };
 
-  if (!Array.isArray(raw.nodes)) return bad('falta nodes (lista)');
-  if (raw.nodes.length > SCENE_LIMITS.maxNodes) return bad(`demasiados nodos (máximo ${SCENE_LIMITS.maxNodes})`);
+  if (!Array.isArray(raw.nodes)) return bad('nodes (list) is missing');
+  if (raw.nodes.length > SCENE_LIMITS.maxNodes) return bad(`too many nodes (at most ${SCENE_LIMITS.maxNodes})`);
   const mat = isObj(raw.material) ? raw.material : {};
   const kind = enumOrWarn(MATERIAL_KINDS, mat.kind, 'leather', 'material.kind');
   const macroRaw = isObj(raw.macro) ? raw.macro : {};
   const cam = isObj(raw.camera) ? raw.camera : {};
 
   const roles = Array.isArray(macroRaw.roles) ? macroRaw.roles.slice(0, SCENE_LIMITS.maxRoles).flatMap((r) => {
-    if (!isObj(r) || !ROLES.includes(r.role as never) || typeof r.piece !== 'string') { warnings.push('macro.roles: entrada inválida descartada'); return []; }
+    if (!isObj(r) || !ROLES.includes(r.role as never) || typeof r.piece !== 'string') { warnings.push('macro.roles: invalid entry dropped'); return []; }
     return [{ role: r.role as SceneSpec['macro']['roles'][number]['role'], piece: text(r.piece, 60) }];
   }) : [];
 
   const nodes: SceneNode[] = [];
   for (const [i, n] of (raw.nodes as unknown[]).entries()) {
-    if (!isObj(n)) return bad(`nodes[${i}] no es un objeto`);
+    if (!isObj(n)) return bad(`nodes[${i}] is not an object`);
     const id = text(n.id, SCENE_LIMITS.maxId).replace(/[^\w-]/g, '_');
-    if (!id) return bad(`nodes[${i}].id vacío`);
+    if (!id) return bad(`nodes[${i}].id is empty`);
     const at = `nodes[${i}]`;
     const folds: FoldSpec[] = [];
     if (Array.isArray(n.folds)) {
-      if (n.folds.length > SCENE_LIMITS.maxFolds) warnings.push(`${at}: más de ${SCENE_LIMITS.maxFolds} pliegues, se ignoran los demás`);
+      if (n.folds.length > SCENE_LIMITS.maxFolds) warnings.push(`${at}: more than ${SCENE_LIMITS.maxFolds} folds, the rest are ignored`);
       for (const f of n.folds.slice(0, SCENE_LIMITS.maxFolds)) {
-        if (!isObj(f)) { warnings.push(`${at}.folds: pliegue inválido`); continue; }
+        if (!isObj(f)) { warnings.push(`${at}.folds: invalid fold`); continue; }
         folds.push({
           axis: enumOrWarn(FOLD_AXES, f.axis, 'vertical', `${at}.fold.axis`),
           at: clamp(f.at, 0.02, 0.98, 0.5, `${at}.fold.at`),
@@ -112,7 +112,7 @@ export function parseScene(raw: unknown): ParseResult {
     camera: { azimuth_deg: clamp(cam.azimuth_deg, -360, 360, 30, 'camera.azimuth_deg'), elevation_deg: clamp(cam.elevation_deg, 0, 89, 35, 'camera.elevation_deg') },
     assembly_notes: notes,
   };
-  if (scene.macro.type === 'none' && nodes.length === 0) return bad('la escena no tiene nodos ni macro');
+  if (scene.macro.type === 'none' && nodes.length === 0) return bad('the scene has neither nodes nor a macro');
   return { ok: true, scene, warnings };
 }
 
@@ -126,42 +126,42 @@ export function resolveScene(spec: SceneSpec, pieces: AgentPiece[]): ResolveResu
   const warnings: string[] = [];
   const macroNodes = spec.macro.type === 'none' ? [] : expandMacro(spec, pieces, warnings);
   const all = [...macroNodes, ...spec.nodes];
-  if (all.length === 0) return { ok: false, error: 'la escena no produjo nodos' };
+  if (all.length === 0) return { ok: false, error: 'the scene produced no nodes' };
 
   const kept: SceneNode[] = [];
   const ids = new Set<string>();
   const used = new Set<string>();
   for (const n of all) {
-    if (ids.has(n.id)) { warnings.push(`nodo ${n.id} repetido, se descarta`); continue; }
+    if (ids.has(n.id)) { warnings.push(`node ${n.id} repeated, dropped`); continue; }
     if (n.type === 'hardware') {
-      if (n.hardware === 'none') { warnings.push(`nodo ${n.id}: herraje sin tipo, se descarta`); continue; }
+      if (n.hardware === 'none') { warnings.push(`node ${n.id}: hardware without a type, dropped`); continue; }
       ids.add(n.id); kept.push({ ...n, piece: '', instance: 0, folds: [], joint: 'stack' });
       continue;
     }
     const ref = findPiece(pieces, n.piece);
-    if (!ref) { warnings.push(`nodo ${n.id}: la pieza «${n.piece}» no existe, se descarta`); continue; }
-    if (n.instance >= ref.piece.qty_per_set) { warnings.push(`nodo ${n.id}: solo hay ${ref.piece.qty_per_set} de «${ref.piece.name}», se descarta`); continue; }
+    if (!ref) { warnings.push(`node ${n.id}: the piece “${n.piece}” does not exist, dropped`); continue; }
+    if (n.instance >= ref.piece.qty_per_set) { warnings.push(`node ${n.id}: there are only ${ref.piece.qty_per_set} of “${ref.piece.name}”, dropped`); continue; }
     const key = `${ref.index}#${n.instance}`;
-    if (used.has(key)) { warnings.push(`nodo ${n.id}: «${ref.piece.name}» ${n.instance + 1} ya está colocada, se descarta`); continue; }
+    if (used.has(key)) { warnings.push(`node ${n.id}: “${ref.piece.name}” ${n.instance + 1} is already placed, dropped`); continue; }
     used.add(key); ids.add(n.id);
     kept.push({ ...n, piece: ref.piece.name });
   }
-  if (kept.length > SCENE_LIMITS.maxNodes) { warnings.push(`más de ${SCENE_LIMITS.maxNodes} nodos, se recortan`); kept.length = SCENE_LIMITS.maxNodes; }
+  if (kept.length > SCENE_LIMITS.maxNodes) { warnings.push(`more than ${SCENE_LIMITS.maxNodes} nodes, trimmed`); kept.length = SCENE_LIMITS.maxNodes; }
 
   // Parents must exist and be panels; exactly one root.
   const byId = new Map(kept.map((n) => [n.id, n]));
   let nodes = kept;
   const root = nodes.find((n) => n.type === 'panel' && n.joint === 'root') ?? nodes.find((n) => n.type === 'panel' && !n.parent);
-  if (!root) return { ok: false, error: 'no hay ninguna pieza raíz' };
+  if (!root) return { ok: false, error: 'there is no root piece' };
   for (const n of nodes) {
     if (n === root) { n.parent = ''; n.joint = 'root'; continue; }
     const p = byId.get(n.parent);
     if (!p || p.type !== 'panel' || n.parent === n.id) {
-      if (n.type === 'panel' || n.type === 'strap') warnings.push(`nodo ${n.id}: padre «${n.parent}» no válido, se apila sobre la raíz`);
+      if (n.type === 'panel' || n.type === 'strap') warnings.push(`node ${n.id}: invalid parent “${n.parent}”, stacked on the root`);
       n.parent = root.id;
       if (n.joint === 'root') n.joint = 'stack';
     }
-    if (n.joint === 'root') { warnings.push(`nodo ${n.id}: solo puede haber una raíz, se apila sobre ella`); n.joint = 'stack'; }
+    if (n.joint === 'root') { warnings.push(`node ${n.id}: there can only be one root, stacked on it`); n.joint = 'stack'; }
     if (n.type === 'strap') {
       const t = byId.get(n.target);
       if (!t || t.type !== 'panel') { n.target = n.parent; }
@@ -172,7 +172,7 @@ export function resolveScene(spec: SceneSpec, pieces: AgentPiece[]): ResolveResu
     const seen = new Set<string>([n.id]);
     let cur = n;
     while (cur.parent) {
-      if (seen.has(cur.parent)) { warnings.push(`ciclo en ${n.id}, se apila sobre la raíz`); n.parent = root.id; if (n.joint === 'root') n.joint = 'stack'; break; }
+      if (seen.has(cur.parent)) { warnings.push(`cycle at ${n.id}, stacked on the root`); n.parent = root.id; if (n.joint === 'root') n.joint = 'stack'; break; }
       seen.add(cur.parent);
       cur = byId.get(cur.parent)!;
     }

@@ -31,7 +31,7 @@ function BlockView({ b }: { b: Block }) {
   }
 }
 
-/** Renderiza Markdown ligero sin HTML crudo (todo el texto se escapa; solo enlaces http/https). */
+/** Renders light Markdown without raw HTML (all text is escaped; only http/https links). */
 export default function Markdown({ text }: { text: string }) {
   return <div className="md">{parseMarkdown(text).map((b, i) => <BlockView key={i} b={b} />)}</div>;
 }

@@ -74,10 +74,10 @@ async function waitFor<T>(get: () => T | null, signal: AbortSignal, ms = 20_000)
 }
 
 const STATUS: Record<Phase, string> = {
-  idle: '', modelling: 'Modelando el armado con IA…', reviewing: 'Revisando el modelo con IA…', aligning: 'Verificando que todas las piezas encajen…',
-  finalizing: 'Preparando la vista 3D…', done: '', failed: 'La IA no respondió; se muestra el armado por reglas.', unavailable: 'IA no disponible; se muestra el armado por reglas.',
+  idle: '', modelling: 'Modelling the assembly with AI…', reviewing: 'Reviewing the model with AI…', aligning: 'Checking that every piece fits…',
+  finalizing: 'Preparing the 3D preview…', done: '', failed: 'The AI did not answer; showing the rule-based assembly.', unavailable: 'AI unavailable; showing the rule-based assembly.',
 };
-const PARTIAL = 'La revisión con IA no terminó; se muestra el mejor armado obtenido.';
+const PARTIAL = 'The AI review did not finish; showing the best assembly so far.';
 
 export function AssemblyPreview({ productName, pieces, assumptions = [], ai = true, scene: given, onDevApi }: AssemblyPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -187,7 +187,7 @@ export function AssemblyPreview({ productName, pieces, assumptions = [], ai = tr
     const reveal = (c: Current, ph: Phase) => { firstShow.current = true; setCurrent(c); setPhase(ph); };
     if (given !== undefined) {
       const g = build(given, clean, 'given');
-      if ('error' in g) log(`escena dada inválida: ${g.error}`);
+      if ('error' in g) log(`given scene is invalid: ${g.error}`);
       reveal('error' in g ? fb : g, 'done');
       return () => ctl.abort();
     }
@@ -202,7 +202,7 @@ export function AssemblyPreview({ productName, pieces, assumptions = [], ai = tr
     // Gate the 3D: nothing is shown until the final scene is chosen.
     setCurrent(null);
     pctRef.current = 0; capRef.current = 0; setPipePct(0);
-    log(`reglas: ${fb.scene.macro.type}, penalización ${fb.sanity.penalty}`);
+    log(`rules: ${fb.scene.macro.type}, penalty ${fb.sanity.penalty}`);
     (async () => {
       let cur: Current = fb;
       const req = { productName, pieces: clean, assumptions };
@@ -210,31 +210,31 @@ export function AssemblyPreview({ productName, pieces, assumptions = [], ai = tr
         setPhase('modelling');
         enter(STAGES.scene);
         const res = await requestScene(req, ctl.signal);
-        log(`escena del modelo en ${res.latencyMs} ms${res.warnings.length ? `; avisos: ${res.warnings.join(' | ')}` : ''}`);
+        log(`model scene in ${res.latencyMs} ms${res.warnings.length ? `; warnings: ${res.warnings.join(' | ')}` : ''}`);
         const cand = build(res.scene, clean, 'ai');
-        if ('error' in cand) log(`escena del modelo descartada: ${cand.error}`);
-        else if (cand.sanity.penalty > fb.sanity.penalty) log(`escena del modelo peor que la de reglas (penalización ${cand.sanity.penalty} frente a ${fb.sanity.penalty}); se revisa la de reglas`);
-        else { cur = cand; log(`escena del modelo aceptada (penalización ${cand.sanity.penalty})`); }
+        if ('error' in cand) log(`model scene dropped: ${cand.error}`);
+        else if (cand.sanity.penalty > fb.sanity.penalty) log(`model scene worse than the rule-based one (penalty ${cand.sanity.penalty} vs ${fb.sanity.penalty}); reviewing the rule-based one`);
+        else { cur = cand; log(`model scene accepted (penalty ${cand.sanity.penalty})`); }
 
         // Critique: render the assembled object (hidden) and let the model judge it.
         const viewer = await waitFor(() => viewerRef.current, ctl.signal);
         if (ctl.signal.aborted) return;
         const shoot = (c: Current) => { if (!viewer) return ''; viewer.setRig(c.rig); return viewer.capture(VIEWS, 384, 1); };
-        if (!viewer) log('sin vista 3D: se omite la revisión con imagen');
+        if (!viewer) log('no 3D view: skipping the image review');
         for (let r = 1; viewer && r <= 2; r++) {
           setPhase('reviewing');
           setRound(r);
           enter(r === 1 ? STAGES.review1 : STAGES.review2);
           const out = await requestCritique({ ...req, scene: explicitScene(cur.scene), image: shoot(cur), sanity: sanityText(cur.sanity), round: r }, ctl.signal);
-          log(`revisión ${r}: ${out.verdict} (${out.score}/10) en ${out.latencyMs} ms${out.issues.length ? ` — ${out.issues.join(' | ')}` : ''}`);
+          log(`review ${r}: ${out.verdict} (${out.score}/10) in ${out.latencyMs} ms${out.issues.length ? ` — ${out.issues.join(' | ')}` : ''}`);
           setReviewIssues(out.issues);
           if (out.verdict === 'ok') { if (cur.source === 'ai') cur = { ...cur, source: 'ai-reviewed' }; break; }
           const next = build(out.scene, clean, 'ai-reviewed');
-          if ('error' in next) { log(`corrección descartada: ${next.error}`); break; }
-          if (JSON.stringify(next.scene.nodes) === JSON.stringify(cur.scene.nodes)) { log('la revisión no cambia la escena; se detiene'); break; }
-          if (next.sanity.penalty > cur.sanity.penalty) { log(`corrección descartada: peor (penalización ${next.sanity.penalty} frente a ${cur.sanity.penalty})`); break; }
+          if ('error' in next) { log(`correction dropped: ${next.error}`); break; }
+          if (JSON.stringify(next.scene.nodes) === JSON.stringify(cur.scene.nodes)) { log('the review does not change the scene; stopping'); break; }
+          if (next.sanity.penalty > cur.sanity.penalty) { log(`correction dropped: worse (penalty ${next.sanity.penalty} vs ${cur.sanity.penalty})`); break; }
           cur = next;
-          log(`corrección aceptada (penalización ${cur.sanity.penalty})`);
+          log(`correction accepted (penalty ${cur.sanity.penalty})`);
         }
         bump(STAGES.align[0]);
 
@@ -243,12 +243,12 @@ export function AssemblyPreview({ productName, pieces, assumptions = [], ai = tr
           setPhase('aligning');
           enter(STAGES.align);
           const out = await requestAlign({ ...req, scene: explicitScene(cur.scene), issues: cur.sanity.issues, sanity: sanityText(cur.sanity), image: shoot(cur) || undefined }, ctl.signal);
-          log(`verificación en ${out.latencyMs} ms${out.changes.length ? ` — ${out.changes.join(' | ')}` : ''}`);
+          log(`verification in ${out.latencyMs} ms${out.changes.length ? ` — ${out.changes.join(' | ')}` : ''}`);
           const next = build(out.scene, clean, 'ai-reviewed');
-          if ('error' in next) log(`verificación descartada: ${next.error}`);
-          else if (next.sanity.penalty < cur.sanity.penalty) { cur = next; log(`verificación aceptada (penalización ${cur.sanity.penalty})`); }
-          else log(`verificación descartada: no mejora (penalización ${next.sanity.penalty} frente a ${cur.sanity.penalty})`);
-        } else log('verificación: sin problemas medidos');
+          if ('error' in next) log(`verification dropped: ${next.error}`);
+          else if (next.sanity.penalty < cur.sanity.penalty) { cur = next; log(`verification accepted (penalty ${cur.sanity.penalty})`); }
+          else log(`verification dropped: no improvement (penalty ${next.sanity.penalty} vs ${cur.sanity.penalty})`);
+        } else log('verification: no measured problems');
 
         setPhase('finalizing');
         enter(STAGES.finalize);
@@ -294,28 +294,28 @@ export function AssemblyPreview({ productName, pieces, assumptions = [], ai = tr
 
   const pct = Math.round(progress * 100);
   const shownPct = Math.floor(pipePct);
-  const stageText = phase === 'reviewing' ? `Revisando el modelo con IA (${round}/2)…` : STATUS[phase];
-  const sourceLabel = current?.source === 'ai-reviewed' ? 'Armado propuesto por IA y revisado' : current?.source === 'ai' ? 'Armado propuesto por IA' : current?.source === 'given' ? 'Escena cargada' : 'Armado por reglas';
-  const thickness = current ? String(current.scene.material.thickness_mm).replace('.', ',') : '';
+  const stageText = phase === 'reviewing' ? `Reviewing the model with AI (${round}/2)…` : STATUS[phase];
+  const sourceLabel = current?.source === 'ai-reviewed' ? 'Assembly proposed by AI and reviewed' : current?.source === 'ai' ? 'Assembly proposed by AI' : current?.source === 'given' ? 'Loaded scene' : 'Rule-based assembly';
+  const thickness = current ? String(current.scene.material.thickness_mm) : '';
   const loose = current ? [...new Set(current.rig.loose.map((l) => l.piece))] : [];
   const note = phase === 'failed' ? failNote || STATUS.failed : phase === 'unavailable' ? STATUS.unavailable : '';
 
   if (inputError) {
     return (
-      <section className="asm" aria-label="Vista previa 3D del armado">
-        <p className="asm-error" role="alert">No se puede mostrar la vista 3D: {inputError}.</p>
+      <section className="asm" aria-label="3D preview of the assembly">
+        <p className="asm-error" role="alert">The 3D preview cannot be shown: {inputError}.</p>
       </section>
     );
   }
 
   return (
-    <section className="asm" aria-label="Vista previa 3D del armado" aria-busy={busy}>
+    <section className="asm" aria-label="3D preview of the assembly" aria-busy={busy}>
       <header className="asm-head">
         <div>
-          <h3 className="asm-title">Así quedaría armado</h3>
+          <h3 className="asm-title">How it would look assembled</h3>
           <p className="asm-sub">{current?.scene.label || productName}</p>
         </div>
-        <span className="cs-pill cs-pill--ai asm-pill">Vista previa aproximada</span>
+        <span className="cs-pill cs-pill--ai asm-pill">Approximate preview</span>
       </header>
 
       <div className="asm-stage" ref={stageRef} data-state={viewerState}>
@@ -325,24 +325,24 @@ export function AssemblyPreview({ productName, pieces, assumptions = [], ai = tr
           tabIndex={busy ? -1 : 0}
           role="img"
           aria-hidden={busy || undefined}
-          aria-label={`Modelo 3D: ${current?.scene.label || productName}. Arrastra o usa las flechas para girar, + y − para acercar.`}
+          aria-label={`3D model: ${current?.scene.label || productName}. Drag or use the arrow keys to rotate, + and − to zoom.`}
           aria-describedby={descId}
           onKeyDown={onKey}
         />
-        {viewerState === 'loading' && !busy && <div className="asm-overlay" aria-hidden="true"><span className="asm-spinner" />Preparando vista 3D…</div>}
+        {viewerState === 'loading' && !busy && <div className="asm-overlay" aria-hidden="true"><span className="asm-spinner" />Preparing the 3D preview…</div>}
         {viewerState === 'error' && (
           <div className="asm-overlay asm-overlay--error" role="alert">
-            <p>No se pudo iniciar la vista 3D en este navegador.</p>
-            <button type="button" className="cs-btn cs-btn--sm cs-btn--secondary" onClick={() => setViewerTry((x) => x + 1)}>Reintentar</button>
+            <p>The 3D preview could not start in this browser.</p>
+            <button type="button" className="cs-btn cs-btn--sm cs-btn--secondary" onClick={() => setViewerTry((x) => x + 1)}>Retry</button>
           </div>
         )}
         {!busy && (
-          <div className="asm-tools" role="group" aria-label="Controles de cámara">
-            <button type="button" className="asm-tool" onClick={() => viewerRef.current?.orbitBy(-20, 0)} aria-label="Girar a la izquierda">⟲</button>
-            <button type="button" className="asm-tool" onClick={() => viewerRef.current?.orbitBy(20, 0)} aria-label="Girar a la derecha">⟳</button>
-            <button type="button" className="asm-tool" onClick={() => viewerRef.current?.zoomBy(0.85)} aria-label="Acercar">+</button>
-            <button type="button" className="asm-tool" onClick={() => viewerRef.current?.zoomBy(1.18)} aria-label="Alejar">−</button>
-            <button type="button" className="asm-tool" onClick={() => current && viewerRef.current?.setView(current.scene.camera.azimuth_deg, current.scene.camera.elevation_deg)} aria-label="Centrar vista">⌖</button>
+          <div className="asm-tools" role="group" aria-label="Camera controls">
+            <button type="button" className="asm-tool" onClick={() => viewerRef.current?.orbitBy(-20, 0)} aria-label="Rotate left">⟲</button>
+            <button type="button" className="asm-tool" onClick={() => viewerRef.current?.orbitBy(20, 0)} aria-label="Rotate right">⟳</button>
+            <button type="button" className="asm-tool" onClick={() => viewerRef.current?.zoomBy(0.85)} aria-label="Zoom in">+</button>
+            <button type="button" className="asm-tool" onClick={() => viewerRef.current?.zoomBy(1.18)} aria-label="Zoom out">−</button>
+            <button type="button" className="asm-tool" onClick={() => current && viewerRef.current?.setView(current.scene.camera.azimuth_deg, current.scene.camera.elevation_deg)} aria-label="Reset view">⌖</button>
           </div>
         )}
         {busy && viewerState !== 'error' && (
@@ -359,28 +359,28 @@ export function AssemblyPreview({ productName, pieces, assumptions = [], ai = tr
             <span className="asm-pct" aria-hidden="true">{shownPct} %</span>
             <span className="asm-stage-label" id={labelId}>{stageText}</span>
             <span className="asm-bar" aria-hidden="true"><span className="asm-bar-fill" style={{ width: `${shownPct}%` }} /></span>
-            <span className="asm-overlay-hint">La vista 3D aparece cuando el modelo está revisado y verificado.</span>
+            <span className="asm-overlay-hint">The 3D preview appears once the model is reviewed and verified.</span>
           </div>
         )}
       </div>
 
       <div className="asm-controls">
         <label className="asm-slider">
-          <span className="asm-slider-label">Armar</span>
+          <span className="asm-slider-label">Assemble</span>
           <input
             type="range" min={0} max={100} step={1} value={pct} disabled={busy}
             onChange={(e) => { cancelAnimationFrame(playRef.current); setProgress(Number(e.target.value) / 100); }}
-            aria-valuetext={pct === 0 ? 'Piezas planas' : pct === 100 ? 'Objeto armado' : `${pct} % armado`}
+            aria-valuetext={pct === 0 ? 'Flat pieces' : pct === 100 ? 'Assembled object' : `${pct} % assembled`}
           />
-          <span className="asm-ends" aria-hidden="true"><span>Piezas planas</span><span>Armado</span></span>
+          <span className="asm-ends" aria-hidden="true"><span>Flat pieces</span><span>Assembled</span></span>
         </label>
         <div className="asm-row">
           <button type="button" className="cs-btn cs-btn--sm cs-btn--secondary" disabled={busy} onClick={() => animateTo(progress >= 0.99 ? 0 : progress, 1)}>
-            {reduced ? 'Mostrar armado' : 'Ver cómo se arma'}
+            {reduced ? 'Show assembled' : 'See how it goes together'}
           </button>
-          <div className="cs-segmented" role="group" aria-label="Colores">
+          <div className="cs-segmented" role="group" aria-label="Colors">
             <button type="button" aria-pressed={mode === 'material'} onClick={() => setMode('material')}>Material</button>
-            <button type="button" aria-pressed={mode === 'pieces'} onClick={() => setMode('pieces')}>Por pieza</button>
+            <button type="button" aria-pressed={mode === 'pieces'} onClick={() => setMode('pieces')}>By piece</button>
           </div>
         </div>
       </div>
@@ -388,23 +388,23 @@ export function AssemblyPreview({ productName, pieces, assumptions = [], ai = tr
       <p className="asm-status" role="status" aria-live="polite">
         {busy ? stageText : current ? sourceLabel + (note ? ` · ${note}` : '') : ''}
         {phase === 'failed' && ai && given === undefined && (
-          <button type="button" className="cs-link asm-retry" onClick={() => setAiTry((x) => x + 1)}>Reintentar con IA</button>
+          <button type="button" className="cs-link asm-retry" onClick={() => setAiTry((x) => x + 1)}>Retry with AI</button>
         )}
       </p>
 
       <p className="asm-caption">
-        Vista previa aproximada, no es un plano técnico. Medidas tomadas de las piezas{thickness ? `; grosor uniforme de ${thickness} mm` : ''}, pliegues ideales y costuras y herrajes simbólicos.
-        {loose.length > 0 && <> Sin colocar: {loose.map((l) => `«${l}»`).join(', ')}.</>}
+        Approximate preview, not a technical drawing. Measurements taken from the pieces{thickness ? `; uniform ${thickness} mm thickness` : ''}, ideal folds and symbolic stitching and hardware.
+        {loose.length > 0 && <> Not placed: {loose.map((l) => `“${l}”`).join(', ')}.</>}
       </p>
       {current && current.scene.assembly_notes.length > 0 && (
-        <ul className="asm-notes" aria-label="Supuestos del armado">{current.scene.assembly_notes.map((n, i) => <li key={i}>{n}</li>)}</ul>
+        <ul className="asm-notes" aria-label="Assembly assumptions">{current.scene.assembly_notes.map((n, i) => <li key={i}>{n}</li>)}</ul>
       )}
       {reviewIssues.length > 0 && phase === 'done' && current?.source !== 'ai-reviewed' && (
-        <p className="asm-caption">Observaciones de la revisión: {reviewIssues.join(' · ')}</p>
+        <p className="asm-caption">Review notes: {reviewIssues.join(' · ')}</p>
       )}
       <details className="asm-details">
-        <summary>Descripción del modelo</summary>
-        <p id={descId}>{current ? `${current.scene.description ? current.scene.description + ' ' : ''}${current.text}` : 'Cargando…'}</p>
+        <summary>Model description</summary>
+        <p id={descId}>{current ? `${current.scene.description ? current.scene.description + ' ' : ''}${current.text}` : 'Loading…'}</p>
       </details>
     </section>
   );

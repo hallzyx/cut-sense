@@ -1,20 +1,20 @@
 /**
- * Proxy de segmentación. Las credenciales de SAM viven SOLO aquí (nunca en el navegador).
+ * Segmentation proxy. The SAM credentials live ONLY here (never in the browser).
  *
- * Variables de entorno:
- *   SAM_API_URL   https://api.meta.ai/v1 (se completa a /v1/responses)
- *   SAM_API_KEY   credencial (Bearer)
- *   SAM_MODEL     identificador de modelo opcional (por defecto "sam-3.1")
- *   PORT          puerto (8787)
+ * Environment variables:
+ *   SAM_API_URL   https://api.meta.ai/v1 (completed to /v1/responses)
+ *   SAM_API_KEY   credential (Bearer)
+ *   SAM_MODEL     optional model id (defaults to "sam-3.1")
+ *   PORT          port (8787)
  *
- * Contrato con el cliente:
- *   POST /api/segment { image: dataURL, width, height, concept?, points?: [{x,y,label}] (normalizados 0..1) }
- *   → 200 { crop:{w,h,data(b64 0/1)}, bounds, confidence, model, latencyMs }   (mask de mayor área)
- *   con `all: true` → 200 { masks: [{crop, bounds, confidence}], model, latencyMs } (todas las instancias)
- *   → 503 { code: "SAM_NOT_CONFIGURED" } si no hay credenciales
- *   → 502/504 { code, message } si el servicio falla o agota el tiempo
+ * Client contract:
+ *   POST /api/segment { image: dataURL, width, height, concept?, points?: [{x,y,label}] (normalized 0..1) }
+ *   → 200 { crop:{w,h,data(b64 0/1)}, bounds, confidence, model, latencyMs }   (largest-area mask)
+ *   with `all: true` → 200 { masks: [{crop, bounds, confidence}], model, latencyMs } (every instance)
+ *   → 503 { code: "SAM_NOT_CONFIGURED" } when there are no credentials
+ *   → 502/504 { code, message } when the service fails or times out
  *
- * Formato según https://dev.meta.ai/docs/sam (Responses API, stream, mask_encoding one_bit).
+ * Format per https://dev.meta.ai/docs/sam (Responses API, stream, mask_encoding one_bit).
  */
 import express from 'express';
 import { agentTurn, AgentError } from './agent';
@@ -29,7 +29,7 @@ const TIMEOUT_MS = 45_000;
 const AGENT_MODEL = process.env.AGENT_MODEL ?? 'muse-spark-1.3';
 const API_BASE = (process.env.SAM_API_URL ?? '').replace(/\/+$/, '').replace(/\/responses$/, '');
 
-/** Límite sencillo por IP: 20 turnos de agente por minuto. */
+/** Simple per-IP limit: 20 agent turns per minute. */
 const hits = new Map<string, number[]>();
 function rateLimited(ip: string) {
   const now = Date.now();
@@ -48,7 +48,7 @@ interface SamOut {
   candidates: number;
 }
 
-/** Eventos SSE del endpoint /v1/responses como AsyncIterable para @meta-sam/parser. */
+/** SSE events from the /v1/responses endpoint as an AsyncIterable for @meta-sam/parser. */
 async function* sseEvents(body: ReadableStream<Uint8Array>): AsyncIterable<ResponsesEvent> {
   const dec = new TextDecoder();
   let buf = '';
@@ -60,12 +60,12 @@ async function* sseEvents(body: ReadableStream<Uint8Array>): AsyncIterable<Respo
       buf = buf.slice(i + 2);
       const data = block.split('\n').filter((l) => l.startsWith('data:')).map((l) => l.slice(5).trim()).join('');
       if (!data || data === '[DONE]') continue;
-      try { yield JSON.parse(data) as ResponsesEvent; } catch { /* línea no JSON */ }
+      try { yield JSON.parse(data) as ResponsesEvent; } catch { /* non-JSON line */ }
     }
   }
 }
 
-/** Llama a SAM 3.1 (Meta Model API, Responses API). Prompt de concepto (texto) o de puntos. */
+/** Calls SAM 3.1 (Meta Model API, Responses API). Concept (text) or point prompt. */
 async function callSam(image: string, w: number, h: number, concept: string, points: Prompt[], signal: AbortSignal): Promise<SamOut[]> {
   const text = points.length
     ? buildObjectPrompt({
@@ -86,13 +86,13 @@ async function callSam(image: string, w: number, h: number, concept: string, poi
   });
   if (!res.ok || !res.body) {
     const detail = await res.text().catch(() => '');
-    throw Object.assign(new Error(`SAM respondió ${res.status}${detail ? `: ${detail.slice(0, 200)}` : ''}`), { status: res.status });
+    throw Object.assign(new Error(`SAM answered ${res.status}${detail ? `: ${detail.slice(0, 200)}` : ''}`), { status: res.status });
   }
   const parsed = parseImageStream(sseEvents(res.body));
   const result = await parsed.finalResult;
-  if (result.outcome.status !== 'completed') throw new Error(`SAM terminó de forma anormal (${result.outcome.status}).`);
+  if (result.outcome.status !== 'completed') throw new Error(`SAM ended abnormally (${result.outcome.status}).`);
   const masks = recordsOfKind(result.records, 'mask');
-  if (!masks.length) throw Object.assign(new Error('SAM no encontró ningún objeto para ese prompt.'), { code: 'SAM_EMPTY' });
+  if (!masks.length) throw Object.assign(new Error('SAM found no object for that prompt.'), { code: 'SAM_EMPTY' });
   const area = (m: (typeof masks)[number]) => (m.bounds.right - m.bounds.left) * (m.bounds.bottom - m.bounds.top);
   return [...masks].sort((a, b) => area(b) - area(a)).map((m) => ({
     crop: { w: m.mask.width, h: m.mask.height, data: Buffer.from(decodeMaskToRaster(m.mask)).toString('base64') },
@@ -108,14 +108,14 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, sam: Boolean(SAM_API_URL && SAM_API_KEY), model: SAM_MODEL, agent: Boolean(API_BASE && SAM_API_KEY), agentModel: AGENT_MODEL });
 });
 
-/** Agente de diseño (Muse Spark): la clave vive solo aquí. */
+/** Design agent (Muse Spark): the key lives only here. */
 app.post('/api/agent', async (req, res) => {
   if (!API_BASE || !SAM_API_KEY) {
-    res.status(503).json({ code: 'AGENT_NOT_CONFIGURED', message: 'El servidor no tiene credenciales para el agente.' });
+    res.status(503).json({ code: 'AGENT_NOT_CONFIGURED', message: 'The server has no credentials for the agent.' });
     return;
   }
   if (rateLimited(req.ip ?? 'local')) {
-    res.status(429).json({ code: 'AGENT_RATE_LIMIT', message: 'Demasiadas solicitudes seguidas. Espera un momento.' });
+    res.status(429).json({ code: 'AGENT_RATE_LIMIT', message: 'Too many requests in a row. Wait a moment.' });
     return;
   }
   const ctl = new AbortController();
@@ -124,7 +124,7 @@ app.post('/api/agent', async (req, res) => {
     const turn = await agentTurn({ messages: req.body?.messages, context: req.body?.context }, { base: API_BASE, key: SAM_API_KEY, model: AGENT_MODEL, signal: ctl.signal });
     res.json({ turn, model: AGENT_MODEL });
   } catch (e) {
-    const err = e instanceof AgentError ? e : new AgentError('AGENT_UPSTREAM', 'Error inesperado del agente.');
+    const err = e instanceof AgentError ? e : new AgentError('AGENT_UPSTREAM', 'Unexpected agent error.');
     res.status(err.status).json({ code: err.code, message: err.message });
   } finally {
     clearTimeout(timer);
@@ -133,12 +133,12 @@ app.post('/api/agent', async (req, res) => {
 
 app.post('/api/segment', async (req, res) => {
   if (!SAM_API_URL || !SAM_API_KEY) {
-    res.status(503).json({ code: 'SAM_NOT_CONFIGURED', message: 'El servidor no tiene credenciales de SAM configuradas.' });
+    res.status(503).json({ code: 'SAM_NOT_CONFIGURED', message: 'The server has no SAM credentials configured.' });
     return;
   }
   const { image, points, width, height, concept, all } = req.body ?? {};
   if (typeof image !== 'string' || !/^data:image\/(png|jpe?g|webp);base64,/.test(image) || !(width > 0) || !(height > 0)) {
-    res.status(400).json({ code: 'BAD_IMAGE', message: 'Imagen o dimensiones inválidas.' });
+    res.status(400).json({ code: 'BAD_IMAGE', message: 'Invalid image or dimensions.' });
     return;
   }
   const prompts: Prompt[] = Array.isArray(points)
@@ -154,10 +154,10 @@ app.post('/api/segment', async (req, res) => {
   } catch (e) {
     const aborted = (e as Error).name === 'AbortError';
     const code = aborted ? 'SAM_TIMEOUT' : (e as { code?: string }).code ?? 'SAM_ERROR';
-    res.status(aborted ? 504 : code === 'SAM_EMPTY' ? 422 : 502).json({ code, message: aborted ? 'SAM tardó demasiado en responder.' : (e as Error).message });
+    res.status(aborted ? 504 : code === 'SAM_EMPTY' ? 422 : 502).json({ code, message: aborted ? 'SAM took too long to answer.' : (e as Error).message });
   } finally {
     clearTimeout(timer);
   }
 });
 
-app.listen(PORT, () => console.log(`CutSense API en http://localhost:${PORT} (SAM ${SAM_API_URL ? 'configurado' : 'sin configurar'})`));
+app.listen(PORT, () => console.log(`CutSense API on http://localhost:${PORT} (SAM ${SAM_API_URL ? 'configured' : 'not configured'})`));

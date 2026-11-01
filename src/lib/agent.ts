@@ -1,20 +1,20 @@
 import type { AgentProposal, AgentTurn } from './agentSchema';
 import type { Kit } from './kits';
 
-/** Una intervención de la conversación. Las del agente guardan el turno ya validado; las de la persona, su boceto si lo hay. */
+/** One message of the conversation. The agent's keep the already validated turn; the person's keep their sketch, if any. */
 export type ChatEntry = { role: 'user'; text: string; image?: string } | { role: 'assistant'; text: string; turn: AgentTurn };
 
-/** Límites del lado del cliente (el servidor los vuelve a comprobar). */
+/** Client-side limits (the server checks them again). */
 export const CHAT_LIMITS = { maxUserTurns: 30, maxSketches: 3, maxInput: 1500, sketchMaxBytes: 8 * 1024 * 1024, sketchMaxSide: 1024 };
 
 const ERROR_TEXT: Record<string, string> = {
-  AGENT_NOT_CONFIGURED: 'El servidor no tiene credenciales para el agente de IA.',
-  AGENT_RATE_LIMIT: 'Demasiadas solicitudes seguidas. Espera un momento e inténtalo de nuevo.',
-  AGENT_TIMEOUT: 'El agente tardó demasiado en responder. Reintenta.',
-  NETWORK: 'No se pudo contactar con el servidor.',
+  AGENT_NOT_CONFIGURED: 'The server has no credentials for the AI agent.',
+  AGENT_RATE_LIMIT: 'Too many requests in a row. Wait a moment and try again.',
+  AGENT_TIMEOUT: 'The agent took too long to answer. Try again.',
+  NETWORK: 'Could not reach the server.',
 };
 
-/** Historial que se envía al servidor: la memoria de la sesión vive aquí, en el cliente. */
+/** History sent to the server: the session memory lives here, on the client. */
 export const toApiMessages = (entries: ChatEntry[]) =>
   entries.map((e) =>
     e.role === 'assistant'
@@ -36,20 +36,20 @@ export async function askAgent(entries: ChatEntry[], context: string, signal?: A
     throw new Error(ERROR_TEXT.NETWORK);
   }
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(ERROR_TEXT[body.code as string] ?? body.message ?? `Error del agente (${res.status}).`);
+  if (!res.ok) throw new Error(ERROR_TEXT[body.code as string] ?? body.message ?? `Agent error (${res.status}).`);
   return body.turn as AgentTurn;
 }
 
-/** Valida y reduce un boceto (PNG/JPEG/WebP) a un JPEG de ≤1024 px listo para enviar. Solo navegador. */
+/** Validates a sketch (PNG/JPEG/WebP) and shrinks it to a ≤1024 px JPEG ready to send. Browser only. */
 export async function prepareSketch(file: File): Promise<string> {
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error('El boceto debe ser una imagen PNG, JPG o WebP.');
-  if (file.size > CHAT_LIMITS.sketchMaxBytes) throw new Error(`El boceto pesa ${(file.size / 1048576).toFixed(1)} MB; el límite es 8 MB.`);
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error('The sketch must be a PNG, JPG or WebP image.');
+  if (file.size > CHAT_LIMITS.sketchMaxBytes) throw new Error(`The sketch is ${(file.size / 1048576).toFixed(1)} MB; the limit is 8 MB.`);
   const url = URL.createObjectURL(file);
   try {
     const im = await new Promise<HTMLImageElement>((res, rej) => {
       const i = new Image();
       i.onload = () => res(i);
-      i.onerror = () => rej(new Error('No se pudo abrir la imagen.'));
+      i.onerror = () => rej(new Error('Could not open the image.'));
       i.src = url;
     });
     const k = Math.min(1, CHAT_LIMITS.sketchMaxSide / Math.max(im.naturalWidth, im.naturalHeight));
@@ -57,7 +57,7 @@ export async function prepareSketch(file: File): Promise<string> {
     c.width = Math.max(1, Math.round(im.naturalWidth * k));
     c.height = Math.max(1, Math.round(im.naturalHeight * k));
     const ctx = c.getContext('2d')!;
-    ctx.fillStyle = '#fff'; // los PNG con transparencia (bocetos digitales) se aplanan sobre blanco
+    ctx.fillStyle = '#fff'; // transparent PNGs (digital sketches) are flattened onto white
     ctx.fillRect(0, 0, c.width, c.height);
     ctx.drawImage(im, 0, 0, c.width, c.height);
     return c.toDataURL('image/jpeg', 0.85);
@@ -66,10 +66,10 @@ export async function prepareSketch(file: File): Promise<string> {
   }
 }
 
-/** La propuesta aprobada entra al pedido como un kit más (medidas en cm). */
+/** The approved proposal joins the order as one more kit (measurements in cm). */
 export function proposalToKit(p: AgentProposal): Kit {
   return {
-    id: 'ai', name: p.name, blurb: 'Propuesta del agente de IA', kind: 'kit',
+    id: 'ai', name: p.name, blurb: 'AI agent proposal', kind: 'kit',
     pieces: p.pieces.map((x) => ({ name: x.name, kind: x.kind, w: x.width_cm, h: x.height_cm, qty: x.qty_per_set, rotations: x.rotations })),
   };
 }

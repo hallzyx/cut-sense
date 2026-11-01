@@ -4,26 +4,28 @@ import { guessRole } from './macros';
 import { DEFAULT_THICKNESS, normName } from './pieces';
 
 /**
- * Deterministic scene from the product name and the pieces alone. It is shown at once
+ * Deterministic scene from the product name and the pieces alone. Product names may be Spanish
+ * or English (the kits, the people and the agent use both), so every family lists both. It is shown at once
  * (before the model answers) and stays as the preview whenever the model is unavailable
  * or returns something unusable.
  */
 const FAMILIES: [RegExp, Category, MacroType][] = [
-  // Garments first: "Chaleco con bolsillo para el celular" is a vest, not a phone sleeve.
-  [/chaquet|campera|abrigo|blazer|chamarra|cazadora|casaca|gabardina|parka|chaleco|camis|blusa|sudadera|buzo|polera|chompa|jersey|sueter|cardigan|anorak|\bpolo\b|jacket|coat\b|\bvest\b|waistcoat|shirt|blouse|hoodie|sweater|prenda|garment/, 'garment', 'garment_top'],
-  [/tarjetero|porta ?tarjetas|cardholder|card holder|card case/, 'cardholder', 'cardholder'],
-  [/billetera|cartera|wallet|bifold/, 'wallet', 'bifold_wallet'],
-  [/monedero|coin|portamonedas/, 'coin_pouch', 'flap_pouch'],
-  [/gafas|lentes|anteojos|glasses|sunglass/, 'glasses_case', 'flat_sleeve'],
-  [/celular|movil|telefono|phone|smartphone|tablet|laptop|portatil|funda/, 'phone_sleeve', 'flat_sleeve'],
-  [/neceser|cosmetiquera|cremallera|\bzip/, 'zip_pouch', 'zip_pouch'],
+  // Garments first: "Chaleco con bolsillo para el celular" / "Vest with a phone pocket" is a vest, not a phone sleeve.
+  [/chaquet|campera|abrigo|blazer|chamarra|cazadora|casaca|gabardina|parka|chaleco|camis|blusa|sudadera|buzo|polera|chompa|jersey|sueter|cardigan|anorak|\bpolo\b|jacket|coat\b|\bvest\b|waistcoat|shirt|blouse|hoodie|sweater|pullover|prenda|garment/, 'garment', 'garment_top'],
+  [/tarjetero|porta ?tarjetas|cardholder|card holder|card case|card wallet|card sleeve/, 'cardholder', 'cardholder'],
+  [/billetera|cartera|wallet|bifold|billfold/, 'wallet', 'bifold_wallet'],
+  [/monedero|coin|portamonedas|change purse/, 'coin_pouch', 'flap_pouch'],
+  [/gafas|lentes|anteojos|glasses|sunglass|eyeglass|spectacle/, 'glasses_case', 'flat_sleeve'],
+  [/celular|movil|telefono|phone|smartphone|tablet|laptop|portatil|funda|\bsleeve/, 'phone_sleeve', 'flat_sleeve'],
+  [/neceser|cosmetiquera|cremallera|\bzip|toiletr|wash ?bag|dopp|cosmetic|make-?up/, 'zip_pouch', 'zip_pouch'],
   [/estuche|lapices|lapicero|pencil|plumier/, 'zip_pouch', 'zip_pouch'],
-  [/bolso|bolsa|tote|mochila|bag|morral|cartera de mano/, 'bag', 'tote'],
-  [/llavero|keychain|key ring|keyring/, 'keychain', 'keychain_loop'],
+  [/bolso|bolsa|tote|mochila|bag|morral|cartera de mano|backpack|satchel|shopper|purse/, 'bag', 'tote'],
+  [/llavero|keychain|key chain|key ring|keyring|key fob|\bfob\b/, 'keychain', 'keychain_loop'],
   [/posavaso|coaster/, 'coaster_set', 'coaster_stack'],
-  [/caja|box|organizador|bandeja/, 'box', 'box_with_lid'],
-  [/sobre|envelope|porta ?documentos|pasaporte/, 'sleeve', 'envelope_flap'],
-  [/tubo|cilindr|tube/, 'sleeve', 'tube_sleeve'],
+  [/caja|box|organizador|organi[sz]er|bandeja|\btray/, 'box', 'box_with_lid'],
+  [/sobre|envelope|porta ?documentos|pasaporte|passport|document holder|folder/, 'sleeve', 'envelope_flap'],
+  [/tubo|cilindr|cylind|tube/, 'sleeve', 'tube_sleeve'],
+  [/\bcase\b/, 'zip_pouch', 'zip_pouch'],
 ];
 
 export function guessFamily(productName: string, pieces: AgentPiece[]): { category: Category; macro: MacroType } {
@@ -49,14 +51,15 @@ export function guessFamily(productName: string, pieces: AgentPiece[]): { catego
 }
 
 const MATERIALS: [RegExp, MaterialKind][] = [
-  [/fieltro|felt/, 'felt'], [/carton|cardboard|carton/, 'cardboard'], [/goma eva|foam|espuma|eva\b/, 'foam'],
-  [/tela|lona|algodon|denim|fabric|canvas/, 'fabric'], [/cuero|piel|leather|polipiel|ecocuero/, 'leather'],
+  [/fieltro|felt/, 'felt'], [/carton|cardboard|paperboard|grey ?board|kraft/, 'cardboard'], [/goma eva|foam|espuma|eva\b/, 'foam'],
+  [/tela|lona|algodon|denim|fabric|canvas|cotton|linen|wool|fleece/, 'fabric'], [/cuero|piel|leather|polipiel|ecocuero|suede/, 'leather'],
 ];
 const COLORS: [RegExp, ColorName][] = [
-  [/negr|black/, 'black'], [/marron oscuro|chocolate|dark brown/, 'dark_brown'], [/marron|cafe|brown/, 'brown'],
-  [/cognac|coñac|cognac|caramelo|miel/, 'cognac'], [/beige|crudo|natural|vaqueta/, 'natural'], [/tostado|tan|camel/, 'tan'],
-  [/burdeos|vino|granate|burgundy/, 'burgundy'], [/oliva|olive/, 'olive'], [/azul marino|navy/, 'navy'], [/gris|grey|gray/, 'grey'],
-  [/rojo|red/, 'red'], [/verde|green/, 'green'], [/azul|blue/, 'blue'],
+  // English colour words need word boundaries: "tan" hides in "standard", "red" in "hundred".
+  [/negr|\bblack/, 'black'], [/marron oscuro|chocolate|dark brown/, 'dark_brown'], [/marron|cafe|\bbrown/, 'brown'],
+  [/cognac|coñac|cognac|caramelo|caramel|miel|honey/, 'cognac'], [/beige|crudo|natural|vaqueta/, 'natural'], [/tostado|\btan\b|camel/, 'tan'],
+  [/burdeos|vino|granate|burgundy/, 'burgundy'], [/oliva|olive/, 'olive'], [/azul marino|navy/, 'navy'], [/gris|\bgrey|\bgray/, 'grey'],
+  [/rojo|\bred\b/, 'red'], [/verde|\bgreen/, 'green'], [/azul|\bblue/, 'blue'],
 ];
 
 export function guessMaterial(text: string): SceneSpec['material'] {
@@ -77,15 +80,15 @@ const CAMERA: Partial<Record<MacroType, SceneSpec['camera']>> = {
 };
 
 const LABELS: Record<Category, string> = {
-  wallet: 'Billetera', cardholder: 'Tarjetero', coin_pouch: 'Monedero', zip_pouch: 'Estuche con cremallera', glasses_case: 'Estuche de gafas',
-  phone_sleeve: 'Funda', bag: 'Bolso', keychain: 'Llavero', coaster_set: 'Set de posavasos', box: 'Caja', sleeve: 'Funda', garment: 'Prenda', other: 'Objeto',
+  wallet: 'Wallet', cardholder: 'Cardholder', coin_pouch: 'Coin purse', zip_pouch: 'Zip pouch', glasses_case: 'Glasses case',
+  phone_sleeve: 'Sleeve', bag: 'Bag', keychain: 'Keychain', coaster_set: 'Coaster set', box: 'Box', sleeve: 'Sleeve', garment: 'Garment', other: 'Object',
 };
 
 export function fallbackScene(productName: string, pieces: AgentPiece[], assumptions: string[] = []): SceneSpec {
   const { category, macro } = guessFamily(productName, pieces);
   const material = guessMaterial(`${productName} ${assumptions.join(' ')} ${pieces.map((p) => p.notes).join(' ')}`);
   const wantsZip = /cremallera|\bzip|cierre de cremallera/.test(normName(productName + ' ' + assumptions.join(' ')));
-  const wantsSnap = /broche|snap|boton|automatico|iman|magnet/.test(normName(productName + ' ' + assumptions.join(' ')));
+  const wantsSnap = /broche|snap|boton|button|automatico|press stud|iman|magnet/.test(normName(productName + ' ' + assumptions.join(' ')));
   return {
     category,
     label: productName.trim().slice(0, 60) || LABELS[category],

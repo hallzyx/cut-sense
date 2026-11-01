@@ -4,7 +4,7 @@ import { buildShape } from '../../engine/templates';
 
 /** Piece helpers shared by the validator, the macros and the viewer. */
 
-/** Lowercase, no accents, single spaces: piece names are matched loosely ("Bolsillo de tarjeta" == "bolsillo de tarjeta "). */
+/** Lowercase, no accents, single spaces: piece names are matched loosely ("Card pocket" == "card pocket "). */
 export function normName(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
@@ -19,18 +19,18 @@ export function findPiece(pieces: AgentPiece[], name: string): PieceRef | null {
 
 /** Defensive copy of the pieces: the preview never trusts its input more than the agent's validator does. */
 export function sanitizePieces(raw: unknown): { pieces: AgentPiece[]; error?: string } {
-  if (!Array.isArray(raw) || raw.length < 1 || raw.length > LIMITS.maxPieces) return { pieces: [], error: `se esperan entre 1 y ${LIMITS.maxPieces} piezas` };
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > LIMITS.maxPieces) return { pieces: [], error: `between 1 and ${LIMITS.maxPieces} pieces expected` };
   const out: AgentPiece[] = [];
   const seen = new Set<string>();
   for (const [i, p] of raw.entries()) {
-    if (typeof p !== 'object' || p === null) return { pieces: [], error: `pieza ${i} inválida` };
+    if (typeof p !== 'object' || p === null) return { pieces: [], error: `piece ${i} is invalid` };
     const r = p as Record<string, unknown>;
     const name = typeof r.name === 'string' ? r.name.trim().slice(0, 60) : '';
     const w = Number(r.width_cm), h = Number(r.height_cm), q = Number(r.qty_per_set);
-    if (!name || seen.has(normName(name))) return { pieces: [], error: `pieza ${i}: nombre vacío o repetido` };
-    if (!PIECE_KINDS.includes(r.kind as AgentPiece['kind'])) return { pieces: [], error: `pieza ${i}: forma no admitida` };
-    if (!(w >= LIMITS.minCm && w <= LIMITS.maxCm && h >= LIMITS.minCm && h <= LIMITS.maxCm)) return { pieces: [], error: `pieza ${i}: medidas fuera de rango` };
-    if (!Number.isInteger(q) || q < 1 || q > LIMITS.maxQty) return { pieces: [], error: `pieza ${i}: cantidad fuera de rango` };
+    if (!name || seen.has(normName(name))) return { pieces: [], error: `piece ${i}: empty or repeated name` };
+    if (!PIECE_KINDS.includes(r.kind as AgentPiece['kind'])) return { pieces: [], error: `piece ${i}: shape not supported` };
+    if (!(w >= LIMITS.minCm && w <= LIMITS.maxCm && h >= LIMITS.minCm && h <= LIMITS.maxCm)) return { pieces: [], error: `piece ${i}: measurements out of range` };
+    if (!Number.isInteger(q) || q < 1 || q > LIMITS.maxQty) return { pieces: [], error: `piece ${i}: quantity out of range` };
     seen.add(normName(name));
     out.push({
       name, kind: r.kind as AgentPiece['kind'], width_cm: w, height_cm: h, qty_per_set: q,

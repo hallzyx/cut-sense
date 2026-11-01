@@ -24,16 +24,16 @@ function Lab() {
   useEffect(() => { window.__lab = { setScene, setProduct: (k) => { setScene(undefined); setKey(k); } }; }, []);
   return (
     <main className="container" style={{ padding: '24px 16px', maxWidth: 960 }}>
-      <h1 className="h4">Laboratorio de vista 3D</h1>
-      <p className="caption" style={{ marginBottom: 12 }}>Solo desarrollo. Las piezas son de ejemplo, como las propondría el agente.</p>
+      <h1 className="h4">3D preview lab</h1>
+      <p className="caption" style={{ marginBottom: 12 }}>Development only. The pieces are samples, as the agent would propose them.</p>
       <div className="cs-btn-row" style={{ marginBottom: 12, gap: 6 }}>
         {PRODUCT_FIXTURES.map((x) => (
           <button key={x.key} type="button" className={`cs-btn cs-btn--sm ${x.key === key ? 'cs-btn--primary' : 'cs-btn--secondary'}`} onClick={() => { setScene(undefined); setKey(x.key); }}>{x.key}</button>
         ))}
       </div>
       <div className="cs-btn-row" style={{ marginBottom: 16, gap: 6 }}>
-        <label className="caption"><input type="checkbox" checked={ai} onChange={(e) => setAi(e.target.checked)} /> Usar IA (gasta cuota)</label>
-        <button type="button" className="cs-btn cs-btn--sm cs-btn--ghost" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>Tema: {theme}</button>
+        <label className="caption"><input type="checkbox" checked={ai} onChange={(e) => setAi(e.target.checked)} /> Use AI (spends quota)</label>
+        <button type="button" className="cs-btn cs-btn--sm cs-btn--ghost" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>Theme: {theme}</button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 260px)', gap: 16, alignItems: 'start' }}>
         <AssemblyPreview key={`${f.key}-${ai}`} productName={f.productName} pieces={f.pieces} assumptions={f.assumptions} ai={ai} scene={scene} onDevApi={(api) => { window.__asm = api; }} />

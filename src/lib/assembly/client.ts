@@ -12,7 +12,7 @@ async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promi
     res = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal });
   } catch (e) {
     if ((e as Error).name === 'AbortError') throw e;
-    throw new AssemblyApiError('NETWORK', 'No se pudo contactar con el servidor.');
+    throw new AssemblyApiError('NETWORK', 'Could not reach the server.');
   }
   const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
   if (!res.ok) throw new AssemblyApiError(String(json?.code ?? 'HTTP'), String(json?.message ?? `Error ${res.status}`), res.status);
