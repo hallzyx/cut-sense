@@ -42,7 +42,7 @@ function MetricTrio({ items, relative }: { items: { value: string; unit?: string
   );
 }
 
-function ResultHero({ r, extraPieces, names, stale }: { r: Result; extraPieces: number; names: Record<string, string>; stale: boolean }) {
+function ResultHero({ r, extraPieces, names, stale, onAskHilo }: { r: Result; extraPieces: number; names: Record<string, string>; stale: boolean; onAskHilo: () => void }) {
   const h = heroFor(r, extraPieces, names);
   return (
     <>
@@ -50,7 +50,11 @@ function ResultHero({ r, extraPieces, names, stale }: { r: Result; extraPieces: 
         <Seal />
         <div><div className="ux-hero__value">{h.value}{h.unit && <small>{h.unit}</small>}</div><div className="ux-hero__label">{stale ? 'plan anterior' : h.label}</div></div>
       </div>
-      {!stale && h.warn && <Alert tone="warn" testId="partial-warn">{h.warn}</Alert>}
+      {!stale && h.warn && (
+        <Alert tone="warn" testId="partial-warn" actions={r.kits?.n === 0
+          ? <button type="button" className="cs-btn cs-btn--sm" data-testid="ask-hilo-shortfall" onClick={onAskHilo}><Icon name="spark" className="ux-ico ux-ai-ico" />Pedir ayuda a Hilo</button>
+          : undefined}>{h.warn}</Alert>
+      )}
     </>
   );
 }
@@ -287,7 +291,7 @@ export const ResultPanel = forwardRef<HTMLHeadingElement, { w: WS; p: Project; o
                 <span className="cs-caption">El área útil cambió: no comparamos porcentajes como “mejora”.</span>
               </Alert>
             )}
-            <ResultHero r={r} extraPieces={w.extraPieces} names={names} stale={w.stale} />
+            <ResultHero r={r} extraPieces={w.extraPieces} names={names} stale={w.stale} onAskHilo={w.askHiloAboutShortfall} />
             {!w.stale && (
               <>
                 <MetricTrio relative={!r.calibrated} items={[

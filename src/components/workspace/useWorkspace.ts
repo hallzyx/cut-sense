@@ -17,6 +17,7 @@ import type { AgentProposal } from '../../lib/agentSchema';
 import { buildDxf } from '../../lib/dxf';
 import { buildPlanSvgCm, buildPrintHtml } from '../../lib/print';
 import { KITS, type Kit } from '../../lib/kits';
+import { shortfallMessage } from '../../lib/shortfall';
 import { addProduct, removeProduct } from '../../lib/products';
 import { serializeProject, type LoadedProject } from '../../lib/projectFile';
 import { detectDefectZones, samErrorText, segmentMaterial } from '../../lib/sam';
@@ -65,6 +66,8 @@ export function useWorkspace(p: Project, setP: (f: (p: Project) => Project) => v
   /** Desde dónde se abrió Hilo: define si lo aprobado reemplaza el pedido o se prueba en el sobrante. */
   const [agentFor, setAgentFor] = useState<'order' | 'leftover'>('order');
   const [agentOpen, setAgentOpen] = useState(false);
+  /** Primer mensaje que se envía solo al abrir a Hilo (por ejemplo, el diagnóstico de un plan sin cabida). */
+  const [agentSeed, setAgentSeed] = useState<string | null>(null);
   const [agentChat, setAgentChat] = useState<ChatEntry[]>([]);
   const [pieceDialog, setPieceDialog] = useState<'draw' | 'svg' | null>(null);
   const [samPoints, setSamPoints] = useState<SamPoint[]>([]);
@@ -301,8 +304,20 @@ export function useWorkspace(p: Project, setP: (f: (p: Project) => Project) => v
     return `Material disponible: unos ${fmt(b.w / ppu)} x ${fmt(b.h / ppu)} cm (caja), área utilizable aprox. ${fmt(live.usableArea / ppu ** 2, 0)} cm2`;
   })();
   const agentBlocked = calibratedInCm(p.calib) ? null : 'Para usar las piezas necesitas la foto calibrada en cm (paso 2, «Escala»). Cierra esta ventana, calibra y vuelve: la conversación se conserva.';
-  const openAgent = () => { setAgentFor('order'); setAgentOpen(true); if (agentBlocked) setNeedsCm(true); };
-  const openAgentForLeftover = () => { setAgentFor('leftover'); setAgentOpen(true); };
+  const openAgent = () => { setAgentFor('order'); setAgentSeed(null); setAgentOpen(true); if (agentBlocked) setNeedsCm(true); };
+  const openAgentForLeftover = () => { setAgentFor('leftover'); setAgentSeed(null); setAgentOpen(true); };
+  /** Plan sin ni un producto completo: abre una conversación nueva con Hilo que ya sabe qué pasó. */
+  const askHiloAboutShortfall = () => {
+    if (!result || !live) return;
+    const m = result.solution.metrics;
+    const b = bbox(p.contour);
+    const seed = shortfallMessage({
+      product: 'mi pedido', unit, pieces: p.defs.filter((d) => d.qty > 0), materialW: b.w / ppu, materialH: b.h / ppu,
+      usableArea: live.usableArea / ppu ** 2, spacing: p.spacing, placed: m.placedCount, requested: m.requestedCount,
+      calibration: p.calib ? { dist: p.calib.dist, unit: p.calib.unit } : null,
+    });
+    setAgentFor('order'); setAgentChat([]); setAgentSeed(seed); setAgentOpen(true);
+  };
   const approveAgent = (proposal: AgentProposal) => {
     const kit = proposalToKit(proposal);
     if (agentFor === 'leftover') { setAgentOpen(false); void tryProduct(kit); return; }
@@ -478,7 +493,7 @@ export function useWorkspace(p: Project, setP: (f: (p: Project) => Project) => v
     ppu, unit, calibrated: !!p.calib, contourErr, problem, stale, live, items, outside, zoneAreas,
     setContour, runSam, cancelSam, runLocal, useCached, acceptProposal, startManualTrace, togglePoints, closeDraft, revertContour, canRevert,
     startDefect, quickDefect, delDefect, selectDefect, setDefectsGeom, calibByWidth, calibExample, confirmCalib, cancelCalib, removeCalib,
-    productQty, setProductQty, agentFor, openAgentForLeftover,
+    productQty, setProductQty, agentFor, agentSeed, openAgentForLeftover, askHiloAboutShortfall,
     setDef, removeDef, addDef, addCustom, mmToCurrent, agentContext: hiloContext, agentBlocked, openAgent, approveAgent, applyKit, toggleRot, setFill, setSpacing,
     blockReason, optimize, leftover, leftoverOk, tryProduct, dropProduct, useFragment, detectDefects, acceptDetected, change,
     ex, doExport, exportReal, exportDxf, printReal, saveProject, downloadJson, resultDefs, extraPieces,

@@ -64,7 +64,7 @@ export default function Workspace({ p, setP, onReset, onLeftoverPhoto, restored,
         {w.step === 3 && <ResultPanel ref={title} w={w} p={p} onLeftoverPhoto={(f) => onLeftoverPhoto(f, p.defs, p.spacing)} />}
       </div>
       {w.agentOpen && (
-        <AgentDialog entries={w.agentChat} setEntries={w.setAgentChat} context={w.agentContext} approveBlocked={w.agentBlocked} onApprove={w.approveAgent} approveLabel={w.agentFor === 'leftover' ? 'Probar en el sobrante' : undefined} onClose={() => w.setAgentOpen(false)} />
+        <AgentDialog entries={w.agentChat} setEntries={w.setAgentChat} context={w.agentContext} seed={w.agentSeed} approveBlocked={w.agentBlocked} onApprove={w.approveAgent} approveLabel={w.agentFor === 'leftover' ? 'Probar en el sobrante' : undefined} onClose={() => w.setAgentOpen(false)} />
       )}
       {w.pieceDialog && (
         <PieceDialog

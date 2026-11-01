@@ -18,6 +18,8 @@ interface Props {
   onApprove: (p: AgentProposal) => void;
   /** Texto del botón de aprobar (cambia si la propuesta se prueba en el sobrante). */
   approveLabel?: string;
+  /** Mensaje que se envía solo al abrir una conversación vacía (diagnóstico de un plan sin cabida). */
+  seed?: string | null;
   onClose: () => void;
 }
 
@@ -89,7 +91,7 @@ function phaseOf(entries: ChatEntry[], busy: boolean): { label: string; tone: 'i
   return { label: `Aclarando · pregunta ${entries.filter((e) => e.role === 'assistant' && e.turn.type === 'question').length}`, tone: 'ask' };
 }
 
-export default function AgentDialog({ entries, setEntries, context, approveBlocked, onApprove, approveLabel, onClose }: Props) {
+export default function AgentDialog({ entries, setEntries, context, approveBlocked, onApprove, approveLabel, seed, onClose }: Props) {
   const [draft, setDraft] = useState('');
   const [sketch, setSketch] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -143,6 +145,15 @@ export default function AgentDialog({ entries, setEntries, context, approveBlock
     setSketchErr(null);
     try { setSketch(await prepareSketch(f)); } catch (e) { setSketchErr((e as Error).message); }
   };
+
+  // El diagnóstico se envía una vez, al abrir. Con un temporizador, el remontaje del modo estricto de React
+  // lo cancela y solo se dispara una vez (enviar directo lo abortaría con el desmontaje de prueba).
+  useEffect(() => {
+    if (!seed || entries.length > 0) return;
+    const t = setTimeout(() => { void send(seed, null, []); }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const phase = phaseOf(entries, busy);
   const lastIdx = entries.length - 1;
