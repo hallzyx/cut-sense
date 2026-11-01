@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { AgentPiece } from '../lib/agentSchema';
-import { AssemblyApiError, requestCritique, requestScene } from '../lib/assembly/client';
+import { AssemblyApiError, requestAlign, requestCritique, requestScene } from '../lib/assembly/client';
 import { describeRig } from '../lib/assembly/describe';
 import type { SceneSpec } from '../lib/assembly/dsl';
 import { fallbackScene } from '../lib/assembly/fallback';
@@ -14,18 +14,22 @@ import './AssemblyPreview.css';
 /**
  * 3D assembly preview of the agent's flat pieces.
  *
- * 1. A deterministic scene (archetype macro picked from the product name) renders at once.
- * 2. Muse Spark proposes its own scene (validated data, never code); it replaces the first one
- *    unless it is geometrically worse.
+ * 1. A deterministic scene (archetype macro picked from the product name) is built at once; it is
+ *    the baseline every model answer is measured against, and what is shown if the model fails.
+ * 2. Muse Spark proposes its own scene (validated data, never code).
  * 3. Up to two critique rounds: the assembled model is rendered from four angles and sent with
  *    the scene and the automatic sanity report; the model answers "ok" or a corrected scene.
- * three.js is loaded on demand, so the main bundle does not grow.
+ * 4. Verification: if the deterministic checks still measure problems (detached or floating pieces,
+ *    misplaced sleeves…), one more call asks the model to fix exactly those.
+ * Every candidate is scored by the deterministic checks and a worse one is never accepted. While the
+ * pipeline runs the viewer stays mounted (it renders the captures) under an opaque progress overlay;
+ * the 3D appears only once the final scene is chosen. three.js is loaded on demand.
  */
 export interface AssemblyPreviewProps {
   productName: string;
   pieces: AgentPiece[];
   assumptions?: string[];
-  /** Use the AI modelling and critique (default true). Without it the rule-based scene is shown. */
+  /** Use the AI modelling, critique and verification (default true). Without it the rule-based scene is shown. */
   ai?: boolean;
   /** Dev/lab only: render this scene instead of asking the model. */
   scene?: unknown;
@@ -37,15 +41,18 @@ export interface AssemblyDevApi {
   setView(az: number, el: number): void;
   setColorMode(m: ColorMode): void;
   capture(views: { az: number; el: number }[], tile?: number, t?: number): string | null;
-  state(): { phase: Phase; source: Source; sanity: Sanity | null; scene: SceneSpec | null; log: string[]; ready: boolean };
+  state(): { phase: Phase; source: Source; sanity: Sanity | null; scene: SceneSpec | null; log: string[]; ready: boolean; pct: number };
 }
 
-type Phase = 'idle' | 'modelling' | 'reviewing' | 'done' | 'failed' | 'unavailable';
+type Phase = 'idle' | 'modelling' | 'reviewing' | 'aligning' | 'finalizing' | 'done' | 'failed' | 'unavailable';
 type Source = 'rules' | 'ai' | 'ai-reviewed' | 'given';
 interface Current { scene: SceneSpec; rig: Rig; sanity: Sanity; text: string; source: Source; warnings: string[] }
 
 const VIEWS = [{ az: 30, el: 32 }, { az: 210, el: 32 }, { az: 100, el: 8 }, { az: 0, el: 85 }];
 const cache = new Map<string, { scene: SceneSpec; source: Source }>();
+/** Share of the progress bar for each model call (percent); the bar only moves forward and stops at 99 until the reveal. */
+const STAGES = { scene: [0, 34], review1: [34, 56], review2: [56, 74], align: [74, 94], finalize: [94, 99] } as const;
+const BUSY: Phase[] = ['modelling', 'reviewing', 'aligning', 'finalizing'];
 
 function build(raw: unknown, pieces: AgentPiece[], source: Source): Current | { error: string } {
   const v = validateScene(raw, pieces);
@@ -54,8 +61,6 @@ function build(raw: unknown, pieces: AgentPiece[], source: Source): Current | { 
   const sanity = sanityCheck(rig);
   return { scene: v.scene, rig, sanity, text: describeRig(rig, sanity), source, warnings: v.warnings };
 }
-/** Prefer the candidate unless it is clearly worse geometrically. */
-const better = (cand: Current, cur: Current) => cand.sanity.intersections <= cur.sanity.intersections && cand.rig.loose.length <= cur.rig.loose.length;
 
 /** Resolve once `get` returns something (the viewer loads in parallel with the first model call). */
 async function waitFor<T>(get: () => T | null, signal: AbortSignal, ms = 20_000): Promise<T | null> {
@@ -69,8 +74,10 @@ async function waitFor<T>(get: () => T | null, signal: AbortSignal, ms = 20_000)
 }
 
 const STATUS: Record<Phase, string> = {
-  idle: '', modelling: 'Modelando el armado con IA…', reviewing: 'Revisando con IA…', done: '', failed: 'La IA no respondió; se muestra el armado por reglas.', unavailable: 'IA no disponible; se muestra el armado por reglas.',
+  idle: '', modelling: 'Modelando el armado con IA…', reviewing: 'Revisando el modelo con IA…', aligning: 'Verificando que todas las piezas encajen…',
+  finalizing: 'Preparando la vista 3D…', done: '', failed: 'La IA no respondió; se muestra el armado por reglas.', unavailable: 'IA no disponible; se muestra el armado por reglas.',
 };
+const PARTIAL = 'La revisión con IA no terminó; se muestra el mejor armado obtenido.';
 
 export function AssemblyPreview({ productName, pieces, assumptions = [], ai = true, scene: given, onDevApi }: AssemblyPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -81,18 +88,24 @@ export function AssemblyPreview({ productName, pieces, assumptions = [], ai = tr
   const [current, setCurrent] = useState<Current | null>(null);
   const [inputError, setInputError] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
+  const [failNote, setFailNote] = useState('');
   const [round, setRound] = useState(0);
   const [aiTry, setAiTry] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [pipePct, setPipePct] = useState(0);
   const [mode, setMode] = useState<ColorMode>('material');
   const [reviewIssues, setReviewIssues] = useState<string[]>([]);
   const playRef = useRef(0);
   const progressRef = useRef(0);
+  const pctRef = useRef(0);
+  const capRef = useRef(0);
   const logRef = useRef<string[]>([]);
   const firstShow = useRef(true);
   const descId = useId();
+  const labelId = useId();
   const reduced = useMemo(() => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches, []);
   const piecesKey = JSON.stringify(pieces);
+  const busy = BUSY.includes(phase);
 
   // three.js viewer, loaded on demand.
   useEffect(() => {
@@ -129,85 +142,129 @@ export function AssemblyPreview({ productName, pieces, assumptions = [], ai = tr
     playRef.current = requestAnimationFrame(step);
   }, [reduced]);
 
-  useEffect(() => { progressRef.current = progress; viewerRef.current?.setProgress(progress); }, [progress, viewerState]);
+  // Pipeline progress: completed stages move the bar; within a stage it creeps toward 85 % of the
+  // stage's share, so it never runs ahead of the work, never goes back and never passes 99 before the reveal.
+  const bump = useCallback((v: number) => {
+    const n = Math.min(99, Math.max(pctRef.current, v));
+    if (n !== pctRef.current) { pctRef.current = n; setPipePct(n); }
+  }, []);
+  const enter = useCallback(([from, to]: readonly [number, number]) => { bump(from); capRef.current = Math.min(99, from + 0.85 * (to - from)); }, [bump]);
+  useEffect(() => {
+    if (!busy) return;
+    const id = window.setInterval(() => {
+      const p = pctRef.current, cap = capRef.current;
+      if (cap > p + 0.05) bump(p + Math.max(0.05, (cap - p) * 0.05));
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [busy, bump]);
+
+  useEffect(() => { progressRef.current = progress; if (!busy) viewerRef.current?.setProgress(progress); }, [progress, viewerState, busy]);
   useEffect(() => { viewerRef.current?.setColorMode(mode); }, [mode, viewerState]);
+  // The shown scene reaches the viewer only once the pipeline is over (until then the viewer renders the captures, hidden).
   useEffect(() => {
     const v = viewerRef.current;
-    if (!v || !current || viewerState !== 'ready') return;
+    if (!v || !current || viewerState !== 'ready' || busy) return;
     v.setRig(current.rig);
     v.setColorMode(mode);
     v.setProgress(progressRef.current);
     if (firstShow.current) { firstShow.current = false; animateTo(0, 1); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current, viewerState]);
+  }, [current, viewerState, busy]);
 
-  // Scene pipeline: rules → model → critique.
+  // Scene pipeline: rules → model → critique → verification → reveal.
   useEffect(() => {
     const ctl = new AbortController();
     const log = (s: string) => { logRef.current.push(s); };
     logRef.current = [];
     setReviewIssues([]);
     setRound(0);
+    setFailNote('');
     const { pieces: clean, error } = sanitizePieces(pieces);
     if (error) { setInputError(error); setCurrent(null); return; }
     setInputError('');
     const fb = build(fallbackScene(productName, clean, assumptions), clean, 'rules');
     if ('error' in fb) { setInputError(fb.error); return; }
+    const reveal = (c: Current, ph: Phase) => { firstShow.current = true; setCurrent(c); setPhase(ph); };
     if (given !== undefined) {
       const g = build(given, clean, 'given');
-      setCurrent('error' in g ? fb : g);
-      setPhase('done');
       if ('error' in g) log(`escena dada inválida: ${g.error}`);
+      reveal('error' in g ? fb : g, 'done');
       return () => ctl.abort();
     }
     const key = `${productName}\u0000${piecesKey}`;
     const hit = cache.get(key);
     if (hit) {
       const c = build(hit.scene, clean, hit.source);
-      if (!('error' in c)) { setCurrent(c); setPhase('done'); return () => ctl.abort(); }
+      if (!('error' in c)) { reveal(c, 'done'); return () => ctl.abort(); }
     }
-    setCurrent(fb);
-    if (!ai) { setPhase('idle'); return () => ctl.abort(); }
+    if (!ai) { reveal(fb, 'idle'); return () => ctl.abort(); }
 
+    // Gate the 3D: nothing is shown until the final scene is chosen.
+    setCurrent(null);
+    pctRef.current = 0; capRef.current = 0; setPipePct(0);
+    log(`reglas: ${fb.scene.macro.type}, penalización ${fb.sanity.penalty}`);
     (async () => {
       let cur: Current = fb;
+      const req = { productName, pieces: clean, assumptions };
       try {
         setPhase('modelling');
-        const res = await requestScene({ productName, pieces: clean, assumptions }, ctl.signal);
+        enter(STAGES.scene);
+        const res = await requestScene(req, ctl.signal);
         log(`escena del modelo en ${res.latencyMs} ms${res.warnings.length ? `; avisos: ${res.warnings.join(' | ')}` : ''}`);
         const cand = build(res.scene, clean, 'ai');
         if ('error' in cand) log(`escena del modelo descartada: ${cand.error}`);
-        else if (cand.sanity.intersections > fb.sanity.intersections + 1 || cand.rig.loose.length > fb.rig.loose.length + 1) log('escena del modelo peor que la de reglas; se revisa la de reglas');
-        else { cur = cand; setCurrent(cand); }
-        // Critique: render the assembled object and let the model judge it.
-        for (let r = 1; r <= 2; r++) {
+        else if (cand.sanity.penalty > fb.sanity.penalty) log(`escena del modelo peor que la de reglas (penalización ${cand.sanity.penalty} frente a ${fb.sanity.penalty}); se revisa la de reglas`);
+        else { cur = cand; log(`escena del modelo aceptada (penalización ${cand.sanity.penalty})`); }
+
+        // Critique: render the assembled object (hidden) and let the model judge it.
+        const viewer = await waitFor(() => viewerRef.current, ctl.signal);
+        if (ctl.signal.aborted) return;
+        const shoot = (c: Current) => { if (!viewer) return ''; viewer.setRig(c.rig); return viewer.capture(VIEWS, 384, 1); };
+        if (!viewer) log('sin vista 3D: se omite la revisión con imagen');
+        for (let r = 1; viewer && r <= 2; r++) {
           setPhase('reviewing');
           setRound(r);
-          const viewer = await waitFor(() => viewerRef.current, ctl.signal);
-          if (ctl.signal.aborted || !viewer) return;
-          viewer.setRig(cur.rig);
-          const image = viewer.capture(VIEWS, 384, 1);
-          viewer.setRig(cur.rig);
-          viewer.setProgress(progressRef.current);
-          const out = await requestCritique({ productName, pieces: clean, assumptions, scene: explicitScene(cur.scene), image, sanity: sanityText(cur.sanity), round: r }, ctl.signal);
+          enter(r === 1 ? STAGES.review1 : STAGES.review2);
+          const out = await requestCritique({ ...req, scene: explicitScene(cur.scene), image: shoot(cur), sanity: sanityText(cur.sanity), round: r }, ctl.signal);
           log(`revisión ${r}: ${out.verdict} (${out.score}/10) en ${out.latencyMs} ms${out.issues.length ? ` — ${out.issues.join(' | ')}` : ''}`);
           setReviewIssues(out.issues);
-          if (out.verdict === 'ok') { cur = { ...cur, source: cur.source === 'rules' ? 'rules' : 'ai-reviewed' }; break; }
+          if (out.verdict === 'ok') { if (cur.source === 'ai') cur = { ...cur, source: 'ai-reviewed' }; break; }
           const next = build(out.scene, clean, 'ai-reviewed');
           if ('error' in next) { log(`corrección descartada: ${next.error}`); break; }
-          if (!better(next, cur)) { log('corrección descartada: más cruces o piezas sin colocar'); break; }
           if (JSON.stringify(next.scene.nodes) === JSON.stringify(cur.scene.nodes)) { log('la revisión no cambia la escena; se detiene'); break; }
+          if (next.sanity.penalty > cur.sanity.penalty) { log(`corrección descartada: peor (penalización ${next.sanity.penalty} frente a ${cur.sanity.penalty})`); break; }
           cur = next;
-          setCurrent(next);
+          log(`corrección aceptada (penalización ${cur.sanity.penalty})`);
         }
-        setCurrent(cur);
+        bump(STAGES.align[0]);
+
+        // Verification: one more call only if the deterministic checks still measure problems.
+        if (cur.sanity.penalty > 0) {
+          setPhase('aligning');
+          enter(STAGES.align);
+          const out = await requestAlign({ ...req, scene: explicitScene(cur.scene), issues: cur.sanity.issues, sanity: sanityText(cur.sanity), image: shoot(cur) || undefined }, ctl.signal);
+          log(`verificación en ${out.latencyMs} ms${out.changes.length ? ` — ${out.changes.join(' | ')}` : ''}`);
+          const next = build(out.scene, clean, 'ai-reviewed');
+          if ('error' in next) log(`verificación descartada: ${next.error}`);
+          else if (next.sanity.penalty < cur.sanity.penalty) { cur = next; log(`verificación aceptada (penalización ${cur.sanity.penalty})`); }
+          else log(`verificación descartada: no mejora (penalización ${next.sanity.penalty} frente a ${cur.sanity.penalty})`);
+        } else log('verificación: sin problemas medidos');
+
+        setPhase('finalizing');
+        enter(STAGES.finalize);
+        await new Promise((r) => setTimeout(r, 120));
+        if (ctl.signal.aborted) return;
+        bump(99);
         cache.set(key, { scene: explicitScene(cur.scene), source: cur.source });
-        setPhase('done');
+        reveal(cur, 'done');
       } catch (e) {
         if ((e as Error).name === 'AbortError' || ctl.signal.aborted) return;
         const code = e instanceof AssemblyApiError ? e.code : 'ERROR';
         log(`IA: ${code} ${(e as Error).message}`);
-        setPhase(code === 'ASSEMBLY_NOT_CONFIGURED' || e instanceof AssemblyApiError && e.status === 404 ? 'unavailable' : cur === fb ? 'failed' : 'done');
+        // Never hang: show the best scene measured so far, with an honest note.
+        const unavailable = code === 'ASSEMBLY_NOT_CONFIGURED' || (e instanceof AssemblyApiError && e.status === 404);
+        if (cur !== fb) setFailNote(PARTIAL);
+        reveal(cur, unavailable && cur === fb ? 'unavailable' : 'failed');
       }
     })();
     return () => ctl.abort();
@@ -220,13 +277,13 @@ export function AssemblyPreview({ productName, pieces, assumptions = [], ai = tr
       setView: (az, el) => viewerRef.current?.setView(az, el),
       setColorMode: (m) => setMode(m),
       capture: (views, tile, t) => viewerRef.current?.capture(views, tile, t) ?? null,
-      state: () => ({ phase, source: current?.source ?? 'rules', sanity: current?.sanity ?? null, scene: current?.scene ?? null, log: logRef.current, ready: viewerState === 'ready' && !!current }),
+      state: () => ({ phase, source: current?.source ?? 'rules', sanity: current?.sanity ?? null, scene: current?.scene ?? null, log: logRef.current, ready: viewerState === 'ready' && !!current && !busy, pct: pctRef.current }),
     });
-  }, [onDevApi, phase, current, viewerState]);
+  }, [onDevApi, phase, current, viewerState, busy]);
 
   const onKey = (e: React.KeyboardEvent) => {
     const v = viewerRef.current;
-    if (!v) return;
+    if (!v || busy) return;
     const map: Record<string, () => void> = {
       ArrowLeft: () => v.orbitBy(-12, 0), ArrowRight: () => v.orbitBy(12, 0), ArrowUp: () => v.orbitBy(0, 8), ArrowDown: () => v.orbitBy(0, -8),
       '+': () => v.zoomBy(0.85), '=': () => v.zoomBy(0.85), '-': () => v.zoomBy(1.18), Home: () => v.setView(current?.scene.camera.azimuth_deg ?? 30, current?.scene.camera.elevation_deg ?? 35),
@@ -236,10 +293,12 @@ export function AssemblyPreview({ productName, pieces, assumptions = [], ai = tr
   };
 
   const pct = Math.round(progress * 100);
-  const busy = phase === 'modelling' || phase === 'reviewing';
+  const shownPct = Math.floor(pipePct);
+  const stageText = phase === 'reviewing' ? `Revisando el modelo con IA (${round}/2)…` : STATUS[phase];
   const sourceLabel = current?.source === 'ai-reviewed' ? 'Armado propuesto por IA y revisado' : current?.source === 'ai' ? 'Armado propuesto por IA' : current?.source === 'given' ? 'Escena cargada' : 'Armado por reglas';
   const thickness = current ? String(current.scene.material.thickness_mm).replace('.', ',') : '';
   const loose = current ? [...new Set(current.rig.loose.map((l) => l.piece))] : [];
+  const note = phase === 'failed' ? failNote || STATUS.failed : phase === 'unavailable' ? STATUS.unavailable : '';
 
   if (inputError) {
     return (
@@ -250,7 +309,7 @@ export function AssemblyPreview({ productName, pieces, assumptions = [], ai = tr
   }
 
   return (
-    <section className="asm" aria-label="Vista previa 3D del armado">
+    <section className="asm" aria-label="Vista previa 3D del armado" aria-busy={busy}>
       <header className="asm-head">
         <div>
           <h3 className="asm-title">Así quedaría armado</h3>
@@ -263,41 +322,60 @@ export function AssemblyPreview({ productName, pieces, assumptions = [], ai = tr
         <canvas
           ref={canvasRef}
           className="asm-canvas"
-          tabIndex={0}
+          tabIndex={busy ? -1 : 0}
           role="img"
+          aria-hidden={busy || undefined}
           aria-label={`Modelo 3D: ${current?.scene.label || productName}. Arrastra o usa las flechas para girar, + y − para acercar.`}
           aria-describedby={descId}
           onKeyDown={onKey}
         />
-        {viewerState === 'loading' && <div className="asm-overlay" aria-hidden="true"><span className="asm-spinner" />Preparando vista 3D…</div>}
+        {viewerState === 'loading' && !busy && <div className="asm-overlay" aria-hidden="true"><span className="asm-spinner" />Preparando vista 3D…</div>}
         {viewerState === 'error' && (
           <div className="asm-overlay asm-overlay--error" role="alert">
             <p>No se pudo iniciar la vista 3D en este navegador.</p>
             <button type="button" className="cs-btn cs-btn--sm cs-btn--secondary" onClick={() => setViewerTry((x) => x + 1)}>Reintentar</button>
           </div>
         )}
-        {busy && <p className="asm-ai" aria-hidden="true"><span className="asm-dot" />{phase === 'reviewing' ? `Revisando con IA… (${round}/2)` : STATUS[phase]}</p>}
-        <div className="asm-tools" role="group" aria-label="Controles de cámara">
-          <button type="button" className="asm-tool" onClick={() => viewerRef.current?.orbitBy(-20, 0)} aria-label="Girar a la izquierda">⟲</button>
-          <button type="button" className="asm-tool" onClick={() => viewerRef.current?.orbitBy(20, 0)} aria-label="Girar a la derecha">⟳</button>
-          <button type="button" className="asm-tool" onClick={() => viewerRef.current?.zoomBy(0.85)} aria-label="Acercar">+</button>
-          <button type="button" className="asm-tool" onClick={() => viewerRef.current?.zoomBy(1.18)} aria-label="Alejar">−</button>
-          <button type="button" className="asm-tool" onClick={() => current && viewerRef.current?.setView(current.scene.camera.azimuth_deg, current.scene.camera.elevation_deg)} aria-label="Centrar vista">⌖</button>
-        </div>
+        {!busy && (
+          <div className="asm-tools" role="group" aria-label="Controles de cámara">
+            <button type="button" className="asm-tool" onClick={() => viewerRef.current?.orbitBy(-20, 0)} aria-label="Girar a la izquierda">⟲</button>
+            <button type="button" className="asm-tool" onClick={() => viewerRef.current?.orbitBy(20, 0)} aria-label="Girar a la derecha">⟳</button>
+            <button type="button" className="asm-tool" onClick={() => viewerRef.current?.zoomBy(0.85)} aria-label="Acercar">+</button>
+            <button type="button" className="asm-tool" onClick={() => viewerRef.current?.zoomBy(1.18)} aria-label="Alejar">−</button>
+            <button type="button" className="asm-tool" onClick={() => current && viewerRef.current?.setView(current.scene.camera.azimuth_deg, current.scene.camera.elevation_deg)} aria-label="Centrar vista">⌖</button>
+          </div>
+        )}
+        {busy && viewerState !== 'error' && (
+          <div
+            className="asm-overlay asm-overlay--pipeline"
+            role="progressbar"
+            aria-labelledby={labelId}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={shownPct}
+            aria-valuetext={`${shownPct} %. ${stageText}`}
+          >
+            <span className="asm-spinner asm-spinner--lg" aria-hidden="true" />
+            <span className="asm-pct" aria-hidden="true">{shownPct} %</span>
+            <span className="asm-stage-label" id={labelId}>{stageText}</span>
+            <span className="asm-bar" aria-hidden="true"><span className="asm-bar-fill" style={{ width: `${shownPct}%` }} /></span>
+            <span className="asm-overlay-hint">La vista 3D aparece cuando el modelo está revisado y verificado.</span>
+          </div>
+        )}
       </div>
 
       <div className="asm-controls">
         <label className="asm-slider">
           <span className="asm-slider-label">Armar</span>
           <input
-            type="range" min={0} max={100} step={1} value={pct}
+            type="range" min={0} max={100} step={1} value={pct} disabled={busy}
             onChange={(e) => { cancelAnimationFrame(playRef.current); setProgress(Number(e.target.value) / 100); }}
             aria-valuetext={pct === 0 ? 'Piezas planas' : pct === 100 ? 'Objeto armado' : `${pct} % armado`}
           />
           <span className="asm-ends" aria-hidden="true"><span>Piezas planas</span><span>Armado</span></span>
         </label>
         <div className="asm-row">
-          <button type="button" className="cs-btn cs-btn--sm cs-btn--secondary" onClick={() => animateTo(progress >= 0.99 ? 0 : progress, 1)}>
+          <button type="button" className="cs-btn cs-btn--sm cs-btn--secondary" disabled={busy} onClick={() => animateTo(progress >= 0.99 ? 0 : progress, 1)}>
             {reduced ? 'Mostrar armado' : 'Ver cómo se arma'}
           </button>
           <div className="cs-segmented" role="group" aria-label="Colores">
@@ -308,14 +386,14 @@ export function AssemblyPreview({ productName, pieces, assumptions = [], ai = tr
       </div>
 
       <p className="asm-status" role="status" aria-live="polite">
-        {busy ? (phase === 'reviewing' ? `Revisando con IA… (${round}/2)` : STATUS[phase]) : current ? sourceLabel + (phase === 'failed' || phase === 'unavailable' ? ` · ${STATUS[phase]}` : '') : ''}
-        {(phase === 'failed') && ai && given === undefined && (
+        {busy ? stageText : current ? sourceLabel + (note ? ` · ${note}` : '') : ''}
+        {phase === 'failed' && ai && given === undefined && (
           <button type="button" className="cs-link asm-retry" onClick={() => setAiTry((x) => x + 1)}>Reintentar con IA</button>
         )}
       </p>
 
       <p className="asm-caption">
-        Vista previa aproximada, no es un plano técnico. Medidas tomadas de las piezas; grosor uniforme de {thickness} mm, pliegues ideales y costuras y herrajes simbólicos.
+        Vista previa aproximada, no es un plano técnico. Medidas tomadas de las piezas{thickness ? `; grosor uniforme de ${thickness} mm` : ''}, pliegues ideales y costuras y herrajes simbólicos.
         {loose.length > 0 && <> Sin colocar: {loose.map((l) => `«${l}»`).join(', ')}.</>}
       </p>
       {current && current.scene.assembly_notes.length > 0 && (
