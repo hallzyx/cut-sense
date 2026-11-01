@@ -9,7 +9,8 @@
  *
  * Contrato con el cliente:
  *   POST /api/segment { image: dataURL, width, height, concept?, points?: [{x,y,label}] (normalizados 0..1) }
- *   → 200 { crop:{w,h,data(b64 0/1)}, bounds, confidence, model, latencyMs }
+ *   → 200 { crop:{w,h,data(b64 0/1)}, bounds, confidence, model, latencyMs }   (mask de mayor área)
+ *   con `all: true` → 200 { masks: [{crop, bounds, confidence}], model, latencyMs } (todas las instancias)
  *   → 503 { code: "SAM_NOT_CONFIGURED" } si no hay credenciales
  *   → 502/504 { code, message } si el servicio falla o agota el tiempo
  *
@@ -51,7 +52,7 @@ async function* sseEvents(body: ReadableStream<Uint8Array>): AsyncIterable<Respo
 }
 
 /** Llama a SAM 3.1 (Meta Model API, Responses API). Prompt de concepto (texto) o de puntos. */
-async function callSam(image: string, w: number, h: number, concept: string, points: Prompt[], signal: AbortSignal): Promise<SamOut> {
+async function callSam(image: string, w: number, h: number, concept: string, points: Prompt[], signal: AbortSignal): Promise<SamOut[]> {
   const text = points.length
     ? buildObjectPrompt({
         size: { width: w, height: h },
@@ -79,12 +80,10 @@ async function callSam(image: string, w: number, h: number, concept: string, poi
   const masks = recordsOfKind(result.records, 'mask');
   if (!masks.length) throw Object.assign(new Error('SAM no encontró ningún objeto para ese prompt.'), { code: 'SAM_EMPTY' });
   const area = (m: (typeof masks)[number]) => (m.bounds.right - m.bounds.left) * (m.bounds.bottom - m.bounds.top);
-  const best = masks.reduce((a, b) => (area(b) > area(a) ? b : a));
-  const raster = decodeMaskToRaster(best.mask);
-  return {
-    crop: { w: best.mask.width, h: best.mask.height, data: Buffer.from(raster).toString('base64') },
-    bounds: best.bounds, confidence: best.confidence, candidates: masks.length,
-  };
+  return [...masks].sort((a, b) => area(b) - area(a)).map((m) => ({
+    crop: { w: m.mask.width, h: m.mask.height, data: Buffer.from(decodeMaskToRaster(m.mask)).toString('base64') },
+    bounds: m.bounds, confidence: m.confidence, candidates: masks.length,
+  }));
 }
 
 const app = express();
@@ -99,7 +98,7 @@ app.post('/api/segment', async (req, res) => {
     res.status(503).json({ code: 'SAM_NOT_CONFIGURED', message: 'El servidor no tiene credenciales de SAM configuradas.' });
     return;
   }
-  const { image, points, width, height, concept } = req.body ?? {};
+  const { image, points, width, height, concept, all } = req.body ?? {};
   if (typeof image !== 'string' || !/^data:image\/(png|jpe?g|webp);base64,/.test(image) || !(width > 0) || !(height > 0)) {
     res.status(400).json({ code: 'BAD_IMAGE', message: 'Imagen o dimensiones inválidas.' });
     return;
@@ -111,8 +110,9 @@ app.post('/api/segment', async (req, res) => {
   const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
   const t0 = Date.now();
   try {
-    const out = await callSam(image, Math.round(width), Math.round(height), String(concept || 'material').slice(0, 80), prompts, ctl.signal);
-    res.json({ ...out, model: SAM_MODEL, latencyMs: Date.now() - t0 });
+    const outs = await callSam(image, Math.round(width), Math.round(height), String(concept || 'material').slice(0, 80), prompts, ctl.signal);
+    if (all === true) res.json({ masks: outs.slice(0, 20), model: SAM_MODEL, latencyMs: Date.now() - t0 });
+    else res.json({ ...outs[0], model: SAM_MODEL, latencyMs: Date.now() - t0 });
   } catch (e) {
     const aborted = (e as Error).name === 'AbortError';
     const code = aborted ? 'SAM_TIMEOUT' : (e as { code?: string }).code ?? 'SAM_ERROR';
