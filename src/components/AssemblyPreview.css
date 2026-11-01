@@ -1,0 +1,69 @@
+/* 3D assembly preview (AssemblyPreview.tsx). Built on the brand tokens; light and dark follow them. */
+.asm { display: grid; gap: var(--cs-space-3); font-family: var(--cs-font-ui); color: var(--cs-text); }
+.asm-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--cs-space-3); flex-wrap: wrap; }
+.asm-title { font-family: var(--cs-font-display); font-weight: var(--cs-weight-bold); font-size: var(--cs-text-lg); line-height: var(--cs-leading-snug); margin: 0; }
+.asm-sub { font-size: var(--cs-text-sm); color: var(--cs-text-muted); margin: 0; }
+.asm-pill { flex: none; }
+
+.asm-stage {
+  position: relative; aspect-ratio: 4 / 3; min-height: 240px; max-height: 70vh; width: 100%;
+  border-radius: var(--cs-radius-lg); border: var(--cs-border); overflow: hidden;
+  /* Cutting-mat grid behind the model */
+  background:
+    linear-gradient(var(--cs-grid-minor) 1px, transparent 1px) 0 0 / 16px 16px,
+    linear-gradient(90deg, var(--cs-grid-minor) 1px, transparent 1px) 0 0 / 16px 16px,
+    radial-gradient(120% 90% at 50% 35%, var(--cs-surface) 0%, var(--cs-surface-sunk) 100%);
+}
+.asm-canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.asm-canvas:active { cursor: grabbing; }
+.asm-canvas:focus-visible { outline: none; box-shadow: inset 0 0 0 3px var(--cs-focus); }
+
+.asm-overlay {
+  position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: var(--cs-space-3);
+  font-size: var(--cs-text-sm); color: var(--cs-text-muted); text-align: center; padding: var(--cs-space-4);
+}
+.asm-overlay--error { background: color-mix(in srgb, var(--cs-surface) 88%, transparent); color: var(--cs-text); }
+.asm-spinner { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--cs-line-strong); border-right-color: transparent; animation: asm-spin .9s linear infinite; }
+
+.asm-ai {
+  position: absolute; left: var(--cs-space-3); top: var(--cs-space-3); margin: 0;
+  display: inline-flex; align-items: center; gap: var(--cs-space-2);
+  padding: 4px 10px; border-radius: var(--cs-radius-pill);
+  background: var(--cs-ai-tint); color: var(--cs-ai-fg); font-size: var(--cs-text-xs); font-weight: var(--cs-weight-semibold);
+}
+.asm-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: asm-pulse 1.2s var(--cs-ease-in-out) infinite; }
+
+.asm-tools {
+  position: absolute; right: var(--cs-space-2); bottom: var(--cs-space-2); display: flex; gap: 4px;
+  padding: 4px; border-radius: var(--cs-radius-md); background: color-mix(in srgb, var(--cs-surface) 85%, transparent); border: var(--cs-border);
+}
+.asm-tool {
+  width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: var(--cs-radius-sm);
+  background: transparent; color: var(--cs-text); font-size: 17px; line-height: 1;
+}
+.asm-tool:hover { background: color-mix(in srgb, var(--cs-text) 8%, transparent); }
+.asm-tool:focus-visible { box-shadow: var(--cs-focus-ring); }
+
+.asm-controls { display: grid; gap: var(--cs-space-3); }
+.asm-slider { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: var(--cs-space-3); row-gap: 2px; }
+.asm-slider-label { font-weight: var(--cs-weight-semibold); font-size: var(--cs-text-sm); }
+.asm-slider input[type='range'] { width: 100%; min-height: var(--cs-tap); accent-color: var(--cs-primary); margin: 0; }
+.asm-slider input[type='range']:focus-visible { outline: none; box-shadow: var(--cs-focus-ring); border-radius: var(--cs-radius-sm); }
+.asm-ends { grid-column: 2; display: flex; justify-content: space-between; font-size: var(--cs-text-2xs); color: var(--cs-text-muted); font-family: var(--cs-font-mono); text-transform: uppercase; letter-spacing: var(--cs-tracking-caps); }
+.asm-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--cs-space-3); }
+
+.asm-status { margin: 0; min-height: 1.4em; font-size: var(--cs-text-sm); color: var(--cs-text-muted); display: flex; flex-wrap: wrap; gap: var(--cs-space-2); align-items: baseline; }
+.asm-retry { font-size: var(--cs-text-sm); background: none; border: 0; padding: 0; }
+.asm-caption { margin: 0; font-size: var(--cs-text-xs); line-height: 1.45; color: var(--cs-text-muted); }
+.asm-notes { margin: 0; padding-left: 1.1em; font-size: var(--cs-text-xs); color: var(--cs-text-muted); }
+.asm-details { font-size: var(--cs-text-sm); }
+.asm-details summary { cursor: pointer; color: var(--cs-text-muted); min-height: 32px; display: flex; align-items: center; }
+.asm-details summary:focus-visible { box-shadow: var(--cs-focus-ring); border-radius: var(--cs-radius-xs); }
+.asm-details p { margin: var(--cs-space-2) 0 0; line-height: var(--cs-leading-normal); }
+.asm-error { margin: 0; padding: var(--cs-space-3); border-radius: var(--cs-radius-md); background: var(--cs-danger-tint); color: var(--cs-danger-fg); font-size: var(--cs-text-sm); }
+
+@keyframes asm-spin { to { transform: rotate(360deg); } }
+@keyframes asm-pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .asm-spinner, .asm-dot { animation: none; }
+}
