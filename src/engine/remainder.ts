@@ -1,13 +1,13 @@
 /**
- * Material sobrante tras un plan: material − unión(defectos) − unión(piezas), con polygon-clipping.
+ * Leftover material after a plan: material − union(defects) − union(pieces), using polygon-clipping.
  *
- * - NO se aplica buffer por la separación (spacing): el sobrante es la geometría literal que queda;
- *   si se reutiliza como material, el optimizador volverá a imponer la separación al borde.
- * - Cada polígono del MultiPolygon resultante es un `Fragment`: anillo exterior + agujeros, sin punto
- *   de cierre. Orientación: exterior con área con signo POSITIVA (convención `normalizeOrientation(r, true)`
- *   de geometry.ts) y agujeros con área NEGATIVA.
- * - Se descartan fragmentos con área < minAreaFraction · área(material) (0.005 por defecto);
- *   se devuelven ordenados por área descendente.
+ * - No buffer is applied for the spacing: the leftover is the literal geometry that remains;
+ *   if it is reused as material, the optimizer will impose the spacing at the edge again.
+ * - Each polygon of the resulting MultiPolygon is a `Fragment`: outer ring + holes, with no closing
+ *   point. Orientation: outer ring with POSITIVE signed area (the `normalizeOrientation(r, true)`
+ *   convention from geometry.ts) and holes with NEGATIVE area.
+ * - Fragments with area < minAreaFraction · area(material) (0.005 by default) are dropped;
+ *   the rest are returned sorted by descending area.
  */
 import type { Placement, Problem, Ring } from '../types';
 import { dedupeRing, difference, multiArea, normalizeOrientation, ringArea, union } from './geometry';
@@ -16,9 +16,9 @@ export interface Fragment { outer: Ring; holes: Ring[]; area: number }
 
 export interface RemainderResult {
   fragments: Fragment[];
-  /** Suma de las áreas de los fragmentos conservados. */
+  /** Sum of the areas of the kept fragments. */
   area: number;
-  /** Área del material (unión de su contorno). */
+  /** Material area (union of its outline). */
   materialArea: number;
 }
 
@@ -56,7 +56,7 @@ export function computeRemainder(
   return { fragments, area: fragments.reduce((s, f) => s + f.area, 0), materialArea };
 }
 
-/** Convierte un fragmento en material reutilizable: el exterior es el material y los agujeros, defectos. */
+/** Turns a fragment into reusable material: the outer ring is the material and the holes are defects. */
 export function fragmentAsMaterial(f: Fragment): { material: Ring; defects: Ring[] } {
   return { material: f.outer.map(([x, y]) => [x, y]), defects: f.holes.map((h) => h.map(([x, y]) => [x, y])) };
 }

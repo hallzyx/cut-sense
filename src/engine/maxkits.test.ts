@@ -9,7 +9,7 @@ import { verifySolution } from './verify';
 
 const frozen = () => 0;
 
-/** Comprueba que cada kit k posee exactamente las instancias [k·qty, (k+1)·qty) de cada plantilla. */
+/** Checks that each kit k owns exactly the instances [k·qty, (k+1)·qty) of each template. */
 function expectCompleteKits(problem: Problem, kits: number, placements: Placement[]) {
   for (const t of problem.templates) {
     const inst = placements.filter((p) => p.templateId === t.id).map((p) => p.instance).sort((a, b) => a - b);
@@ -21,8 +21,8 @@ function expectCompleteKits(problem: Problem, kits: number, placements: Placemen
 }
 
 describe('maximizeKits', () => {
-  it('chapa rectangular con capacidad conocida: 4 kits (2×20x20 + 1×10x10)', () => {
-    // 101×41 en vez de 100×40: el optimizador reserva un margen ínfimo entre piezas (OPT_MARGIN_REL)
+  it('rectangular sheet with known capacity: 4 kits (2×20x20 + 1×10x10)', () => {
+    // 101×41 instead of 100×40: the optimizer reserves a tiny margin between pieces (OPT_MARGIN_REL)
     const p: Problem = {
       material: rect(0, 0, 101, 41), defects: [], spacing: 0, seed: 1,
       templates: [makeTemplate(0, 'rect', 20, 20, 2), makeTemplate(1, 'rect', 10, 10, 1)],
@@ -38,7 +38,7 @@ describe('maximizeKits', () => {
     expect(r.attempts.length).toBeGreaterThan(0);
   });
 
-  it('cartera de cuero (14 px/cm, spacing 2.8 px, mancha) sobre el ejemplo de cuero', () => {
+  it('leather wallet (14 px/cm, spacing 2.8 px, stain) on the leather example', () => {
     const PPU = 14;
     const kit = KITS.find((k) => k.id === 'cartera')!;
     const templates: Template[] = kit.pieces.map((k, i) => ({
@@ -53,14 +53,14 @@ describe('maximizeKits', () => {
     const t0 = performance.now();
     const r = maximizeKits(p);
     const ms = performance.now() - t0;
-    console.log(`[kits] cartera en cuero: ${r.kits} carteras completas en ${ms.toFixed(0)} ms; intentos ${JSON.stringify(r.attempts)}`);
+    console.log(`[kits] leather wallet: ${r.kits} complete wallets in ${ms.toFixed(0)} ms; attempts ${JSON.stringify(r.attempts)}`);
     expect(r.kits).toBeGreaterThanOrEqual(1);
     expect(verifySolution(expandKits(p, r.kits), r.solution.placements).violations).toEqual([]);
     expectCompleteKits(p, r.kits, r.solution.placements);
     expect(ms).toBeLessThan(8000 * 1.25 + 500);
   }, 30000);
 
-  it('kits === 0 si ni un kit cabe: devuelve el plan parcial de un kit', () => {
+  it('kits === 0 if not even one kit fits: returns the partial plan for one kit', () => {
     const p: Problem = {
       material: rect(0, 0, 100, 100), defects: [], spacing: 0, seed: 1,
       templates: [makeTemplate(0, 'rect', 20, 20, 2), makeTemplate(1, 'rect', 150, 20, 1)],
@@ -73,7 +73,7 @@ describe('maximizeKits', () => {
     expect(verifySolution(p, r.solution.placements).valid).toBe(true);
   });
 
-  it('determinista con reloj inyectado', () => {
+  it('deterministic with an injected clock', () => {
     const p: Problem = {
       material: [[0, 0], [160, 0], [170, 60], [120, 110], [60, 90], [0, 120]], defects: [rect(70, 30, 20, 20)],
       spacing: 2, seed: 5,
@@ -86,15 +86,15 @@ describe('maximizeKits', () => {
     expect(b.solution.placements).toEqual(a.solution.placements);
     expect(a.kits).toBeGreaterThan(1);
     expect(verifySolution(expandKits(p, a.kits), a.solution.placements).valid).toBe(true);
-    console.log(`[kits] determinismo: ${a.kits} kits, intentos ${JSON.stringify(a.attempts)}`);
+    console.log(`[kits] determinism: ${a.kits} kits, attempts ${JSON.stringify(a.attempts)}`);
   }, 30000);
 
-  it('respeta maxKits', () => {
+  it('respects maxKits', () => {
     const p: Problem = { material: rect(0, 0, 200, 200), defects: [], spacing: 0, seed: 1, templates: [makeTemplate(0, 'rect', 10, 10, 1)] };
     expect(maximizeKits(p, { now: frozen, maxKits: 3 }).kits).toBe(3);
   });
 
-  it('respeta el presupuesto de tiempo (reloj real, caso con intentos fallidos)', () => {
+  it('respects the time budget (real clock, case with failed attempts)', () => {
     const p: Problem = {
       material: [[0, 0], [160, 0], [170, 60], [120, 110], [60, 90], [0, 120]], defects: [rect(70, 30, 20, 20)],
       spacing: 2, seed: 5,
@@ -103,14 +103,14 @@ describe('maximizeKits', () => {
     const t0 = performance.now();
     const r = maximizeKits(p, { timeLimitMs: 2000 });
     const ms = performance.now() - t0;
-    console.log(`[kits] presupuesto 2000 ms: ${r.kits} kits en ${ms.toFixed(0)} ms, ${r.attempts.length} intentos`);
+    console.log(`[kits] 2000 ms budget: ${r.kits} kits in ${ms.toFixed(0)} ms, ${r.attempts.length} attempts`);
     expect(ms).toBeLessThan(2000 * 1.25 + 300);
     expect(r.kits).toBeGreaterThanOrEqual(4);
     expect(verifySolution(expandKits(p, r.kits), r.solution.placements).valid).toBe(true);
     expectCompleteKits(p, r.kits, r.solution.placements);
   }, 20000);
 
-  it('versión asíncrona: mismo resultado e informa progreso hasta 1', async () => {
+  it('async version: same result and reports progress up to 1', async () => {
     const p: Problem = { material: rect(0, 0, 101, 41), defects: [], spacing: 0, seed: 1, templates: [makeTemplate(0, 'rect', 20, 20, 2), makeTemplate(1, 'rect', 10, 10, 1)] };
     const fr: number[] = [];
     const r = await maximizeKitsAsync(p, (f) => fr.push(f), { now: frozen });

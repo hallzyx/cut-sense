@@ -1,4 +1,4 @@
-/** API pública del motor geométrico de CutSense (sin DOM: Node y navegador). */
+/** Public API of the CutSense geometry engine (no DOM: Node and browser). */
 export * from './geometry';
 export { verifySolution, verifyTolerances, shapeMatches, type VerifyTolerances } from './verify';
 export { computeMetrics } from './metrics';

@@ -1,31 +1,31 @@
 /**
- * Optimizador de anidado (nesting) determinista — 'cs-nest-1.0'.
+ * Deterministic nesting optimizer — 'cs-nest-1.0'.
  *
- * Objetivo: maximizar el nº de piezas colocadas; desempate por mayor área ocupada.
+ * Goal: maximize the number of placed pieces; ties broken by larger occupied area.
  *
- * Método:
- * 1. Cada plantilla se expande en instancias; cada rotación permitida da una "orientación"
- *    (forma rotada sobre el centro de su bbox y normalizada a esquina mínima (0,0)).
- * 2. Pasadas voraces (greedy) "bottom-left" generalizadas: para cada pieza, en orden, se barren
- *    posiciones candidatas (rejilla adaptativa + anclas en vértices del material, de los defectos y
- *    en los bordes de las piezas ya colocadas, desplazadas por la separación) en el orden de una
- *    "gravedad" (eje primario/secundario y sentido). La primera posición válida se compacta
- *    deslizándola con búsqueda binaria hacia la gravedad. Se elige la orientación con mejor
- *    puntuación.
- * 3. Validez por colisión directa: punto-en-polígono + distancia segmento-segmento >= spacing + margen,
- *    contra el contorno del material (índice espacial en rejilla), defectos y piezas colocadas.
- *    Un ráster de ocupación (celdas S/256) rechaza en O(1) posiciones cuyos puntos interiores
- *    profundos caen en zona bloqueada (exacto: solo descarta posiciones inválidas).
- * 4. Varias pasadas (150 por defecto): 4 con orden por área y gravedad uniforme, luego un genoma
- *    (orden + gravedad por pieza) que alterna reinicios aleatorios y mutaciones del genoma actual
- *    (ascenso de colinas que acepta empates; adelanta piezas que no cupieron), con PRNG mulberry32
- *    sembrado (seed). Al final, reparación: inserción de pendientes con rejilla fina y por
- *    intercambio con una pieza menor. Se conserva el mejor plan. Cada mejora se pasa por `verifySolution`
- *    (independiente); si fallase, se eliminan las piezas infractoras: nunca se devuelve un plan inválido.
+ * Method:
+ * 1. Each template is expanded into instances; each allowed rotation yields an "orientation"
+ *    (shape rotated around its bbox center and normalized to a minimum corner at (0,0)).
+ * 2. Generalized "bottom-left" greedy passes: for each piece, in order, candidate positions are
+ *    swept (adaptive grid + anchors at material vertices, defect vertices and
+ *    the edges of already placed pieces, offset by the spacing) in the order of a
+ *    "gravity" (primary/secondary axis and direction). The first valid position is compacted
+ *    by sliding it towards the gravity with a binary search. The orientation with the best
+ *    score is chosen.
+ * 3. Validity by direct collision: point-in-polygon + segment-to-segment distance >= spacing + margin,
+ *    against the material outline (spatial grid index), defects and placed pieces.
+ *    An occupancy raster (S/256 cells) rejects in O(1) positions whose deep interior points
+ *    fall in a blocked zone (exact: it only discards invalid positions).
+ * 4. Several passes (150 by default): 4 with area ordering and uniform gravity, then a genome
+ *    (order + per-piece gravity) that alternates random restarts and mutations of the current genome
+ *    (hill climbing that accepts ties; moves forward pieces that did not fit), with a seeded
+ *    mulberry32 PRNG (seed). At the end, repair: insertion of pending pieces with a fine grid and by
+ *    swapping with a smaller piece. The best plan is kept. Every improvement goes through `verifySolution`
+ *    (independent); if it fails, the offending pieces are removed: an invalid plan is never returned.
  *
- * Determinismo: mismo problema + seed ⇒ misma secuencia de pasadas. La búsqueda se detiene tras
- * `maxIterations` pasadas (determinista), al colocar todo, o al agotar `timeLimitMs` (salvaguarda:
- * si el reloj corta antes que maxIterations, máquinas más lentas podrían explorar menos pasadas).
+ * Determinism: same problem + seed ⇒ same sequence of passes. The search stops after
+ * `maxIterations` passes (deterministic), when everything is placed, or when `timeLimitMs` runs out (safeguard:
+ * if the clock cuts in before maxIterations, slower machines might explore fewer passes).
  */
 import type { Placement, Problem, Pt, Ring, Solution, Template } from '../types';
 import {
@@ -39,18 +39,18 @@ export const OPTIMIZER_VERSION = 'cs-nest-1.0';
 export const DEFAULT_TIME_LIMIT_MS = 4000;
 export const DEFAULT_MAX_ITERATIONS = 150;
 export const DEFAULT_SEED = 1;
-/** Margen extra (relativo a la escala) que el optimizador añade a la separación para no rozar la tolerancia del verificador. */
+/** Extra margin (relative to the scale) the optimizer adds to the spacing so it does not graze the verifier tolerance. */
 export const OPT_MARGIN_REL = 1e-7;
 const MAX_INSTANCES = 400;
-/** Paso mínimo de la rejilla refinada: S / REFINE_MIN_DIV. */
+/** Minimum step of the refined grid: S / REFINE_MIN_DIV. */
 const REFINE_MIN_DIV = 100;
-/** Paso mínimo de la rejilla en la reparación final: S / REPAIR_MIN_DIV. */
+/** Minimum grid step in the final repair: S / REPAIR_MIN_DIV. */
 const REPAIR_MIN_DIV = 200;
-/** Resolución del ráster de ocupación: celdas de S / RASTER_DIV. */
+/** Occupancy raster resolution: cells of S / RASTER_DIV. */
 const RASTER_DIV = 256;
 
 export interface OptimizeProgress {
-  /** Avance estimado 0..1: max(pasadas hechas / maxIterations, tiempo / timeLimitMs); 1 al terminar. */
+  /** Estimated progress 0..1: max(passes done / maxIterations, time / timeLimitMs); 1 when finished. */
   fraction: number;
   iteration: number;
   maxIterations: number;
@@ -60,17 +60,17 @@ export interface OptimizeProgress {
 }
 
 export interface OptimizeOptions {
-  /** Reloj inyectable (ms). Por defecto performance.now() o Date.now(). */
+  /** Injectable clock (ms). Defaults to performance.now() or Date.now(). */
   now?: () => number;
-  /** Nº máximo de pasadas voraces (por defecto 40). */
+  /** Maximum number of greedy passes (default 150). */
   maxIterations?: number;
-  /** Se llama tras cada pasada y al final: (fracción 0..1, detalle). */
+  /** Called after each pass and at the end: (fraction 0..1, detail). */
   onProgress?: ProgressCallback;
 }
 
 export type ProgressCallback = (fraction: number, detail: OptimizeProgress) => void;
 
-/** PRNG mulberry32: devuelve floats en [0, 1). */
+/** mulberry32 PRNG: returns floats in [0, 1). */
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -85,18 +85,18 @@ export function mulberry32(seed: number): () => number {
 const defaultNow = (): number =>
   typeof globalThis.performance?.now === 'function' ? globalThis.performance.now() : Date.now();
 
-// ---------------------------------------------------------------- estructuras internas
+// ---------------------------------------------------------------- internal structures
 
 /**
- * `probe`: punto interior de la forma (prueba rápida de solape antes de las distancias exactas).
- * `deep`: puntos interiores a más de una celda del borde; si su celda del ráster está bloqueada,
- * hay un punto bloqueado dentro de la pieza ⇒ posición inválida (rechazo O(1) exacto).
+ * `probe`: interior point of the shape (quick overlap test before exact distances).
+ * `deep`: interior points more than one cell away from the edge; if their raster cell is blocked,
+ * there is a blocked point inside the piece ⇒ invalid position (exact O(1) rejection).
  */
 interface Orient { rot: number; base: Ring; w: number; h: number; probe: Pt; deep: Pt[] }
 interface Item { t: Template; tIdx: number; orients: Orient[]; area: number }
 interface Obstacle { ring: Ring; bb: BBox }
 interface Placed { item: Item; o: Orient; x: number; y: number; ring: Ring; bb: BBox }
-/** Gravedad: eje primario y sentido (1 = hacia el mínimo, −1 = hacia el máximo) en cada eje. */
+/** Gravity: primary axis and direction (1 = towards the minimum, −1 = towards the maximum) on each axis. */
 interface Gravity { primary: 'x' | 'y'; dirP: 1 | -1; dirS: 1 | -1 }
 type Score = [number, number];
 
@@ -107,7 +107,7 @@ const GRAVITIES: Gravity[] = [
   { primary: 'y', dirP: -1, dirS: 1 }, { primary: 'x', dirP: -1, dirS: 1 },
 ];
 
-/** Índice espacial uniforme de los segmentos del contorno del material. */
+/** Uniform spatial index of the material outline segments. */
 class SegGrid {
   private segs: Float64Array;
   private cells: number[][];
@@ -144,7 +144,7 @@ class SegGrid {
   private cx(x: number): number { return Math.min(this.nx - 1, Math.max(0, Math.floor((x - this.b.minX) / this.cell))); }
   private cy(y: number): number { return Math.min(this.ny - 1, Math.max(0, Math.floor((y - this.b.minY) / this.cell))); }
 
-  /** ¿Algún segmento del contorno está a distancia < d de la pieza (base desplazada ox, oy)? */
+  /** Is any outline segment at distance < d from the piece (base offset ox, oy)? */
   closer(base: Ring, ox: number, oy: number, minX: number, minY: number, maxX: number, maxY: number, d: number): boolean {
     this.stampId = (this.stampId + 1) >>> 0;
     if (this.stampId === 0) { this.stamp.fill(0); this.stampId = 1; }
@@ -173,7 +173,7 @@ class SegGrid {
   }
 }
 
-/** ¿Algún par de aristas (pieza desplazada, obstáculo) está a distancia < d? */
+/** Is any pair of edges (offset piece, obstacle) at distance < d? */
 function ringsCloser(base: Ring, ox: number, oy: number, ob: Ring, d: number): boolean {
   const d2 = d * d, n = base.length, m = ob.length;
   for (let e = 0; e < n; e++) {
@@ -196,7 +196,7 @@ function better(a: Score, b: Score, tol: number): boolean {
   return a[1] < b[1] - tol;
 }
 
-/** Un punto estrictamente interior de un anillo simple (centroide si cae dentro; si no, barrido horizontal). */
+/** A strictly interior point of a simple ring (centroid if it falls inside; otherwise a horizontal sweep). */
 function interiorPoint(ring: Ring): Pt {
   const c = centroid(ring);
   if (pointInRing(c[0], c[1], ring)) return c;
@@ -217,7 +217,7 @@ function interiorPoint(ring: Ring): Pt {
   return ring[0];
 }
 
-/** Puntos de muestra en rejilla interior a distancia > 1.5·cell del borde (máx. ~12). */
+/** Sample points on an interior grid at distance > 1.5·cell from the edge (max ~12). */
 function deepPoints(ring: Ring, cell: number): Pt[] {
   const b = bbox(ring), out: Pt[] = [];
   const need2 = (1.5 * cell) ** 2, n = ring.length;
@@ -235,14 +235,14 @@ function deepPoints(ring: Ring, cell: number): Pt[] {
   return out;
 }
 
-// ---------------------------------------------------------------- motor
+// ---------------------------------------------------------------- engine
 
 class Nester {
   readonly S: number;
   readonly d: number;
   readonly mb: BBox;
   private grid: SegGrid;
-  // ráster de ocupación: 1 = el centro de la celda está fuera del material, en un defecto o en una pieza
+  // occupancy raster: 1 = the cell center is outside the material, in a defect or in a piece
   readonly rc: number;
   private rnx: number;
   private rny: number;
@@ -253,7 +253,7 @@ class Nester {
   private baseAnchors: { x: number[]; y: number[] };
   private deadline = Infinity;
   aborted = false;
-  /** Posiciones (en el orden de la última pasada) de las piezas que no cupieron. */
+  /** Positions (in the order of the last pass) of the pieces that did not fit. */
   lastFailed: number[] = [];
 
   constructor(private material: Ring, defects: Ring[], spacing: number, private now: () => number) {
@@ -302,7 +302,7 @@ class Nester {
     }
   }
 
-  /** Sustituye las piezas colocadas y reconstruye el ráster dinámico. */
+  /** Replaces the placed pieces and rebuilds the dynamic raster. */
   setPlaced(list: Placed[]): void {
     this.placed = list;
     this.rDyn.set(this.rStatic);
@@ -320,7 +320,7 @@ class Nester {
     return this.rDyn[j * this.rnx + i] === 1;
   }
 
-  /** ¿Cabe la orientación `o` con su esquina mínima en (x, y)? */
+  /** Does orientation `o` fit with its minimum corner at (x, y)? */
   fits(o: Orient, x: number, y: number): boolean {
     const d = this.d, mb = this.mb;
     const minX = x, minY = y, maxX = x + o.w, maxY = y + o.h;
@@ -329,7 +329,7 @@ class Nester {
     const b0 = o.base[0];
     for (const q of o.deep) if (this.blockedAt(q[0] + x, q[1] + y)) return false;
     const px = o.probe[0] + x, py = o.probe[1] + y;
-    // rechazo barato: el punto interior de la pieza cae fuera del material o dentro de un obstáculo
+    // cheap rejection: the interior point of the piece falls outside the material or inside an obstacle
     if (!pointInRing(px, py, this.material)) return false;
     for (let k = 0; k < 2; k++) {
       const list: Obstacle[] = k === 0 ? this.placed : this.defects;
@@ -387,7 +387,7 @@ class Nester {
       : [ax(x, o.w, g.dirP), ax(y, o.h, g.dirS)];
   }
 
-  /** Desliza la pieza hacia la gravedad mientras siga cabiendo (búsqueda con paso decreciente). */
+  /** Slides the piece towards the gravity while it keeps fitting (search with a decreasing step). */
   private compact(o: Orient, x: number, y: number, g: Gravity, step0: number): [number, number] {
     const minStep = step0 / 128;
     for (let round = 0; round < 2; round++) {
@@ -406,9 +406,9 @@ class Nester {
   }
 
   /**
-   * Busca la primera posición válida en orden de gravedad. Si la rejilla gruesa no encuentra
-   * ninguna, la refina (paso/2) hasta `minStep`: las piezas grandes en materiales convexos
-   * irregulares suelen tener regiones factibles más pequeñas que el paso inicial.
+   * Finds the first valid position in gravity order. If the coarse grid finds
+   * none, it refines it (step/2) down to `minStep`: large pieces in irregular convex
+   * materials often have feasible regions smaller than the initial step.
    */
   *find(o: Orient, g: Gravity, bound: Score | null, minDiv = REFINE_MIN_DIV): Generator<void, { x: number; y: number; score: Score } | null, void> {
     const minStep = this.S / minDiv;
@@ -447,7 +447,7 @@ class Nester {
     return null;
   }
 
-  /** Mejor posición (entre orientaciones) para `item` con gravedad `g`, o null. */
+  /** Best position (across orientations) for `item` with gravity `g`, or null. */
   private *placeOne(item: Item, g: Gravity, minDiv = REFINE_MIN_DIV): Generator<void, Placed | null, void> {
     const tol = 1e-9 * this.S;
     let best: { x: number; y: number; score: Score; o: Orient } | null = null;
@@ -462,16 +462,16 @@ class Nester {
   }
 
   /**
-   * Una pasada voraz; `gravs[i]` es la gravedad de la i-ésima pieza del orden.
-   * Devuelve las piezas colocadas (parciales si se agotó el tiempo; ver `aborted`).
+   * One greedy pass; `gravs[i]` is the gravity of the i-th piece in the order.
+   * Returns the placed pieces (partial if time ran out; see `aborted`).
    */
   *pass(order: Item[], gravs: Gravity[], deadline: number): Generator<void, Placed[], void> {
     this.setPlaced([]);
     this.lastFailed = [];
     this.deadline = deadline;
     this.aborted = false;
-    // El conjunto de candidatos no depende de la gravedad (solo su orden de barrido), así que si una
-    // plantilla no cupo, no cabe con ninguna gravedad, y con más piezas colocadas tampoco.
+    // The candidate set does not depend on the gravity (only its sweep order), so if a
+    // template did not fit, it fits with no gravity, and with more pieces placed it will not either.
     const failed = new Set<number>();
     for (let i = 0; i < order.length; i++) {
       const item = order[i], g = gravs[i];
@@ -488,14 +488,14 @@ class Nester {
   }
 
   /**
-   * Reparación final: intenta insertar cada pieza pendiente con una rejilla más fina; si no cabe, prueba a retirar una pieza colocada más pequeña, insertar la
-   * pendiente y volver a insertar la retirada (solo se acepta si caben ambas).
+   * Final repair: tries to insert each pending piece with a finer grid; if it does not fit, it tries removing a smaller placed piece, inserting the
+   * pending one and reinserting the removed one (accepted only if both fit).
    */
   *insertPending(placed: Placed[], pending: Item[], deadline: number): Generator<void, Placed[], void> {
     this.setPlaced(placed.slice());
     this.deadline = deadline;
     this.aborted = false;
-    // una sola gravedad basta para decidir si cabe: los candidatos no dependen de ella
+    // a single gravity is enough to decide whether it fits: the candidates do not depend on it
     const tryPlace = function* (self: Nester, item: Item): Generator<void, Placed | null, void> {
       return yield* self.placeOne(item, GRAVITIES[0], REPAIR_MIN_DIV);
     };
@@ -505,7 +505,7 @@ class Nester {
       let pl: Placed | null = yield* tryPlace(this, item);
       if (this.aborted) break;
       if (pl) { this.addPlaced(pl); continue; }
-      // intercambio: retirar una pieza de área menor, colocar la pendiente y recolocar la retirada
+      // swap: remove a smaller-area piece, place the pending one and re-place the removed one
       let done = false;
       const victims = this.placed.map((p, i) => ({ p, i })).filter(({ p }) => p.item.area < item.area)
         .sort((a, b) => a.p.item.area - b.p.item.area);
@@ -537,7 +537,7 @@ function toPlacements(placed: Placed[]): Placement[] {
   });
 }
 
-/** Elimina piezas infractoras hasta que el verificador independiente acepte el plan. */
+/** Removes offending pieces until the independent verifier accepts the plan. */
 export function repairPlacements(problem: Problem, placements: Placement[]): Placement[] {
   let cur = placements.slice();
   for (let guard = 0; guard <= placements.length; guard++) {
@@ -593,7 +593,7 @@ function shuffleInPlace<T>(a: T[], rng: () => number, swaps: number): void {
   }
 }
 
-/** Núcleo como generador: cede el control periódicamente (lo usa optimizeAsync). */
+/** Core as a generator: yields control periodically (used by optimizeAsync). */
 export function* optimizeSteps(problem: Problem, options: OptimizeOptions = {}): Generator<void, Solution, void> {
   const now = options.now ?? defaultNow;
   const start = now();
@@ -627,7 +627,7 @@ export function* optimizeSteps(problem: Problem, options: OptimizeOptions = {}):
   const nester = new Nester(material, defects, spacing, now);
 
   let usableArea = ringArea(material);
-  try { usableArea = multiArea(difference(material, ...defects)); } catch { /* cota superior: área del material */ }
+  try { usableArea = multiArea(difference(material, ...defects)); } catch { /* upper bound: material area */ }
   const { instances: all, requested } = buildItems(problem, nester);
   requestedTotal = requested;
   const instances = all.filter((it) => it.area <= usableArea * (1 + 1e-9));
@@ -638,12 +638,12 @@ export function* optimizeSteps(problem: Problem, options: OptimizeOptions = {}):
   let best: Placement[] = [];
   let bestArea = 0;
   let bestPlaced: Placed[] = [];
-  // genoma "actual" del ascenso de colinas: se aceptan empates para poder caminar por mesetas
+  // "current" genome of the hill climbing: ties are accepted so it can walk across plateaus
   let bestGenome: { order: Item[]; gravs: Gravity[]; failed: number[] } | null = null;
   let curCount = -1;
   const randGrav = () => GRAVITIES[Math.floor(rng() * GRAVITIES.length)];
 
-  /** Acepta `placed` como mejor plan si mejora (nº de piezas, luego área) y pasa el verificador. */
+  /** Accepts `placed` as the best plan if it improves (piece count, then area) and passes the verifier. */
   const consider = (placed: Placed[]): boolean => {
     let cand = toPlacements(placed);
     const candArea = planArea(cand);
@@ -661,16 +661,16 @@ export function* optimizeSteps(problem: Problem, options: OptimizeOptions = {}):
   for (let iter = 0; iter < maxIter; iter++) {
     const elapsed = now() - start;
     if (iter > 0 && elapsed > timeLimit) break;
-    // genoma = orden de piezas + gravedad por pieza
+    // genome = piece order + per-piece gravity
     let order = baseOrder;
     let gravs: Gravity[] = order.map(() => GRAVITIES[iter % 4]);
     if (iter >= 4) {
       if (bestGenome && rng() < 0.5) {
-        // mutación del mejor genoma: intercambios en el orden y/o cambios de gravedad
+        // mutation of the best genome: order swaps and/or gravity changes
         order = bestGenome.order.slice();
         gravs = bestGenome.gravs.slice();
         if (bestGenome.failed.length && rng() < 0.6) {
-          // adelantar una pieza que no cupo (suele desbloquear el plan) y quizá cambiar su gravedad
+        // move forward a piece that did not fit (usually unblocks the plan) and maybe change its gravity
           const i = bestGenome.failed[Math.floor(rng() * bestGenome.failed.length)];
           const j = Math.floor(rng() * (i + 1));
           const [it] = order.splice(i, 1), [gv] = gravs.splice(i, 1);
@@ -696,7 +696,7 @@ export function* optimizeSteps(problem: Problem, options: OptimizeOptions = {}):
         if (rng() < 0.5) { const g = randGrav(); gravs = order.map(() => g); } else gravs = order.map(() => randGrav());
       }
     }
-    // la primera pasada dispone de 2× el presupuesto para garantizar algún resultado
+    // the first pass gets 2× the budget to guarantee some result
     const deadline = start + (iter === 0 ? 2 * timeLimit : timeLimit);
     const placed = yield* nester.pass(order, gravs, deadline);
     const aborted = nester.aborted;
@@ -713,7 +713,7 @@ export function* optimizeSteps(problem: Problem, options: OptimizeOptions = {}):
     if (aborted || best.length >= instances.length) break;
   }
 
-  // reparación final: insertar pendientes en el mejor plan (rejilla fina, todas las gravedades, intercambios)
+  // final repair: insert pending pieces into the best plan (fine grid, all gravities, swaps)
   if (best.length < instances.length && now() - start <= timeLimit) {
     const count = new Map<number, number>();
     for (const p of bestPlaced) count.set(p.item.tIdx, (count.get(p.item.tIdx) ?? 0) + 1);
@@ -728,7 +728,7 @@ export function* optimizeSteps(problem: Problem, options: OptimizeOptions = {}):
   return finish(best);
 }
 
-/** Optimiza de forma síncrona. Siempre devuelve un plan que pasa `verifySolution`. */
+/** Optimizes synchronously. Always returns a plan that passes `verifySolution`. */
 export function optimize(problem: Problem, options: OptimizeOptions = {}): Solution {
   const gen = optimizeSteps(problem, options);
   for (;;) {
@@ -738,8 +738,8 @@ export function optimize(problem: Problem, options: OptimizeOptions = {}): Solut
 }
 
 /**
- * Igual que `optimize` pero cede el event loop cada ~`yieldEveryMs` (50 ms) para no congelar la UI
- * cuando se llama desde el hilo principal.
+ * Same as `optimize` but yields the event loop every ~`yieldEveryMs` (50 ms) so the UI does not freeze
+ * when called from the main thread.
  */
 export async function optimizeAsync(
   problem: Problem,

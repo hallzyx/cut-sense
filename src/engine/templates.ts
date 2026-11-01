@@ -1,7 +1,7 @@
 import type { Ring, Template, TemplateKind } from '../types';
 
-/** Construye la forma base de una plantilla (bbox con esquina mínima en 0,0). */
-/** `custom` es una forma normalizada a [0,1]² que se escala a w×h. */
+/** Builds the base shape of a template (bbox with its minimum corner at 0,0). */
+/** `custom` is a shape normalized to [0,1]² that gets scaled to w×h. */
 export function buildShape(kind: TemplateKind, w: number, h: number, custom?: Ring): Ring {
   switch (kind) {
     case 'custom':
@@ -29,18 +29,18 @@ export function buildShape(kind: TemplateKind, w: number, h: number, custom?: Ri
     }
     case 'trapezoid':
       return [[w * 0.2, 0], [w * 0.8, 0], [w, h], [0, h]];
-    case 'irregular': // silueta en L / chevron simple
+    case 'irregular': // L-shaped silhouette / simple chevron
       return [[0, 0], [w * 0.55, 0], [w * 0.55, h * 0.45], [w, h * 0.45], [w, h], [0, h]];
   }
 }
 
 export const KIND_LABEL: Record<TemplateKind, string> = {
-  rect: 'Rectángulo', rrect: 'Rectángulo redondeado', circle: 'Círculo (polígono)', trapezoid: 'Trapezoide', irregular: 'Silueta en L', custom: 'Personalizada',
+  rect: 'Rectangle', rrect: 'Rounded rectangle', circle: 'Circle (polygon)', trapezoid: 'Trapezoid', irregular: 'L-shape', custom: 'Custom',
 };
 
 /** Piece colours A–F from the CutSense brand system (design/tokens.css), paired with PATTERNS by index. */
 export const PALETTE = ['#F5B800', '#4FC3F7', '#F2609E', '#1FB5A0', '#A07CFF', '#B5E61D'];
-// patrones SVG para no depender solo del color
+// SVG patterns so that meaning does not rely on colour alone
 export const PATTERNS = ['solid', 'diag', 'dots', 'cross', 'horiz', 'vert'] as const;
 
 export function makeTemplate(i: number, kind: TemplateKind, w: number, h: number, qty: number, name?: string): Template {

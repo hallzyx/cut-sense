@@ -5,7 +5,7 @@ import { makeTemplate } from './templates';
 import { concaveMaterial, rect } from './testFixtures';
 import { verifySolution } from './verify';
 
-/** Densifica el contorno cóncavo con ruido (simula un contorno de SAM con cientos de vértices). */
+/** Densifies the concave outline with noise (simulates a SAM outline with hundreds of vertices). */
 function noisyMaterial(perEdge: number, amp: number, seed: number): Ring {
   const rng = mulberry32(seed);
   const out: Ring = [];
@@ -22,7 +22,7 @@ function noisyMaterial(perEdge: number, amp: number, seed: number): Ring {
   return out;
 }
 
-describe('estrés: 12 piezas grandes, contorno de ~300 vértices, 3 defectos', () => {
+describe('stress: 12 large pieces, ~300-vertex outline, 3 defects', () => {
   const problem: Problem = {
     material: noisyMaterial(30, 1.5, 9),
     defects: [rect(100, 90, 40, 35), rect(300, 200, 30, 50), rect(380, 20, 60, 30)],
@@ -36,15 +36,15 @@ describe('estrés: 12 piezas grandes, contorno de ~300 vértices, 3 defectos', (
     seed: 2024,
   };
 
-  it('plan válido en < 5 s y determinista', () => {
+  it('valid plan in < 5 s and deterministic', () => {
     const t0 = performance.now();
     const sol = optimize(problem);
     const ms = performance.now() - t0;
-    console.log(`[perf] estrés 12 piezas / ${problem.material.length} vértices: ${sol.placements.length}/12 en ${ms.toFixed(0)} ms, utilización ${sol.metrics.usableUtilization.toFixed(1)}%`);
+    console.log(`[perf] stress 12 pieces / ${problem.material.length} vertices: ${sol.placements.length}/12 in ${ms.toFixed(0)} ms, utilization ${sol.metrics.usableUtilization.toFixed(1)}%`);
     expect(verifySolution(problem, sol.placements).violations).toEqual([]);
     expect(ms).toBeLessThan(5000);
     expect(sol.placements.length).toBeGreaterThan(4);
-    // determinismo: con el reloj congelado (presupuesto que nunca corta) se obtiene lo mismo
+    // determinism: with a frozen clock (a budget that never cuts in) the same result is obtained
     expect(optimize(problem, { now: () => 0 }).placements).toEqual(sol.placements);
   }, 20000);
 });

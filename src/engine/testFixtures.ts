@@ -1,4 +1,4 @@
-/** Fixtures compartidos por los tests del motor (no forman parte de la API pública). */
+/** Fixtures shared by the engine tests (not part of the public API). */
 import type { Problem, Ring, Template } from '../types';
 import { makeTemplate } from './templates';
 
@@ -6,7 +6,7 @@ export function rect(x: number, y: number, w: number, h: number): Ring {
   return [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
 }
 
-/** Retazo cóncavo irregular (~415×310) con una muesca interior. */
+/** Irregular concave offcut (~415×310) with an inner notch. */
 export const concaveMaterial: Ring = [
   [0, 0], [400, 0], [410, 120], [380, 300], [230, 310], [220, 170],
   [170, 160], [150, 300], [10, 290], [-5, 140],

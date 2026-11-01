@@ -1,17 +1,17 @@
 /**
- * Verificador INDEPENDIENTE de planes de corte.
+ * INDEPENDENT verifier for cut plans.
  *
- * No reutiliza el código de colocación del optimizador: aquí la contención, la invasión de
- * defectos y el solape se deciden por ÁREA de operaciones booleanas (polygon-clipping), y la
- * separación por distancia exacta segmento-segmento entre contornos. El optimizador, en cambio,
- * decide por punto-en-polígono + distancias con margen y nunca llama a polygon-clipping por candidato.
+ * It does not reuse the optimizer's placement code: containment, defect invasion and overlap are
+ * decided here by the AREA of boolean operations (polygon-clipping), and spacing by the exact
+ * segment-to-segment distance between outlines. The optimizer, by contrast, decides by
+ * point-in-polygon + margin distances and never calls polygon-clipping per candidate.
  *
- * Tolerancias (S = lado mayor del bbox del material, mínimo 1):
- * - longitudes: lenEps = LEN_EPS_REL·S (1e-9·S). Separación válida si dist >= spacing − lenEps.
- * - áreas: areaEps = AREA_EPS_REL·S² (1e-8·S²). Solape/invasión/salida si el área > areaEps.
- * - forma: cada vértice debe coincidir con la plantilla rotada+trasladada a menos de
- *   SHAPE_EPS_REL·max(w, h, 1) (1e-6 relativo).
- * - rotación: pertenece a template.rotations módulo 360 con tolerancia 1e-9 grados.
+ * Tolerances (S = longest side of the material bbox, minimum 1):
+ * - lengths: lenEps = LEN_EPS_REL·S (1e-9·S). Spacing is valid if dist >= spacing − lenEps.
+ * - areas: areaEps = AREA_EPS_REL·S² (1e-8·S²). Overlap/invasion/out-of-bounds if area > areaEps.
+ * - shape: every vertex must match the template rotated+translated to within
+ *   SHAPE_EPS_REL·max(w, h, 1) (1e-6 relative).
+ * - rotation: belongs to template.rotations modulo 360 with a tolerance of 1e-9 degrees.
  */
 import type { Placement, Problem, Ring, Template, Violation, VerifyResult } from '../types';
 import {
@@ -37,7 +37,7 @@ function rotationAllowed(rot: number, allowed: number[]): boolean {
   });
 }
 
-/** ¿`poly` es `shape` rotada `rot` grados y trasladada? Admite desplazamiento cíclico del índice inicial. */
+/** Is `poly` `shape` rotated by `rot` degrees and translated? Allows a cyclic shift of the starting index. */
 export function shapeMatches(shape: Ring, rot: number, poly: Ring, tol: number): boolean {
   const ref = rotateRing(dedupeRing(shape), rot, [0, 0]);
   const n = ref.length;
@@ -60,7 +60,7 @@ function bboxGap(a: BBox, b: BBox): number {
   return Math.hypot(dx, dy);
 }
 
-/** Área de una operación booleana; si la librería falla devuelve +Infinity (conservador ⇒ violación). */
+/** Area of a boolean operation; if the library fails it returns +Infinity (conservative ⇒ violation). */
 function safeArea(f: () => MultiPolygon): number {
   try { return multiArea(f()); } catch { return Infinity; }
 }
@@ -93,75 +93,75 @@ export function verifySolution(problem: Problem, placements: Placement[]): Verif
   placements.forEach((pl, i) => {
     const t = templates.get(pl.templateId);
     if (!t) {
-      violations.push({ code: 'UNKNOWN_TEMPLATE', message: `Plantilla desconocida "${pl.templateId}"`, placementIndex: i });
+      violations.push({ code: 'UNKNOWN_TEMPLATE', message: `Unknown template "${pl.templateId}"`, placementIndex: i });
     } else {
       if (!Number.isInteger(pl.instance) || pl.instance < 0 || pl.instance >= t.qty) {
-        violations.push({ code: 'QTY_EXCEEDED', message: `Instancia ${pl.instance} fuera de 0..${t.qty - 1} para "${t.id}"`, placementIndex: i });
+        violations.push({ code: 'QTY_EXCEEDED', message: `Instance ${pl.instance} outside 0..${t.qty - 1} for "${t.id}"`, placementIndex: i });
       }
       const key = `${pl.templateId}#${pl.instance}`;
       if (seen.has(key)) {
-        violations.push({ code: 'QTY_EXCEEDED', message: `Instancia duplicada ${key}`, placementIndex: i });
+        violations.push({ code: 'QTY_EXCEEDED', message: `Duplicate instance ${key}`, placementIndex: i });
       }
       seen.add(key);
       if (!rotationAllowed(pl.rotation, t.rotations)) {
-        violations.push({ code: 'BAD_ROTATION', message: `Rotación ${pl.rotation}° no permitida para "${t.id}" (${t.rotations.join(', ')})`, placementIndex: i });
+        violations.push({ code: 'BAD_ROTATION', message: `Rotation ${pl.rotation}° not allowed for "${t.id}" (${t.rotations.join(', ')})`, placementIndex: i });
       }
     }
 
     const poly = Array.isArray(pl.polygon) ? pl.polygon : [];
     const finite = poly.every((p) => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]));
     if (poly.length < 3 || !finite || Math.abs(signedArea(poly)) <= areaEps || !isSimple(poly)) {
-      violations.push({ code: 'DEGENERATE', message: 'Polígono degenerado o con autointersecciones', placementIndex: i });
+      violations.push({ code: 'DEGENERATE', message: 'Degenerate polygon or self-intersections', placementIndex: i });
       return;
     }
     if (t) {
       const tol = SHAPE_EPS_REL * Math.max(t.w, t.h, 1);
       if (!shapeMatches(t.shape, pl.rotation, poly, tol)) {
-        violations.push({ code: 'SHAPE_MISMATCH', message: `La forma no coincide con "${t.id}" rotada ${pl.rotation}°`, placementIndex: i });
+        violations.push({ code: 'SHAPE_MISMATCH', message: `Shape does not match "${t.id}" rotated ${pl.rotation}°`, placementIndex: i });
       }
     }
 
-    // dentro del material + separación al borde
+    // inside the material + spacing to the edge
     const outside = safeArea(() => difference(poly, material));
     if (outside > areaEps) {
-      violations.push({ code: 'OUT_OF_BOUNDS', message: `La pieza sale del material (área fuera ≈ ${fmt(outside)})`, placementIndex: i });
+      violations.push({ code: 'OUT_OF_BOUNDS', message: `The piece extends outside the material (outside area ≈ ${fmt(outside)})`, placementIndex: i });
     } else if (spacing > 0) {
       const d = boundaryDistance(poly, material);
       if (d < spacing - lenEps) {
-        violations.push({ code: 'SPACING', message: `Separación al borde ${fmt(d)} < ${spacing}`, placementIndex: i });
+        violations.push({ code: 'SPACING', message: `Spacing to edge ${fmt(d)} < ${spacing}`, placementIndex: i });
       }
     }
 
-    // defectos (unión, sin doble conteo)
+    // defects (union, no double counting)
     const bb = bbox(poly);
     if (defectBox && bboxGap(bb, defectBox) < spacing + lenEps) {
       const inv = defectUnionOk
         ? safeArea(() => intersection(poly, defectUnion))
         : Math.max(...defects.map((d) => safeArea(() => intersection(poly, d))));
       if (inv > areaEps) {
-        violations.push({ code: 'DEFECT_INVADED', message: `La pieza invade un defecto (área ≈ ${fmt(inv)})`, placementIndex: i });
+        violations.push({ code: 'DEFECT_INVADED', message: `The piece invades a defect (area ≈ ${fmt(inv)})`, placementIndex: i });
       } else if (spacing > 0) {
         const d = Math.min(...defectRings.map((r) => boundaryDistance(poly, r)));
         if (d < spacing - lenEps) {
-          violations.push({ code: 'SPACING', message: `Separación a defecto ${fmt(d)} < ${spacing}`, placementIndex: i });
+          violations.push({ code: 'SPACING', message: `Spacing to defect ${fmt(d)} < ${spacing}`, placementIndex: i });
         }
       }
     }
     good.push({ i, poly, bb });
   });
 
-  // pares de piezas
+  // piece pairs
   for (let a = 0; a < good.length; a++) {
     for (let b = a + 1; b < good.length; b++) {
       const A = good[a], B = good[b];
       if (bboxGap(A.bb, B.bb) >= spacing + lenEps && bboxGap(A.bb, B.bb) > 0) continue;
       const ov = safeArea(() => intersection(A.poly, B.poly));
       if (ov > areaEps) {
-        violations.push({ code: 'OVERLAP', message: `Las piezas ${A.i} y ${B.i} se solapan (área ≈ ${fmt(ov)})`, placementIndex: B.i, otherIndex: A.i });
+        violations.push({ code: 'OVERLAP', message: `Pieces ${A.i} and ${B.i} overlap (area ≈ ${fmt(ov)})`, placementIndex: B.i, otherIndex: A.i });
       } else if (spacing > 0) {
         const d = boundaryDistance(A.poly, B.poly);
         if (d < spacing - lenEps) {
-          violations.push({ code: 'SPACING', message: `Separación entre piezas ${A.i} y ${B.i}: ${fmt(d)} < ${spacing}`, placementIndex: B.i, otherIndex: A.i });
+          violations.push({ code: 'SPACING', message: `Spacing between pieces ${A.i} and ${B.i}: ${fmt(d)} < ${spacing}`, placementIndex: B.i, otherIndex: A.i });
         }
       }
     }

@@ -11,7 +11,7 @@ const prob = (defects = [rect(5, 5, 10, 10)]): Problem => ({ material: rect(0, 0
 const pl = (r: ReturnType<typeof rect>, instance = 0): Placement => ({ templateId: 't0', instance, rotation: 0, polygon: r });
 
 describe('computeRemainder', () => {
-  it('conserva el área: material = defectos∩material + piezas + sobrante', () => {
+  it('preserves area: material = defects∩material + pieces + leftover', () => {
     const p = prob();
     const ps = [pl(rect(30, 30, 20, 10)), pl(rect(60, 60, 15, 25), 1)];
     const r = computeRemainder(p, ps, { minAreaFraction: 0 });
@@ -20,7 +20,7 @@ describe('computeRemainder', () => {
     expect(m.excludedArea + m.occupiedArea + r.area).toBeCloseTo(r.materialArea, 6);
   });
 
-  it('una pieza en el centro deja 1 fragmento con 1 agujero', () => {
+  it('one piece in the center leaves 1 fragment with 1 hole', () => {
     const r = computeRemainder(prob([]), [pl(rect(40, 40, 20, 20))]);
     expect(r.fragments).toHaveLength(1);
     expect(r.fragments[0].holes).toHaveLength(1);
@@ -29,7 +29,7 @@ describe('computeRemainder', () => {
     expect(signedArea(r.fragments[0].holes[0])).toBeLessThan(0);
   });
 
-  it('una franja vertical de piezas parte el material en 2 fragmentos disjuntos', () => {
+  it('a vertical strip of pieces splits the material into 2 disjoint fragments', () => {
     const ps = [pl(rect(45, 0, 10, 50)), pl(rect(45, 50, 10, 50), 1)];
     const r = computeRemainder(prob([]), ps);
     expect(r.fragments).toHaveLength(2);
@@ -38,22 +38,22 @@ describe('computeRemainder', () => {
     expect(r.fragments.every((f) => f.holes.length === 0)).toBe(true);
   });
 
-  it('sin piezas: material menos defectos', () => {
+  it('no pieces: material minus defects', () => {
     const r = computeRemainder(prob(), []);
     expect(r.fragments).toHaveLength(1);
     expect(r.area).toBeCloseTo(9900, 6);
     expect(r.fragments[0].holes).toHaveLength(1);
   });
 
-  it('ordena por área y descarta astillas < minAreaFraction', () => {
+  it('sorts by area and discards slivers < minAreaFraction', () => {
     const ps = [pl(rect(0, 0, 99.9, 60)), pl(rect(0, 60, 99.9, 40), 1)];
-    expect(computeRemainder(prob([]), ps).fragments).toHaveLength(0); // franja de 0.1×100 = 0.1 % < 0.5 %
+    expect(computeRemainder(prob([]), ps).fragments).toHaveLength(0); // strip of 0.1×100 = 0.1 % < 0.5 %
     const ps2 = [pl(rect(30, 0, 10, 100))];
     const r2 = computeRemainder(prob([]), ps2);
     expect(r2.fragments.map((f) => Math.round(f.area))).toEqual([6000, 3000]);
   });
 
-  it('fragmentAsMaterial: exterior → material, agujeros → defectos', () => {
+  it('fragmentAsMaterial: outer ring → material, holes → defects', () => {
     const f = computeRemainder(prob([]), [pl(rect(40, 40, 20, 20))]).fragments[0];
     const m = fragmentAsMaterial(f);
     expect(m.material).toEqual(f.outer);

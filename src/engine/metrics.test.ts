@@ -8,7 +8,7 @@ const T: Template = {
 };
 
 describe('computeMetrics', () => {
-  it('defectos solapados no se cuentan dos veces; defecto fuera no cuenta', () => {
+  it('overlapping defects are not counted twice; a defect outside does not count', () => {
     const p: Problem = {
       material: rect(0, 0, 100, 100),
       defects: [rect(0, 0, 20, 20), rect(10, 10, 20, 20), rect(200, 200, 30, 30)],
@@ -22,12 +22,12 @@ describe('computeMetrics', () => {
     expect(m.usableUtilization).toBe(0);
   });
 
-  it('defecto parcialmente fuera del material cuenta solo la parte interior', () => {
+  it('a defect partly outside the material counts only its inner part', () => {
     const p: Problem = { material: rect(0, 0, 100, 100), defects: [rect(-10, 50, 20, 10)], templates: [T], spacing: 0 };
     expect(computeMetrics(p, []).excludedArea).toBeCloseTo(100, 6);
   });
 
-  it('ocupación, porcentajes y conteos por plantilla', () => {
+  it('occupancy, percentages and per-template counts', () => {
     const p: Problem = { material: rect(0, 0, 100, 100), defects: [rect(50, 50, 50, 50)], templates: [T], spacing: 0 };
     const placements = [
       { templateId: 'r', instance: 0, rotation: 0, polygon: rect(0, 0, 10, 10) },
@@ -46,7 +46,7 @@ describe('computeMetrics', () => {
     expect(m.requestedCount).toBe(3);
   });
 
-  it('piezas solapadas no inflan el área ocupada', () => {
+  it('overlapping pieces do not inflate the occupied area', () => {
     const p: Problem = { material: rect(0, 0, 100, 100), defects: [], templates: [T], spacing: 0 };
     const placements = [
       { templateId: 'r', instance: 0, rotation: 0, polygon: rect(0, 0, 10, 10) },
@@ -55,7 +55,7 @@ describe('computeMetrics', () => {
     expect(computeMetrics(p, placements).occupiedArea).toBeCloseTo(150, 6);
   });
 
-  it('defectos que cubren todo ⇒ utilizable 0 sin división por cero', () => {
+  it('defects covering everything ⇒ usable 0 without division by zero', () => {
     const p: Problem = { material: rect(0, 0, 100, 100), defects: [rect(-5, -5, 110, 110)], templates: [T], spacing: 0 };
     const m = computeMetrics(p, []);
     expect(m.usableArea).toBeCloseTo(0, 6);

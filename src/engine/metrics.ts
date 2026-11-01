@@ -1,14 +1,14 @@
 /**
- * Métricas recalculadas SIEMPRE desde la geometría (nunca desde contadores del optimizador).
+ * Metrics ALWAYS recomputed from the geometry (never from optimizer counters).
  *
- * Denominadores:
- * - totalArea      = área(material)
- * - excludedArea   = área(unión(defectos) ∩ material)            (sin doble conteo; lo de fuera no cuenta)
+ * Denominators:
+ * - totalArea      = area(material)
+ * - excludedArea   = area(union(defects) ∩ material)            (no double counting; anything outside does not count)
  * - usableArea     = totalArea − excludedArea
- * - occupiedArea   = área(unión(piezas) ∩ (material − defectos)) (piezas solapadas o fuera no suman de más)
- * - usableUtilization   = 100 · occupiedArea / usableArea   (0 si usableArea = 0)
- * - materialUtilization = 100 · occupiedArea / totalArea    (0 si totalArea = 0)
- * Conteos: `placed` cuenta instancias distintas y válidas (templateId conocido, 0 <= instance < qty).
+ * - occupiedArea   = area(union(pieces) ∩ (material − defects)) (overlapping or out-of-bounds pieces are not over-counted)
+ * - usableUtilization   = 100 · occupiedArea / usableArea   (0 if usableArea = 0)
+ * - materialUtilization = 100 · occupiedArea / totalArea    (0 if totalArea = 0)
+ * Counts: `placed` counts distinct, valid instances (known templateId, 0 <= instance < qty).
  */
 import type { Metrics, Placement, Problem } from '../types';
 import { type MultiPolygon, dedupeRing, difference, intersection, multiArea, ringArea, union } from './geometry';
