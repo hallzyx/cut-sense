@@ -84,7 +84,7 @@ Reference layers are off by default because some machines cut every layer they r
   },
   "plan": {                        // null when there is no plan
     "placements": [{ "templateId": "t0", "instance": 0, "rotation": 0, "polygon": [[x, y], ...] }],
-    "seed": 1, "optimizerVersion": "cs-nest-1.0", "elapsedMs": 2140,
+    "seed": 1, "optimizerVersion": "cs-nest-1.1", "elapsedMs": 2140,
     "kits": { "n": 3, "perKit": { "t0": 1 } },
     "extras": []
   }
@@ -113,7 +113,7 @@ From the result details, **Download problem + solution (JSON)** saves the exact 
 
 ```json
 { "problem": { "material": [...], "defects": [...], "templates": [...], "spacing": 12.3, "seed": 1, "timeLimitMs": 4000 },
-  "solution": { "placements": [...], "metrics": {...}, "elapsedMs": 2140, "optimizerVersion": "cs-nest-1.0", "seed": 1 },
+  "solution": { "placements": [...], "metrics": {...}, "elapsedMs": 2140, "optimizerVersion": "cs-nest-1.1", "seed": 1 },
   "verify": { "valid": true, "violations": [] } }
 ```
 

@@ -56,7 +56,7 @@ CutSense is honest about its limits, and so is this README:
 | **Custom pieces** | Draw a shape on a small canvas, or import the largest closed shape from an SVG (curves are sampled into polygons; the real width is read from the SVG's `width`/`viewBox`). Up to 6 piece types per order. |
 | **Exports** | Verified plan as SVG or PNG (with or without the photo). With a calibration in cm or mm: a 1:1 print layout tiled across A4 or Letter sheets with overlap marks, a 5 × 5 cm scale check and per-piece templates; a 1:1 SVG in centimetres; and a DXF (R12, millimetres, pieces on a `CUT` layer, optional `MATERIAL`/`DEFECTS` reference layers). |
 | **Save and open projects** | One JSON file holds the photo, outline, zones, calibration, order and plan (Ctrl/Cmd+S). On open, the file is strictly validated and the plan is verified again; a plan that no longer passes is dropped, not shown. |
-| **Reproducibility** | Every result carries the seed and optimizer version (`cs-nest-1.0`). "Download problem + solution (JSON)" saves the exact input and output. |
+| **Reproducibility** | Every result carries the seed and optimizer version (`cs-nest-1.1`). "Download problem + solution (JSON)" saves the exact input and output. |
 | **Hilo, the AI pattern maker** | A design chat (Muse Spark via the Meta Model API) that asks one question at a time with quick replies, reads sketches, and proposes flat pieces with sizes and quantities as strictly validated data. Nothing is applied until you approve it. When a plan cannot fit even one complete product, Hilo can be opened with a diagnosis already written. |
 | **3D assembly preview** | Each proposal comes with an approximate 3D model of how the pieces fold and assemble, built from the real piece sizes, reviewed by the model against a render, and checked deterministically before it is revealed. See [docs/3d-preview.md](docs/3d-preview.md). |
 | **Accessible UI** | Light and dark themes, keyboard paths, colour never used alone (pieces carry colour + pattern + letter), polite live announcements, reduced-motion support. Hilo answers in the language you write in. |
@@ -134,7 +134,7 @@ flowchart LR
     outline --> defects["Excluded zones<br/>drawn · circle · SAM detection (accepted by you)"]
     defects --> calib["Calibration<br/>width or two points → px per cm"]
     calib --> pieces["Pieces<br/>kits · shapes · custom · Hilo proposal"]
-    pieces --> nest["Deterministic nesting<br/>cs-nest-1.0, seeded"]
+    pieces --> nest["Deterministic nesting<br/>cs-nest-1.1, seeded"]
     nest --> verify{"Independent verifier<br/>polygon clipping + segment distances"}
     verify -- "violations" --> repair["Drop offending pieces"] --> verify
     verify -- "valid" --> result["Verified plan<br/>metrics from geometry"]
@@ -225,7 +225,7 @@ On the roadmap:
 | Document | Topic |
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | Modules, data flow, units, the Project/Result state model, why AI proposes and code decides |
-| [docs/engine.md](docs/engine.md) | Nesting heuristic `cs-nest-1.0`, complete-set search, verifier guarantees, leftover |
+| [docs/engine.md](docs/engine.md) | Nesting heuristic `cs-nest-1.1`, complete-set search, verifier guarantees, leftover |
 | [docs/api.md](docs/api.md) | Every endpoint: shapes, error codes, rate limits, timeouts, env vars |
 | [docs/agent.md](docs/agent.md) | Hilo: conversation rules, quick replies, sketches, schema, guardrails |
 | [docs/3d-preview.md](docs/3d-preview.md) | 3D assembly preview: scene language, review loop, checks, limits |
