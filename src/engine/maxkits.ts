@@ -13,6 +13,8 @@
  * already been tried). Then AUGMENTATION: with the N-kit plan fixed (its pieces as obstacles with the same
  * spacing) it tries to place one more kit in the free gap; it is accepted only if all its pieces fit
  * and the combined plan passes `verifySolution` for N+1 kits; repeated until it fails. Upper bound: min(maxKits, ⌊usable area / kit area⌋, ⌊400 / pieces per kit⌋).
+ * The attempts skip the optimizer's leftover passes; if time remains, the final N-kit plan is re-optimized
+ * once with them and replaced only by a complete, verified plan with a larger contiguous leftover.
  *
  * Budget: `timeLimitMs` (8000 by default) is split among the estimated remaining attempts.
  * Each attempt gets 80% of its share as `timeLimitMs` because the optimizer's first pass
@@ -24,6 +26,7 @@ import type { Problem, Solution } from '../types';
 import { dedupeRing, difference, multiArea, ringArea } from './geometry';
 import { computeMetrics } from './metrics';
 import { OPTIMIZER_VERSION, optimizeSteps, type ProgressCallback } from './optimize';
+import { compareLeftover, leftoverScore } from './remainder';
 import { verifySolution } from './verify';
 
 export const DEFAULT_KITS_TIME_LIMIT_MS = 8000;
@@ -120,7 +123,7 @@ export function* maximizeKitsSteps(problem: Problem, options: MaxKitsOptions = {
       // 0.8: the optimizer's final repair can use up to 1.25× its limit
       timeLimitMs: Math.max(1, slice * 0.8),
     };
-    const sol = yield* optimizeSteps(p, { now });
+    const sol = yield* optimizeSteps(p, { now, leftoverPasses: 0 });
     const requested = n * perKitCount;
     const ok = requested > 0 && sol.placements.length === requested;
     attempts.push({ kits: n, placed: sol.placements.length, requested });
@@ -142,7 +145,7 @@ export function* maximizeKitsSteps(problem: Problem, options: MaxKitsOptions = {
       seed: (seed + (best + 1) * 0x85ebca6b) >>> 0,
       timeLimitMs: Math.max(1, slice * 0.8),
     };
-    const sol = yield* optimizeSteps(p, { now });
+    const sol = yield* optimizeSteps(p, { now, leftoverPasses: 0 });
     const n = best + 1;
     const requested = n * perKitCount;
     let ok = sol.placements.length === perKitCount;
@@ -193,6 +196,20 @@ export function* maximizeKitsSteps(problem: Problem, options: MaxKitsOptions = {
       //    spacing), try to place ONE more kit in the free space; repeat while it works
       while (best >= 1 && best < ub && !outOfTime()) {
         if (!(yield* augment())) break;
+      }
+      // 5) leftover polish: the attempts skip the optimizer's leftover passes (they only need "does it fit");
+      //    the plan of `best` kits is re-optimized once with them and replaces the chosen plan only if it is
+      //    complete, verified and leaves a strictly larger contiguous leftover (same kits, same pieces)
+      if (best >= 1 && !outOfTime()) {
+        const expanded = expandKits(problem, best);
+        const remaining = Math.max(0, budget - (now() - start));
+        // 0.4: the optimizer's first pass can use up to 2× its limit
+        const sol = yield* optimizeSteps({ ...expanded, seed, timeLimitMs: Math.max(1, remaining * 0.4) }, { now });
+        const cur = results.get(best)!;
+        if (sol.placements.length === best * perKitCount && verifySolution(expanded, sol.placements).valid) {
+          const a = leftoverScore(expanded, sol.placements), b = leftoverScore(expanded, cur.placements);
+          if (compareLeftover(a, b, a.cellArea) > 0) results.set(best, { ...cur, placements: sol.placements });
+        }
       }
     }
   }

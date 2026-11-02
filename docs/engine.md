@@ -21,9 +21,9 @@ A `Template.shape` is already sized, with its bounding box anchored at (0, 0). S
 
 A `Solution` holds `placements` (template id, instance index, rotation, final polygon), `metrics`, `elapsedMs`, `optimizerVersion` and `seed`.
 
-## Nesting heuristic `cs-nest-1.0`
+## Nesting heuristic `cs-nest-1.1`
 
-`optimize.ts`. Objective: **place as many pieces as possible; break ties by the larger occupied area.**
+`optimize.ts`. Objective: **place as many pieces as possible; break ties by the larger occupied area, then by the larger contiguous leftover** (then fewer leftover fragments).
 
 ### 1. Pieces and orientations
 
@@ -71,6 +71,8 @@ The current genome follows a hill climb that **accepts ties** (a pass that place
 
 A pass's plan is *considered* only if it beats the best plan so far (more pieces, or the same count and more area). It is then run through `repairPlacements`: the independent verifier is called, and any offending piece is dropped (for a pair, the later one) until the plan is valid. Only if the repaired plan still beats the best does it become the new best. **The optimizer never returns a plan the verifier rejects.**
 
+**Leftover tie-break.** A plan that ties the best one in pieces *and* area (within `1e-9 · S²`) is compared by its leftover, and wins if its largest contiguous fragment is bigger (beyond half a raster cell), or equal with fewer fragments; the winner still goes through `repairPlacements` and must keep the same count. The score is a raster proxy (`scoreFreeRaster` in `remainder.ts`), not `computeRemainder`: on the occupancy raster, the blocked cells are grown by a probe radius `max(spacing, S/64)`, and the remaining free cells are split into 4-connected components. Polygon clipping would be far slower and, with spacing > 0, the gaps between pieces join the whole leftover into one fragment, so every plan would look the same; with the probe, gaps and slivers narrower than ~2·`S/64` do not count as contiguous. It costs well under a millisecond per tie (the raster already holds the pass's plan) and is computed only on ties. It never steers the search: the genome follows piece counts as before and the repair pass starts from the plan the strict order would have kept, so the piece count is the same as without the tie-break. When every piece fits early, up to `leftoverPasses` (default 7) extra uniform-gravity passes, those not run yet, are made only to offer such ties.
+
 ### 6. Repair pass
 
 When pieces are still missing and time remains, a final pass tries to insert each pending piece into the best plan with a finer grid (down to `S/200`). If a pending piece does not fit, it tries a **swap**: remove a smaller placed piece, place the pending one, then re-place the removed one; the swap is kept only if both fit. The result goes through the same verification as every other candidate.
@@ -78,7 +80,7 @@ When pieces are still missing and time remains, a final pass tries to insert eac
 ### 7. Time budget and determinism
 
 - The same problem and seed always produce the same sequence of passes, so the same plan, **as long as the time budget does not cut the search short**.
-- The search stops after `maxIterations` passes, when everything is placed, or when `timeLimitMs` runs out (default 4000 ms; the first pass may use up to 2× the budget so there is always a result, and the repair pass up to 1.25×). The time limit is a safeguard: on a much slower machine fewer passes may run, and the plan can differ.
+- The search stops after `maxIterations` passes, when everything is placed (plus the leftover passes), or when `timeLimitMs` runs out (default 4000 ms; the first pass may use up to 2× the budget so there is always a result, and the repair pass up to 1.25×). The time limit is a safeguard: on a much slower machine fewer passes may run, and the plan can differ.
 - For fully deterministic runs (tests, benchmarks), inject a clock with `options.now` that does not advance.
 - `optimizeSteps` is a generator that yields regularly. `optimize` runs it synchronously; `optimizeAsync` yields to the event loop about every 50 ms so the UI stays responsive, and reports progress as `max(passes done / maxIterations, elapsed / timeLimit)`.
 
@@ -92,7 +94,8 @@ When pieces are still missing and time remains, a final pass tries to insert eac
   1. exponential growth 1, 2, 4, … until the first failure or the bound;
   2. binary search between the last success and the first failure;
   3. a check of best + 1 and best + 2 (re-tried with a derived seed if already attempted);
-  4. **augmentation**: with the plan for the best *N* fixed (its pieces become obstacles with the same spacing), try to place one more set in the free space; accept only if all its pieces fit and the combined plan passes `verifySolution` for *N* + 1 sets; repeat until it fails.
+  4. **augmentation**: with the plan for the best *N* fixed (its pieces become obstacles with the same spacing), try to place one more set in the free space; accept only if all its pieces fit and the combined plan passes `verifySolution` for *N* + 1 sets; repeat until it fails;
+  5. **leftover polish**: the attempts run without the optimizer's leftover passes; if time remains, the *N*-set problem is optimized once more with them, and that plan replaces the chosen one only if it is complete, passes the verifier and has a strictly better leftover score (`leftoverScore`).
 - **Budget.** `timeLimitMs` (default 8000 ms) is shared among the estimated remaining attempts; each attempt gets 80 % of its share because the optimizer's repair pass may overrun its own limit by 25 %. The same determinism caveat applies: identical with a frozen clock, possibly different on a much slower machine.
 - **Result.** `kits` (the best *N*, or 0), `perKit`, the plan with metrics for the expanded problem, and the list of attempts.
 

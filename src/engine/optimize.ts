@@ -1,7 +1,8 @@
 /**
- * Deterministic nesting optimizer — 'cs-nest-1.0'.
+ * Deterministic nesting optimizer — 'cs-nest-1.1'.
  *
- * Goal: maximize the number of placed pieces; ties broken by larger occupied area.
+ * Goal: maximize the number of placed pieces; ties broken by larger occupied area, then by the leftover:
+ * the plan whose largest contiguous leftover fragment is bigger (then the one with fewer fragments).
  *
  * Method:
  * 1. Each template is expanded into instances; each allowed rotation yields an "orientation"
@@ -22,9 +23,15 @@
  *    mulberry32 PRNG (seed). At the end, repair: insertion of pending pieces with a fine grid and by
  *    swapping with a smaller piece. The best plan is kept. Every improvement goes through `verifySolution`
  *    (independent); if it fails, the offending pieces are removed: an invalid plan is never returned.
+ * 5. Leftover tie-break: only when a plan ties the best one in pieces and area, both are scored with a
+ *    raster proxy of the leftover (`scoreFreeRaster` in remainder.ts, on the occupancy raster: < 1 ms) and
+ *    the larger contiguous fragment wins. It never trades pieces or area, it does not steer the search
+ *    (the genome and the final repair use the same plans as without it), and a tie that wins still goes
+ *    through `verifySolution`. If everything is placed early, up to `leftoverPasses` (7) extra
+ *    uniform-gravity passes are run only to offer such ties.
  *
  * Determinism: same problem + seed ⇒ same sequence of passes. The search stops after
- * `maxIterations` passes (deterministic), when everything is placed, or when `timeLimitMs` runs out (safeguard:
+ * `maxIterations` passes (deterministic), when everything is placed (plus the leftover passes), or when `timeLimitMs` runs out (safeguard:
  * if the clock cuts in before maxIterations, slower machines might explore fewer passes).
  */
 import type { Placement, Problem, Pt, Ring, Solution, Template } from '../types';
@@ -33,12 +40,15 @@ import {
   pointSegDist2, scaleOf, segSegDist2, translateRing,
 } from './geometry';
 import { computeMetrics } from './metrics';
+import { compareLeftover, DEFAULT_MIN_AREA_FRACTION, leftoverProbeRadius, type LeftoverScore, scoreFreeRaster } from './remainder';
 import { verifySolution } from './verify';
 
-export const OPTIMIZER_VERSION = 'cs-nest-1.0';
+export const OPTIMIZER_VERSION = 'cs-nest-1.1';
 export const DEFAULT_TIME_LIMIT_MS = 4000;
 export const DEFAULT_MAX_ITERATIONS = 150;
 export const DEFAULT_SEED = 1;
+/** Extra uniform-gravity passes run after a complete plan, only to look for a better leftover (default 7). */
+export const DEFAULT_LEFTOVER_PASSES = 7;
 /** Extra margin (relative to the scale) the optimizer adds to the spacing so it does not graze the verifier tolerance. */
 export const OPT_MARGIN_REL = 1e-7;
 const MAX_INSTANCES = 400;
@@ -66,6 +76,11 @@ export interface OptimizeOptions {
   maxIterations?: number;
   /** Called after each pass and at the end: (fraction 0..1, detail). */
   onProgress?: ProgressCallback;
+  /**
+   * When every piece is placed, number of extra uniform-gravity passes (those not run yet) used only to
+   * break the tie by leftover (default 7 = all the gravities; 0 disables it). Never changes the piece count.
+   */
+  leftoverPasses?: number;
 }
 
 export type ProgressCallback = (fraction: number, detail: OptimizeProgress) => void;
@@ -252,6 +267,8 @@ class Nester {
   private placed: Placed[] = [];
   private baseAnchors: { x: number[]; y: number[] };
   private deadline = Infinity;
+  private probe: number;
+  private minLeftover: number;
   aborted = false;
   /** Positions (in the order of the last pass) of the pieces that did not fit. */
   lastFailed: number[] = [];
@@ -286,6 +303,20 @@ class Nester {
       }
     }
     this.rDyn = this.rStatic.slice();
+    this.probe = leftoverProbeRadius(this.S, spacing);
+    this.minLeftover = DEFAULT_MIN_AREA_FRACTION * ringArea(material);
+  }
+
+  /** Area of one raster cell (tolerance when comparing leftovers). */
+  get cellArea(): number { return this.rc * this.rc; }
+
+  /**
+   * Leftover proxy of the plan `list` (see `scoreFreeRaster` in remainder.ts) on the occupancy raster.
+   * After a pass the raster already holds `list`, so it is only repainted when `list` is another plan.
+   */
+  leftover(list: Placed[]): LeftoverScore {
+    if (list !== this.placed) this.setPlaced(list);
+    return scoreFreeRaster(this.rDyn, this.rnx, this.rny, this.rc, this.probe, this.minLeftover);
   }
 
   private paint(ring: Ring, bb: BBox): void {
@@ -638,23 +669,43 @@ export function* optimizeSteps(problem: Problem, options: OptimizeOptions = {}):
   let best: Placement[] = [];
   let bestArea = 0;
   let bestPlaced: Placed[] = [];
+  let bestLeftover: LeftoverScore | null = null;
+  // plan the final repair starts from: the best one under the strict (pieces, area) order, as if there were
+  // no leftover tie-break, so the repair (and therefore the piece count) is the same as without it
+  let repairBase: Placed[] = [];
   // "current" genome of the hill climbing: ties are accepted so it can walk across plateaus
   let bestGenome: { order: Item[]; gravs: Gravity[]; failed: number[] } | null = null;
   let curCount = -1;
   const randGrav = () => GRAVITIES[Math.floor(rng() * GRAVITIES.length)];
 
-  /** Accepts `placed` as the best plan if it improves (piece count, then area) and passes the verifier. */
+  const improves = (n: number, a: number) => n > best.length || (n === best.length && a > bestArea + areaTol);
+  const ties = (n: number, a: number) => n > 0 && n === best.length && Math.abs(a - bestArea) <= areaTol;
+
+  /**
+   * Accepts `placed` as the best plan if it improves (piece count, then area) or, on a tie in both, if it
+   * leaves a larger contiguous leftover (raster proxy; computed only on ties) — and passes the verifier.
+   */
   const consider = (placed: Placed[]): boolean => {
     let cand = toPlacements(placed);
     const candArea = planArea(cand);
-    if (!(cand.length > best.length || (cand.length === best.length && candArea > bestArea + areaTol))) return false;
+    const strict = improves(cand.length, candArea);
+    let left: LeftoverScore | null = null;
+    if (!strict) {
+      if (!ties(cand.length, candArea)) return false;
+      left = nester.leftover(placed);
+      bestLeftover ??= nester.leftover(bestPlaced);
+      if (compareLeftover(left, bestLeftover, nester.cellArea) <= 0) return false;
+    }
     cand = repairPlacements(problem, cand);
     const a = planArea(cand);
-    if (!(cand.length > best.length || (cand.length === best.length && a > bestArea + areaTol))) return false;
+    // a tie candidate that loses a piece in the repair no longer ties: rejected
+    if (strict ? !improves(cand.length, a) : cand.length !== best.length || !ties(cand.length, a)) return false;
     best = cand;
     bestArea = a;
     const kept = new Set(cand.map((c) => c.polygon));
     bestPlaced = placed.filter((q) => kept.has(q.ring));
+    bestLeftover = left; // lazily recomputed on the next tie when null
+    if (strict) repairBase = bestPlaced;
     return true;
   };
 
@@ -713,16 +764,31 @@ export function* optimizeSteps(problem: Problem, options: OptimizeOptions = {}):
     if (aborted || best.length >= instances.length) break;
   }
 
-  // final repair: insert pending pieces into the best plan (fine grid, all gravities, swaps)
+  // leftover polish: with every piece placed, the uniform-gravity passes not run yet can only tie on
+  // pieces and area; `consider` keeps the one with the largest contiguous leftover (bounded, deterministic)
+  const extra = Math.max(0, Math.floor(options.leftoverPasses ?? DEFAULT_LEFTOVER_PASSES));
+  if (best.length >= instances.length && best.length > 0 && extra > 0) {
+    let runs = 0;
+    for (let gi = Math.min(iterationsDone, 4); gi < GRAVITIES.length && runs < extra; gi++) {
+      if (now() - start > timeLimit) break;
+      runs++;
+      const placed = yield* nester.pass(baseOrder, baseOrder.map(() => GRAVITIES[gi]), start + timeLimit);
+      if (nester.aborted) break;
+      consider(placed);
+    }
+  }
+
+  // final repair: insert pending pieces into the best plan (fine grid, all gravities, swaps); it starts from
+  // `repairBase` so that the leftover tie-break never changes the pieces it manages to add
   if (best.length < instances.length && now() - start <= timeLimit) {
     const count = new Map<number, number>();
-    for (const p of bestPlaced) count.set(p.item.tIdx, (count.get(p.item.tIdx) ?? 0) + 1);
+    for (const p of repairBase) count.set(p.item.tIdx, (count.get(p.item.tIdx) ?? 0) + 1);
     const pending: Item[] = [];
     for (const it of baseOrder) {
       const c = count.get(it.tIdx) ?? 0;
       if (c > 0) count.set(it.tIdx, c - 1); else pending.push(it);
     }
-    const placed = yield* nester.insertPending(bestPlaced, pending, start + 1.25 * timeLimit);
+    const placed = yield* nester.insertPending(repairBase, pending, start + 1.25 * timeLimit);
     if (!nester.aborted) consider(placed);
   }
   return finish(best);

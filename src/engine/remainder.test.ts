@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Placement, Problem } from '../types';
 import { signedArea } from './geometry';
 import { computeMetrics } from './metrics';
-import { computeRemainder, fragmentAsMaterial } from './remainder';
+import { compareLeftover, computeRemainder, fragmentAsMaterial, leftoverScore } from './remainder';
 import { makeTemplate } from './templates';
 import { rect } from './testFixtures';
 
@@ -59,5 +59,28 @@ describe('computeRemainder', () => {
     expect(m.material).toEqual(f.outer);
     expect(m.defects).toEqual(f.holes);
     expect(computeMetrics({ ...prob([]), ...m }, []).usableArea).toBeCloseTo(9600, 6);
+  });
+});
+
+describe('leftoverScore (raster proxy for the optimizer tie-break)', () => {
+  it('a strip of pieces: 2 fragments, the largest ≈ the wider side shrunk by the probe', () => {
+    const r = leftoverScore(prob([]), [pl(rect(30, 0, 10, 100))]);
+    expect(r.fragments).toBe(2);
+    expect(r.largest).toBeGreaterThan(5000); // 60×100 minus a band of ~1.6 (S/64) along its edges
+    expect(r.largest).toBeLessThan(6000);
+  });
+
+  it('a gap narrower than the probe does not join the leftover (unlike the exact geometry)', () => {
+    const ps = [pl(rect(30, 0, 10, 49.5)), pl(rect(30, 50.5, 10, 49.5), 1)];
+    expect(computeRemainder(prob([]), ps).fragments).toHaveLength(1);
+    expect(leftoverScore(prob([]), ps).fragments).toBe(2);
+  });
+
+  it('compareLeftover: larger biggest fragment first, then fewer fragments', () => {
+    const corner = leftoverScore(prob([]), [pl(rect(0, 0, 20, 20))]);
+    const middle = leftoverScore(prob([]), [pl(rect(40, 0, 20, 100))]);
+    expect(compareLeftover(corner, middle, corner.cellArea)).toBeGreaterThan(0);
+    expect(compareLeftover({ largest: 10, fragments: 1 }, { largest: 10, fragments: 3 }, 1)).toBeGreaterThan(0);
+    expect(compareLeftover({ largest: 10, fragments: 1 }, { largest: 10, fragments: 1 }, 1)).toBe(0);
   });
 });
