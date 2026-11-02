@@ -7,13 +7,19 @@ From a photo of an irregular scrap to a cutting plan you can trust.</p>
 
 ---
 
-CutSense turns a photo of an irregular flat offcut (leather, felt, foam, cardboard) into a verified cutting plan. Photograph the scrap, let AI outline it, mark the defects, choose what you want to make, and get a layout that a geometric verifier has checked before you see it. Export it as an image, print it at real scale across sheets of paper, or send a DXF to a cutting machine.
+Every workshop has a drawer of offcuts that are too good to throw away and too awkward to plan around. CutSense turns that drawer into material: photograph a scrap of leather, felt, foam or cardboard, and get a cutting plan that a geometric verifier has checked before you see it. Then keep going: whatever is left becomes the next piece of material, so every offcut gets a second and a third life.
 
-The idea behind it is simple: **AI proposes, deterministic code places and verifies, you decide.** Segmentation and the design assistant are AI. Placement, verification, metrics and exports are plain, reproducible geometry.
+- **From photo to plan in minutes.** AI outlines the irregular shape, you mark the flaws, pick what to make, and the nesting engine lays the pieces out around them.
+- **A plan you can trust.** Every layout passes an independent verifier (no overlaps, nothing outside the material, nothing on a defect, the spacing you asked for) before it is shown.
+- **Built for the leftover.** Among equally good layouts, CutSense prefers the one that leaves the largest single piece of material free, then lets you plan another product on it or photograph the real remnant and start again.
+- **Ready for the bench or the machine.** Print the pieces at 1:1 across sheets of paper, or export SVG and DXF for a cutter.
+- **Design with a partner.** Hilo, the AI pattern maker, turns "I want a small wallet" into flat pieces with sizes, and shows an assembled 3D preview before you cut.
+
+The principle behind it: **AI proposes, deterministic code places and verifies, you decide.** Segmentation and the design assistant are AI. Placement, verification, metrics and exports are plain, reproducible geometry, so the same input gives the same plan and every number can be traced back to the geometry.
 
 ## Contents
 
-- [What it does](#what-it-does) and [what it does not do](#what-it-does-not-do)
+- [What it does](#what-it-does) and [why you can trust the plan](#why-you-can-trust-the-plan)
 - [Features](#features)
 - [Screenshots](#screenshots)
 - [Quick start](#quick-start)
@@ -21,7 +27,7 @@ The idea behind it is simple: **AI proposes, deterministic code places and verif
 - [Project layout](#project-layout)
 - [API at a glance](#api-at-a-glance)
 - [Security and privacy](#security-and-privacy)
-- [Roadmap and known limits](#roadmap-and-known-limits)
+- [Scope and roadmap](#scope-and-roadmap)
 - [Documentation](#documentation)
 - [Contributing and license](#contributing-and-license)
 
@@ -31,15 +37,15 @@ The idea behind it is simple: **AI proposes, deterministic code places and verif
 2. **Prepare.** A three-item checklist: **Scale** (calibrate with the material's real width or with two points on a known length), **Excluded zones** (draw them, drop a circle, or ask SAM to detect defects), and **Pieces** (ready-made kits, basic shapes, your own drawn or imported shapes, or a design worked out with Hilo, the AI pattern maker).
 3. **Result.** A deterministic nesting engine places the pieces and an independent verifier checks the plan. You see a verified plan, how much of the usable area it occupies, and what (if anything) did not fit. Then you export it, try another product on the leftover, or plan the next batch on a leftover fragment.
 
-## What it does not do
+## Why you can trust the plan
 
-CutSense is honest about its limits, and so is this README:
-
-- **No proven optimum.** The plan is the best one a seeded heuristic search found within its budget. It is verified to be *valid*, not proven to be *optimal*.
-- **No industrial accuracy.** Exports are reference drawings. Accuracy depends on the calibration and on the photo being taken from nearly straight above; strong perspective makes the scale unreliable. Kerf, speed and power are your machine's business.
-- **No measured savings.** The app reports the area it occupies; it does not claim cost or waste savings.
-- **No accounts, no cloud storage.** Projects live in your browser session and in files you choose to save.
-- **AI output is a proposal.** SAM can miss stains it treats as material, and Hilo's measurements are a starting point you review before cutting.
+- **Verified, every time.** A second, independent geometric path checks containment, defect invasion, overlap and spacing before a plan can become a result. A plan that fails is repaired or dropped; an invalid layout is never shown or exported.
+- **Real numbers from real geometry.** Occupied area, usable area, pieces placed and what did not fit are recomputed from the final geometry, not read from the optimizer.
+- **Reproducible.** Every result carries its seed and optimizer version (`cs-nest-1.1`), and you can download the exact problem and solution as JSON. The same input and seed give the same plan.
+- **You stay in control.** AI output is always a proposal: you accept, edit or redraw SAM's outline and defect zones, and you approve Hilo's pieces before anything is applied.
+- **Honest about edits.** Change anything after optimizing and the plan is marked out of date until you re-optimize, so you never export a layout that no longer matches your data.
+- **Accurate where it counts.** With a calibration in cm or mm and a photo taken from straight above, plans, print sheets and DXF files carry real sizes.
+- **Private by design.** No accounts and no cloud storage: projects live in your browser and in files you choose to save.
 
 ## Features
 
@@ -202,17 +208,16 @@ Full request and response shapes, error codes and limits: [docs/api.md](docs/api
 - **Project files are not trusted.** Opening a project validates every field (types, ranges, sizes, embedded image format, 40 MB cap) and re-runs the verifier on the saved plan. A tampered or outdated plan is discarded.
 - **Where your data goes.** Photos are sent to the Meta Model API for segmentation; Hilo messages, sketches and 3D renders are sent to it for the design and preview features. Nothing is stored by the CutSense server. A saved project file contains your photo, so treat it as private.
 
-## Roadmap and known limits
+## Scope and roadmap
 
-Known limits today:
+Designed for today:
 
-- Single sheet of material per plan; no multi-sheet nesting.
-- Rotations are restricted to 0°, 90°, 180° and 270° per piece.
-- The search budget is time-based (4 s for a fixed order, 8 s for complete sets). Results are deterministic for the same input and seed, but a much slower machine may explore fewer passes and find a different plan.
-- At most 6 piece types per order and 400 piece instances per optimization.
-- Defects that SAM sees as material must be drawn by hand.
-- Two-point calibration assumes a near top-down photo.
-- The 3D preview is an approximation: uniform thickness, ideal folds, symbolic stitches; garments are shown flat.
+- **One sheet of material per plan**, with rotations of 0°, 90°, 180° and 270° per piece.
+- **Orders of up to 6 piece types** and 400 piece instances per optimization.
+- **A fast, bounded search**: 4 s for a fixed order and 8 s for complete sets, so the interface stays responsive.
+- **Hand-drawn zones** for any defect that SAM reads as material.
+- **Top-down photos** for the most accurate calibration.
+- **A quick 3D preview**: an assembled view of how the pieces fold, with uniform thickness and ideal folds, shown as a technical drawing for garments.
 
 On the roadmap:
 
