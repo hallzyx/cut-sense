@@ -1,6 +1,15 @@
 # Architecture
 
-CutSense is a single-page React app (Vite, TypeScript) with a small Express API next to it. Almost everything runs in the browser: digitizing, nesting, verification, metrics, exports and project files. The server exists for one reason: to call the Meta Model API without ever exposing the API key to the browser.
+CutSense turns an offcut into a verified cutting plan, and the leftover into the next piece of material. The architecture is built around that loop, and around one rule: **AI proposes, deterministic code places and verifies, you decide.**
+
+It is a single-page React app (Vite, TypeScript) with a small Express API next to it. Almost everything runs in the browser: digitizing, nesting, verification, metrics, exports and project files, so plans are fast, private and reproducible. The server has one job: to call the Meta Model API without ever exposing the API key to the browser.
+
+What the design delivers:
+
+- **Verified plans.** An independent verifier checks every candidate before it can become a result.
+- **Reproducible results.** Same problem and seed, same plan; each result carries the optimizer version.
+- **A closed loop for offcuts.** The leftover is computed from the final geometry and can be planned again.
+- **Works with or without AI.** Without credentials, labelled alternatives keep the whole flow available.
 
 ```mermaid
 flowchart TB
