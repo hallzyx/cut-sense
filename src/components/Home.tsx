@@ -128,6 +128,7 @@ export default function Home({ onFile, onExample, onOpenProject, error, isDark, 
             <a href="#how">How it works</a><a href="#leftover">Leftover</a><a href="#trust">Trust</a><a href="#hilo">Hilo</a><a href="#exports">Exports</a><a href="#faq">Good to know</a>
           </nav>
           <div className="lp-top__end">
+            <button className="cs-btn cs-btn--ghost cs-btn--sm" type="button" onClick={() => projectInput.current?.click()} title="Open a saved project (.json)">Open project</button>
             <button className="cs-btn cs-btn--secondary cs-btn--sm lp-top__cta" type="button" onClick={upload}>Upload a photo</button>
             <button className="cs-btn cs-btn--ghost lp-theme" type="button" aria-pressed={isDark} aria-label="Dark theme" onClick={onTheme}>{isDark ? Icon.moon : Icon.sun}</button>
           </div>
@@ -152,18 +153,10 @@ export default function Home({ onFile, onExample, onOpenProject, error, isDark, 
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) onOpenProject(f); e.target.value = ''; }} />
               <div className="lp-hero__aux">
                 <p className="cs-caption">JPG, PNG or WebP · up to 10 MB · flat material, contrasting background, even light, overhead camera</p>
-                <p className="cs-body-sm"><button className="cs-link" type="button" onClick={() => projectInput.current?.click()}>Open a saved project (.json)</button></p>
               </div>
               <div className="lp-hero__alert" role="alert">{error && (
                 <div className="cs-alert cs-alert--danger">{Icon.alert}<span className="cs-alert__title">We could not open that file</span><span className="cs-alert__body">{error}</span></div>
               )}</div>
-              <ul className="lp-prov" aria-label="Who does what">
-                <li className="cs-pill cs-pill--ai">AI proposes</li>
-                <li className="cs-pill cs-pill--human">You correct</li>
-                <li className="cs-pill cs-pill--computed">The engine computes</li>
-                <li className="cs-pill cs-pill--verified">Geometry verifies</li>
-              </ul>
-              <div className="lp-ruler" aria-hidden="true" />
             </div>
 
             <figure className="lp-hero__visual">
@@ -385,10 +378,10 @@ export default function Home({ onFile, onExample, onOpenProject, error, isDark, 
                   <li className="lp-file"><span className="cs-badge">JSON</span><span className="lp-file__name">Project and problem</span><span className="cs-caption">Save the project to reopen it later, or download the exact problem and solution.</span></li>
                 </ul>
                 <p className="cs-caption lp-exports__note">Exports marked <span className="cs-unit cs-unit--calibrated lp-unit-sm">cm</span> need a photo calibrated in cm or mm.</p>
-                <div className="cs-alert cs-alert--warn lp-exports__note">
-                  {Icon.warn}
-                  <p><span className="cs-alert__title">Reference drawings.</span> Check one measurement before cutting. Accuracy depends on the calibration and a photo taken from straight above; your machine decides kerf, speed and power.</p>
-                </div>
+                <aside className="lp-note" aria-label="Before you cut">
+                  <span className="lp-note__k">Before you cut</span>
+                  <p><b>Exports are reference drawings.</b> Check one measurement on the real piece first. Accuracy depends on the calibration and a photo taken from straight above, and your machine decides kerf, speed and power.</p>
+                </aside>
               </div>
             </div>
           </div>

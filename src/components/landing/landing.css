@@ -56,10 +56,6 @@ html { scroll-padding-top: 72px; }
 .lp-hero__aux { display: grid; gap: 6px; margin-top: var(--cs-space-4); }
 .lp-hero__alert:empty { display: none; }
 .lp-hero__alert { margin-top: var(--cs-space-4); max-width: 34rem; }
-.lp-prov { display: flex; flex-wrap: wrap; gap: 8px; margin-top: var(--cs-space-6); padding: 0; list-style: none; }
-.lp-ruler { height: 18px; margin-top: var(--cs-space-6); opacity: .5;
-  background: repeating-linear-gradient(90deg, var(--cs-text) 0 1px, transparent 1px 10px) bottom/100% 6px no-repeat,
-              repeating-linear-gradient(90deg, var(--cs-text) 0 1.5px, transparent 1.5px 50px) bottom/100% 12px no-repeat; }
 .lp-hero__visual { position: relative; margin: var(--cs-space-6) 4px var(--cs-space-6); }
 .lp-hero__visual .cs-stage { transform: rotate(1.2deg); box-shadow: var(--cs-shadow-3); }
 .lp-hero__seal { position: absolute; right: -8px; top: -34px; width: 92px; height: 92px; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .25)); }
@@ -219,6 +215,16 @@ html { scroll-padding-top: 72px; }
 .lp-file__name { font-weight: var(--cs-weight-semibold); }
 .lp-file__name .cs-unit { height: 20px; padding: 0 6px; margin-left: 6px; vertical-align: 1px; font-size: var(--cs-text-2xs); }
 .lp-exports__note { margin-top: var(--cs-space-4); }
+/* "Before you cut": a plain note under a ruler edge, no box, icon or tint. */
+.lp-note { position: relative; display: grid; gap: var(--cs-space-2); max-width: 36rem; margin-top: var(--cs-space-8); padding-top: var(--cs-space-6); color: var(--cs-text); }
+.lp-note::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 12px; color: var(--cs-line-strong);
+  background:
+    linear-gradient(currentColor, currentColor) top / 100% 1px no-repeat,
+    repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 8px) top / 100% 5px no-repeat,
+    repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 40px) top / 100% 11px no-repeat; }
+.lp-note__k { font-family: var(--cs-font-mono); font-size: var(--cs-text-2xs); letter-spacing: var(--cs-tracking-caps); text-transform: uppercase; color: var(--cs-text-muted); }
+.lp-note p { margin: 0; font-size: var(--cs-text-sm); line-height: 1.55; color: var(--cs-text-muted); }
+.lp-note b { color: var(--cs-text); font-weight: var(--cs-weight-semibold); }
 @media (min-width: 640px) { .lp-files { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1000px) { .lp-exports { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--cs-space-12); align-items: start; } }
 
