@@ -8,7 +8,9 @@ dist
 .env.*
 !.env.example
 design
-docs
+# The landing imports the 3D renders from docs/3d-preview; the rest of docs is not needed.
+docs/*
+!docs/3d-preview
 *.md
 Dockerfile
 docker-compose*.yml
