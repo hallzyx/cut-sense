@@ -77,26 +77,24 @@ export default function App() {
     }
   };
 
+  const toggleTheme = () => setTheme(isDark ? 'light' : 'dark');
+
+  // The landing page brings its own header, landmarks and footer.
+  if (!p.image) return <Home onFile={onFile} onExample={onExample} onOpenProject={onOpenProject} error={error} isDark={!!isDark} onTheme={toggleTheme} />;
+
   return (
     <>
-      <header className={`nav ${p.image ? 'nav--app' : ''}`}>
-        <div className={p.image ? 'nav-in nav-in--app' : 'container nav-in'}>
-          <a className="logo" href="/" onClick={(e) => { if (p.image) { e.preventDefault(); if (confirm('Back to the start? Unsaved changes will be lost.')) setP(emptyProject()); } }}>
-            {p.image ? <><span className="logo-word"><Logo height={26} /></span><span className="logo-mark" role="img" aria-label="CutSense"><LogoMark size={30} /></span></> : <Logo height={30} />}
+      <header className="nav nav--app">
+        <div className="nav-in nav-in--app">
+          <a className="logo" href="/" onClick={(e) => { e.preventDefault(); if (confirm('Back to the start? Unsaved changes will be lost.')) setP(emptyProject()); }}>
+            <span className="logo-word"><Logo height={26} /></span><span className="logo-mark" role="img" aria-label="CutSense"><LogoMark size={30} /></span>
           </a>
-          {p.image
-            ? <div className="nav-slot" ref={setSlot} />
-            : <>
-              <span className="nav-note">Make sense of every offcut</span>
-              <button className="theme-toggle" aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'} onClick={() => setTheme(isDark ? 'light' : 'dark')}>{isDark ? '☀' : '☾'}</button>
-            </>}
+          <div className="nav-slot" ref={setSlot} />
         </div>
       </header>
       <main>
-        {p.image
-          ? <Workspace key={key} p={p} setP={setP} restored={restored} onReset={() => setP(emptyProject())} onLeftoverPhoto={(f, defs, spacing) => onFile(f, { defs, spacing })}
-            headerSlot={slot} isDark={!!isDark} onTheme={() => setTheme(isDark ? 'light' : 'dark')} />
-          : <Home onFile={onFile} onExample={onExample} onOpenProject={onOpenProject} error={error} />}
+        <Workspace key={key} p={p} setP={setP} restored={restored} onReset={() => setP(emptyProject())} onLeftoverPhoto={(f, defs, spacing) => onFile(f, { defs, spacing })}
+          headerSlot={slot} isDark={!!isDark} onTheme={toggleTheme} />
       </main>
     </>
   );
