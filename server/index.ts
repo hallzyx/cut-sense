@@ -6,6 +6,8 @@
  *   SAM_API_KEY   credential (Bearer)
  *   SAM_MODEL     optional model id (defaults to "sam-3.1")
  *   PORT          port (8787)
+ *   STATIC_DIR    built web bundle to serve (defaults to ../dist when it exists)
+ *   TRUST_PROXY   hops of reverse proxy to trust for req.ip (e.g. 1 behind Traefik)
  *
  * Client contract:
  *   POST /api/segment { image: dataURL, width, height, concept?, points?: [{x,y,label}] (normalized 0..1) }
@@ -16,6 +18,9 @@
  *
  * Format per https://dev.meta.ai/docs/sam (Responses API, stream, mask_encoding one_bit).
  */
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { agentTurn, AgentError } from './agent';
 import { registerAssemblyRoutes } from './assembly';
@@ -101,6 +106,9 @@ async function callSam(image: string, w: number, h: number, concept: string, poi
 }
 
 const app = express();
+app.disable('x-powered-by');
+/** Behind a reverse proxy (Traefik, nginx) set TRUST_PROXY=1 so `req.ip` is the real client, not the proxy. */
+if (process.env.TRUST_PROXY) app.set('trust proxy', /^\d+$/.test(process.env.TRUST_PROXY) ? Number(process.env.TRUST_PROXY) : process.env.TRUST_PROXY);
 app.use(express.json({ limit: '12mb' }));
 registerAssemblyRoutes(app, { base: API_BASE || undefined, key: SAM_API_KEY, model: AGENT_MODEL });
 
@@ -160,4 +168,35 @@ app.post('/api/segment', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`CutSense API on http://localhost:${PORT} (SAM ${SAM_API_URL ? 'configured' : 'not configured'})`));
+/** Unknown API routes answer JSON instead of falling through to the web app. */
+app.use('/api', (_req, res) => {
+  res.status(404).json({ code: 'NOT_FOUND', message: 'Unknown API route.' });
+});
+
+/** Production: when the web bundle has been built (`npm run build`), this same server also serves it. */
+const STATIC_DIR = resolve(process.env.STATIC_DIR ?? join(dirname(fileURLToPath(import.meta.url)), '..', 'dist'));
+const INDEX_HTML = join(STATIC_DIR, 'index.html');
+if (existsSync(INDEX_HTML)) {
+  app.use('/assets', express.static(join(STATIC_DIR, 'assets'), { immutable: true, maxAge: '1y' }));
+  app.use(express.static(STATIC_DIR, {
+    maxAge: '1h',
+    setHeaders: (res, file) => { if (file.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache'); },
+  }));
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') { next(); return; }
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(INDEX_HTML);
+  });
+}
+
+const server = app.listen(PORT, () => console.log(
+  `CutSense on http://localhost:${PORT} (SAM ${SAM_API_URL ? 'configured' : 'not configured'}, web ${existsSync(INDEX_HTML) ? 'served from ' + STATIC_DIR : 'not served'})`,
+));
+
+/** Stop cleanly on `docker stop` / SIGTERM. */
+for (const sig of ['SIGTERM', 'SIGINT'] as const) {
+  process.on(sig, () => {
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(0), 5_000).unref();
+  });
+}
