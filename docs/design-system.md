@@ -14,11 +14,12 @@ CutSense's visual identity and UI rules live in [`design/`](../design/). The ful
 | [`design/components.css`](../design/components.css) | Framework-agnostic components (`.cs-*`) and the signature keyframes |
 | [`design/preview.html`](../design/preview.html) | Living style guide; open it in a browser, toggle the theme (or add `?theme=dark`) |
 | `design/logo-*.svg` | Mark and wordmark in colour, reverse (dark surfaces) and mono (`currentColor`) |
-| [`design/screenshots/`](../design/screenshots/) | Style guide captures at 390 px and 1280 px, both themes |
+| [`design/screenshots/`](../design/screenshots/) | Style guide captures at 390 px and 1280 px, both themes; `hero-*.png` are captures of the live landing page |
+| [`design/landing/LANDING.md`](../design/landing/LANDING.md) | The landing page ("The life of an offcut"): sections, final copy, `.lp-*` classes, motion, accessibility, plus a static mockup (`landing.html`) |
 | [`design/ux/UX-REDESIGN.md`](../design/ux/UX-REDESIGN.md) | The workspace redesign: step rail, checklist, menus, sheets |
 | [`design/ux/prototype.html`](../design/ux/prototype.html), [`design/ux/ux.css`](../design/ux/ux.css) | Static prototype of the redesigned workspace and its styles |
 
-The app uses its own copies of the tokens and components in `src/brand/` (`tokens.css`, `components.css`), loaded by `src/styles.css`; the redesign's workspace styles are in `src/ux.css`. When you change a token, update both `design/` and `src/brand/`.
+The app uses its own copies of the tokens and components in `src/brand/` (`tokens.css`, `components.css`), loaded by `src/styles.css`; the redesign's workspace styles are in `src/ux.css`, and the landing page's in `src/components/landing/landing.css`. The landing's how-it-works and leftover images are real captures of the app in `public/landing/` (WebP, light and dark). When you change a token, update both `design/` and `src/brand/`.
 
 ## Key tokens
 

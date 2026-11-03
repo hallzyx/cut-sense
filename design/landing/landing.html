@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CutSense · Make sense of every offcut</title>
+<meta name="description" content="Photograph an irregular offcut of leather, felt, foam or cardboard and get a cutting plan checked by an independent geometric verifier. Then plan the next product on what is left.">
+<link rel="icon" href="../logo-mark.svg" type="image/svg+xml">
+<script>
+  /* theme before paint: ?theme=dark|light, else OS preference (mockup only) */
+  (function () { var t = new URLSearchParams(location.search).get('theme');
+    if (t !== 'dark' && t !== 'light') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t); })();
+</script>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../components.css">
+<link rel="stylesheet" href="landing.css">
+</head>
+<body class="cs-root">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<pattern id="cs-pat-a" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#F5B800"/></pattern>
+<pattern id="cs-pat-b" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#4FC3F7"/><rect width="1.8" height="6" fill="rgba(11,15,13,.55)"/></pattern>
+<pattern id="cs-pat-c" width="7" height="7" patternUnits="userSpaceOnUse"><rect width="7" height="7" fill="#F2609E"/><circle cx="3.5" cy="3.5" r="1.5" fill="rgba(11,15,13,.6)"/></pattern>
+<pattern id="cs-pat-d" width="7" height="7" patternUnits="userSpaceOnUse"><rect width="7" height="7" fill="#1FB5A0"/><path d="M0 0L7 7M7 0L0 7" stroke="rgba(11,15,13,.55)" stroke-width="1.1"/></pattern>
+<pattern id="cs-pat-e" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#A07CFF"/><rect width="6" height="1.8" fill="rgba(11,15,13,.55)"/></pattern>
+<pattern id="cs-pat-f" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#B5E61D"/><rect width="1.8" height="6" fill="rgba(11,15,13,.55)"/></pattern>
+<pattern id="cs-pat-defect" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="10" height="10" fill="#FFFFFF" fill-opacity=".9"/><rect width="5" height="10" fill="#FF3B30"/></pattern>
+<pattern id="lp-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.2" height="7" fill="#1E5A43" fill-opacity=".55"/></pattern>
+<filter id="lp-leather" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="3" seed="4" result="n"/><feColorMatrix in="n" type="saturate" values="0" result="g"/><feComponentTransfer in="g" result="g2"><feFuncA type="linear" slope=".28"/></feComponentTransfer><feComposite in="g2" in2="SourceGraphic" operator="in" result="t"/><feBlend in="SourceGraphic" in2="t" mode="multiply"/></filter>
+<filter id="lp-table" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".012 .2" numOctaves="2" seed="9" result="n"/><feColorMatrix in="n" type="saturate" values="0" result="g"/><feComponentTransfer in="g" result="g2"><feFuncA type="linear" slope=".22"/></feComponentTransfer><feComposite in="g2" in2="SourceGraphic" operator="in" result="t"/><feBlend in="SourceGraphic" in2="t" mode="multiply"/></filter>
+<filter id="lp-noise" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" result="t"/><feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.16 0"/></filter>
+<radialGradient id="lp-vignette" cx="50%" cy="45%" r="75%"><stop offset="60%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".28"/></radialGradient>
+<path id="lp-seal-ring" d="M60 60m-38 0a38 38 0 1 1 76 0a38 38 0 1 1 -76 0"/>
+</defs></svg>
+<a class="lp-skip" href="#main">Skip to content</a>
+
+<!-- ================= TOP BAR ================= -->
+<header class="lp-top">
+  <div class="cs-container lp-top__in">
+    <a class="lp-logo" href="#top"><svg viewBox="0 0 274 56" role="img" aria-label="CutSense, home"><g transform="scale(1.17)"><path d="M9.2 5.4L29.6 4.2Q33.4 4 33.6 7.6L33.8 10.4Q34 13.4 31 13.4L17.6 13.4L17.6 34.6L39.8 34.6Q43.6 34.6 43 38.2L42.5 41.2Q42 44.2 38.9 44.3L12.2 44.9Q7.9 45 6.7 40.9L4.2 32.4Q3.6 30.3 4.3 28.3L5.6 24.4Q6.2 22.6 5.8 20.8L4.9 12.1Q4.4 6 9.2 5.4Z" fill="var(--lp-logo-offcut)"/><rect x="24.6" y="16.4" width="15.6" height="15.6" rx="1.6" transform="rotate(-10 32.4 24.2)" fill="var(--lp-logo-piece)"/></g><g fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round"><path d="M99.51 15.22A17.2 17.2 0 1 0 99.51 40.78M108.61 24.8V37.7A7.5 7.5 0 0 0 123.61 37.7V24.8M123.61 37.7V45.2M135.71 15.8V39.2A6 6 0 0 0 141.71 45.2H143.71M169.59 14.47A9.5 8.6 0 1 0 161.81 28A9.5 8.6 0 1 1 154.03 41.53M180.41 35H196.41A8 10.2 0 1 0 194.71 41.28M205.51 24.8V45.2M205.51 32.3A7.5 7.5 0 0 1 220.51 32.3V45.2M241.89 26.97A6.75 5.1 0 1 0 236.36 35A6.75 5.1 0 1 1 230.83 43.03M252.21 35H268.21A8 10.2 0 1 0 266.51 41.28"/></g><path d="M132.21 24.8H144.21" fill="none" stroke="var(--lp-logo-piece)" stroke-width="5.6" stroke-linecap="round"/></svg></a>
+    <nav class="lp-top__nav" aria-label="On this page">
+      <a href="#how">How it works</a><a href="#leftover">Leftover</a><a href="#trust">Trust</a><a href="#hilo">Hilo</a><a href="#exports">Exports</a><a href="#faq">Good to know</a>
+    </nav>
+    <div class="lp-top__end">
+      <button class="cs-btn cs-btn--secondary cs-btn--sm lp-top__cta" type="button" data-upload>Upload a photo</button>
+      <button class="cs-btn cs-btn--ghost lp-theme" type="button" aria-pressed="false" data-theme-toggle aria-label="Dark theme">
+        <svg class="lp-i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="lp-i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<!-- ================= 1 · HERO ================= -->
+<section class="lp-hero cs-grid-paper" id="top" aria-labelledby="lp-h1">
+  <div class="cs-container lp-hero__grid">
+    <div>
+      <p class="cs-eyebrow">Sense of the cut</p>
+      <h1 class="cs-display lp-hero__title" id="lp-h1">Make sense of every <span class="cs-chalk-underline">offcut</span>.</h1>
+      <p class="cs-lead">Photograph a scrap of leather, felt, foam or cardboard. AI proposes the outline, you correct it, and an independent geometric check verifies every cutting plan before you see it. Then what is left becomes your next piece of material.</p>
+      <div class="cs-btn-row cs-btn-row--stack lp-hero__ctas">
+        <button class="cs-btn cs-btn--primary cs-btn--lg" type="button" data-upload>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          Upload a photo of your offcut</button>
+        <button class="cs-btn cs-btn--secondary cs-btn--lg" type="button" data-example="cuero">Try an example</button>
+      </div>
+      <input id="lp-file" type="file" hidden accept="image/jpeg,image/png,image/webp" aria-label="Upload a JPG, PNG or WebP photo of your offcut">
+      <input id="lp-project" type="file" hidden accept="application/json,.json" aria-label="Open a saved CutSense project (.json)">
+      <div class="lp-hero__aux">
+        <p class="cs-caption" id="lp-file-hint">JPG, PNG or WebP · up to 10 MB · flat material, contrasting background, even light, overhead camera</p>
+        <p class="cs-body-sm"><button class="cs-link" type="button" data-open-project>Open a saved project (.json)</button></p>
+      </div>
+      <div class="lp-hero__alert" role="alert" data-error-slot></div>
+      <ul class="lp-prov" aria-label="Who does what">
+        <li class="cs-pill cs-pill--ai">AI proposes</li>
+        <li class="cs-pill cs-pill--human">You correct</li>
+        <li class="cs-pill cs-pill--computed">The engine computes</li>
+        <li class="cs-pill cs-pill--verified">Geometry verifies</li>
+      </ul>
+      <div class="lp-ruler" aria-hidden="true"></div>
+    </div>
+
+    <figure class="lp-hero__visual" style="margin-inline:4px">
+      <div class="cs-stage">
+        <svg viewBox="0 0 600 420" width="600" height="420" role="img" aria-labelledby="lp-hero-art-t"><title id="lp-hero-art-t">Example of a verified plan: ten patterned pieces placed on a dark leather offcut, clear of a marked defect, inside a green verified outline.</title>
+<rect width="600" height="420" fill="#2A211B" filter="url(#lp-table)"/><path d="M70,90 C120,40 260,50 330,60 C410,70 500,40 545,95 C580,140 560,220 570,290 C578,350 520,385 450,380 C380,375 330,395 250,388 C170,382 90,392 62,330 C40,280 70,230 55,170 C48,135 50,110 70,90 Z" fill="#141210" filter="url(#lp-leather)"/><path d="M70,90 C120,40 260,50 330,60 C410,70 500,40 545,95 C580,140 560,220 570,290 C578,350 520,385 450,380 C380,375 330,395 250,388 C170,382 90,392 62,330 C40,280 70,230 55,170 C48,135 50,110 70,90 Z" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="3" transform="translate(2,4)"/><path d="M180,180 q40,-20 90,10" stroke="#2c2622" stroke-width="3" fill="none"/><rect width="600" height="420" fill="url(#lp-vignette)"/>
+<path d="M70,90 C120,40 260,50 330,60 C410,70 500,40 545,95 C580,140 560,220 570,290 C578,350 520,385 450,380 C380,375 330,395 250,388 C170,382 90,392 62,330 C40,280 70,230 55,170 C48,135 50,110 70,90 Z" fill="none" stroke="rgba(255,255,255,.78)" stroke-width="8" stroke-linejoin="round" /><path d="M70,90 C120,40 260,50 330,60 C410,70 500,40 545,95 C580,140 560,220 570,290 C578,350 520,385 450,380 C380,375 330,395 250,388 C170,382 90,392 62,330 C40,280 70,230 55,170 C48,135 50,110 70,90 Z" fill="none" stroke="#0B0F0D" stroke-width="5.5" stroke-linejoin="round" /><path d="M70,90 C120,40 260,50 330,60 C410,70 500,40 545,95 C580,140 560,220 570,290 C578,350 520,385 450,380 C380,375 330,395 250,388 C170,382 90,392 62,330 C40,280 70,230 55,170 C48,135 50,110 70,90 Z" fill="none" stroke="#5BD69A" stroke-width="3" stroke-linejoin="round" /><path d="M300,195 Q330,172 362,198 Q380,230 350,252 Q318,264 300,240 Q286,215 300,195Z" fill="url(#cs-pat-defect)"/><path d="M300,195 Q330,172 362,198 Q380,230 350,252 Q318,264 300,240 Q286,215 300,195Z" fill="none" stroke="rgba(255,255,255,.78)" stroke-width="7" stroke-linejoin="round" stroke-dasharray="6 4"/><path d="M300,195 Q330,172 362,198 Q380,230 350,252 Q318,264 300,240 Q286,215 300,195Z" fill="none" stroke="#0B0F0D" stroke-width="4.5" stroke-linejoin="round" stroke-dasharray="6 4"/><path d="M300,195 Q330,172 362,198 Q380,230 350,252 Q318,264 300,240 Q286,215 300,195Z" fill="none" stroke="#FF3B30" stroke-width="2" stroke-linejoin="round" stroke-dasharray="6 4"/>
+<g class="cs-anim-settle" style="--i:0"><path d="M95,95h150v95h-150z" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="4.5"/><path d="M95,95h150v95h-150z" fill="url(#cs-pat-a)" stroke="#0B0F0D" stroke-width="1.6"/><text x="170" y="142" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono, monospace" font-weight="700" font-size="15" fill="#0B0F0D" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">A1</text></g><g class="cs-anim-settle" style="--i:1"><path d="M95,200h150v95h-150z" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="4.5"/><path d="M95,200h150v95h-150z" fill="url(#cs-pat-a)" stroke="#0B0F0D" stroke-width="1.6"/><text x="170" y="247" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono, monospace" font-weight="700" font-size="15" fill="#0B0F0D" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">A2</text></g><g class="cs-anim-settle" style="--i:2"><path d="M258,86h70v50h-70z" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="4.5"/><path d="M258,86h70v50h-70z" fill="url(#cs-pat-b)" stroke="#0B0F0D" stroke-width="1.6"/><text x="293" y="111" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono, monospace" font-weight="700" font-size="15" fill="#0B0F0D" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">B1</text></g><g class="cs-anim-settle" style="--i:3"><path d="M336,86h70v50h-70z" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="4.5"/><path d="M336,86h70v50h-70z" fill="url(#cs-pat-b)" stroke="#0B0F0D" stroke-width="1.6"/><text x="371" y="111" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono, monospace" font-weight="700" font-size="15" fill="#0B0F0D" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">B2</text></g><g class="cs-anim-settle" style="--i:4"><path d="M414,86h70v50h-70z" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="4.5"/><path d="M414,86h70v50h-70z" fill="url(#cs-pat-b)" stroke="#0B0F0D" stroke-width="1.6"/><text x="449" y="111" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono, monospace" font-weight="700" font-size="15" fill="#0B0F0D" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">B3</text></g><g class="cs-anim-settle" style="--i:5"><path d="M258,144h70v40h-70z" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="4.5"/><path d="M258,144h70v40h-70z" fill="url(#cs-pat-b)" stroke="#0B0F0D" stroke-width="1.6"/><text x="293" y="164" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono, monospace" font-weight="700" font-size="15" fill="#0B0F0D" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">B4</text></g><g class="cs-anim-settle" style="--i:6"><path d="M482,150h58a12,12 0 0 1 12,12v86a12,12 0 0 1 -12,12h-58a12,12 0 0 1 -12,-12v-86a12,12 0 0 1 12,-12z" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="4.5"/><path d="M482,150h58a12,12 0 0 1 12,12v86a12,12 0 0 1 -12,12h-58a12,12 0 0 1 -12,-12v-86a12,12 0 0 1 12,-12z" fill="url(#cs-pat-c)" stroke="#0B0F0D" stroke-width="1.6"/><text x="511" y="205" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono, monospace" font-weight="700" font-size="15" fill="#0B0F0D" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">C1</text></g><g class="cs-anim-settle" style="--i:7"><path d="M262,300h118l-20,62h-78z" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="4.5"/><path d="M262,300h118l-20,62h-78z" fill="url(#cs-pat-d)" stroke="#0B0F0D" stroke-width="1.6"/><text x="321" y="331" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono, monospace" font-weight="700" font-size="15" fill="#0B0F0D" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">D1</text></g><g class="cs-anim-settle" style="--i:8"><path d="M100,305h90v26h-50v36h-40z" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="4.5"/><path d="M100,305h90v26h-50v36h-40z" fill="url(#cs-pat-e)" stroke="#0B0F0D" stroke-width="1.6"/><text x="128" y="328" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono, monospace" font-weight="700" font-size="15" fill="#0B0F0D" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">E1</text></g><g class="cs-anim-settle" style="--i:9"><path d="M395,290h62v58h-62z" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="4.5"/><path d="M395,290h62v58h-62z" fill="url(#cs-pat-f)" stroke="#0B0F0D" stroke-width="1.6"/><text x="426" y="319" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono, monospace" font-weight="700" font-size="15" fill="#0B0F0D" stroke="#fff" stroke-width="4" paint-order="stroke" stroke-linejoin="round">F1</text></g>
+</svg>
+        <div class="cs-stage__bar"><span class="cs-stage__tag" style="background:var(--cs-mat-600)">Verified</span></div>
+      </div>
+      <div class="cs-seal cs-seal--animate lp-hero__seal"><svg viewBox="0 0 120 120" role="img" aria-label="Verified plan seal"><g transform="rotate(-10 60 60)"><path d="M117.00 60.00L112.17 65.88L115.57 72.68L109.55 77.34L111.36 84.73L104.45 87.93L104.56 95.54L97.12 97.12L95.54 104.56L87.93 104.45L84.73 111.36L77.34 109.55L72.68 115.57L65.88 112.17L60.00 117.00L54.12 112.17L47.32 115.57L42.66 109.55L35.27 111.36L32.07 104.45L24.46 104.56L22.88 97.12L15.44 95.54L15.55 87.93L8.64 84.73L10.45 77.34L4.43 72.68L7.83 65.88L3.00 60.00L7.83 54.12L4.43 47.32L10.45 42.66L8.64 35.27L15.55 32.07L15.44 24.46L22.88 22.88L24.46 15.44L32.07 15.55L35.27 8.64L42.66 10.45L47.32 4.43L54.12 7.83L60.00 3.00L65.88 7.83L72.68 4.43L77.34 10.45L84.73 8.64L87.93 15.55L95.54 15.44L97.12 22.88L104.56 24.46L104.45 32.07L111.36 35.27L109.55 42.66L115.57 47.32L112.17 54.12Z" fill="var(--cs-verified-solid)"/><circle cx="60" cy="60" r="48" fill="none" stroke="var(--cs-surface)" stroke-width="1.6" stroke-dasharray="3.2 2.6"/><text font-family="JetBrains Mono, monospace" font-size="10" font-weight="700" fill="var(--cs-surface)"><textPath href="#lp-seal-ring" textLength="236" lengthAdjust="spacing">VERIFIED · GEOMETRY · PLAN ·</textPath></text><circle cx="60" cy="60" r="27" fill="var(--cs-surface)"/><path d="M47.5 61l8.5 8.5 17.5-18.5" fill="none" stroke="var(--cs-verified-solid)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></g></svg></div>
+      <figcaption class="lp-ticket lp-hero__ticket">
+        <span class="lp-ticket__k">Example plan</span>
+        <span class="lp-ticket__v">10 of 10 pieces placed</span>
+        <span class="lp-ticket__m">cs-nest-1.1 · seed 4127</span>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= 2 · HOW IT WORKS ================= -->
+<section class="lp-sec" id="how" aria-labelledby="lp-how-h">
+  <div class="cs-container">
+    <header class="lp-head">
+      <p class="cs-eyebrow"><span class="lp-num">01</span> How it works</p>
+      <h2 class="cs-h2" id="lp-how-h">From a photo to a plan you can trust.</h2>
+      <p class="cs-lead">Five steps at the bench. Each one tells you who did the work: the AI proposes, you correct, the engine computes, geometry verifies, and you decide.</p>
+    </header>
+    <ol class="lp-steps">
+      <li class="lp-step lp-step--ai">
+        <span class="lp-step__dot" aria-hidden="true">1</span>
+        <div class="lp-step__text">
+          <span class="cs-pill cs-pill--ai">AI proposal · SAM 3.1</span>
+          <h3 class="cs-h3">Photograph it. AI traces the edge.</h3>
+          <p class="lp-body">Lay the offcut flat on a contrasting background and shoot from above. SAM 3.1 proposes the edge as a dashed line, and holes as zones to avoid. Accept it, move any point, or trace it by hand. No AI available? Outline by contrast instead.</p>
+        </div>
+        <figure class="lp-shot">
+          <div class="lp-shot__frame">
+            <img class="lp-img-light" src="../ux/screenshots/f2-1280-light.png" width="1152" height="803" loading="lazy" decoding="async" alt="CutSense, step 1: a leather offcut with a dashed blue outline proposed by AI, and the panel asking 'Is this the edge of your material?'">
+            <img class="lp-img-dark" src="../ux/screenshots/f2-1280-dark.png" width="1152" height="803" loading="lazy" decoding="async" alt="CutSense, step 1: a leather offcut with a dashed blue outline proposed by AI, and the panel asking 'Is this the edge of your material?'">
+          </div>
+          <figcaption class="cs-caption">The outline is a proposal until you accept it.</figcaption>
+        </figure>
+      </li>
+      <li class="lp-step lp-step--human">
+        <span class="lp-step__dot" aria-hidden="true">2</span>
+        <div class="lp-step__text">
+          <span class="cs-pill cs-pill--human">Corrected by you</span>
+          <h3 class="cs-h3">Mark the flaws. Set the scale.</h3>
+          <p class="lp-body">Mark scars, stains and holes so no piece lands on them, or ask SAM to look for them and keep only what is right. Then calibrate with a length you know, such as a bank card (<span class="cs-measure">8.56 cm</span>), to work in real centimetres.</p>
+        </div>
+        <figure class="lp-shot">
+          <div class="lp-shot__frame">
+            <img class="lp-img-light" src="../ux/screenshots/f5-1280-light.png" width="1152" height="803" loading="lazy" decoding="async" alt="CutSense, step 2: the offcut with hatched excluded zones over its flaws and a calibration line measuring 8.56 cm.">
+            <img class="lp-img-dark" src="../ux/screenshots/f5-1280-dark.png" width="1152" height="803" loading="lazy" decoding="async" alt="CutSense, step 2: the offcut with hatched excluded zones over its flaws and a calibration line measuring 8.56 cm.">
+          </div>
+          <figcaption class="cs-caption">Excluded zones carry a barrier-tape hatch, unlike any piece.</figcaption>
+        </figure>
+      </li>
+      <li class="lp-step">
+        <span class="lp-step__dot" aria-hidden="true">3</span>
+        <div class="lp-step__text">
+          <span class="cs-pill cs-pill--computed">Your order</span>
+          <h3 class="cs-h3">Choose what to make.</h3>
+          <p class="lp-body">Pick a kit (leather cardholder, bifold wallet), single pieces (keychains, coasters, bookmarks), shapes you draw or import, or pieces designed with Hilo. In <b>Complete sets</b> mode, CutSense looks for as many complete sets as fit. Partial sets never count.</p>
+        </div>
+        <figure class="lp-shot">
+          <div class="lp-shot__frame" style="--lp-pos: 100% 50%">
+            <img class="lp-img-light" src="../ux/screenshots/f7-1280-light.png" width="1152" height="803" loading="lazy" decoding="async" alt="CutSense, step 2 pieces list: a leather cardholder kit with body, front pocket, card pockets and flap, each with its size in centimetres.">
+            <img class="lp-img-dark" src="../ux/screenshots/f7-1280-dark.png" width="1152" height="803" loading="lazy" decoding="async" alt="CutSense, step 2 pieces list: a leather cardholder kit with body, front pocket, card pockets and flap, each with its size in centimetres.">
+          </div>
+          <figcaption class="cs-caption">Every piece type has a colour, a pattern and a letter.</figcaption>
+        </figure>
+      </li>
+      <li class="lp-step lp-step--verified">
+        <span class="lp-step__dot" aria-hidden="true">4</span>
+        <div class="lp-step__text">
+          <span class="cs-pill cs-pill--verified">Verified</span>
+          <h3 class="cs-h3">Get a plan that has been checked.</h3>
+          <p class="lp-body">A deterministic engine places the pieces. Then a separate verifier checks the whole plan: no overlaps, nothing outside the material, nothing on a defect, the spacing you asked for. Only a plan that passes is shown.</p>
+        </div>
+        <figure class="lp-shot">
+          <div class="lp-shot__frame">
+            <img class="lp-img-light" src="../ux/screenshots/f8b-result-closed-1280-light.png" width="1152" height="803" loading="lazy" decoding="async" alt="CutSense, step 3: a verified plan with three complete cardholder sets on the offcut, a green verified seal and the seed of the run.">
+            <img class="lp-img-dark" src="../ux/screenshots/f8b-result-closed-1280-dark.png" width="1152" height="803" loading="lazy" decoding="async" alt="CutSense, step 3: a verified plan with three complete cardholder sets on the offcut, a green verified seal and the seed of the run.">
+          </div>
+          <div class="cs-seal" aria-hidden="true"><svg viewBox="0 0 120 120" role="img" aria-label="Verified"><g transform="rotate(-10 60 60)"><path d="M117.00 60.00L112.17 65.88L115.57 72.68L109.55 77.34L111.36 84.73L104.45 87.93L104.56 95.54L97.12 97.12L95.54 104.56L87.93 104.45L84.73 111.36L77.34 109.55L72.68 115.57L65.88 112.17L60.00 117.00L54.12 112.17L47.32 115.57L42.66 109.55L35.27 111.36L32.07 104.45L24.46 104.56L22.88 97.12L15.44 95.54L15.55 87.93L8.64 84.73L10.45 77.34L4.43 72.68L7.83 65.88L3.00 60.00L7.83 54.12L4.43 47.32L10.45 42.66L8.64 35.27L15.55 32.07L15.44 24.46L22.88 22.88L24.46 15.44L32.07 15.55L35.27 8.64L42.66 10.45L47.32 4.43L54.12 7.83L60.00 3.00L65.88 7.83L72.68 4.43L77.34 10.45L84.73 8.64L87.93 15.55L95.54 15.44L97.12 22.88L104.56 24.46L104.45 32.07L111.36 35.27L109.55 42.66L115.57 47.32L112.17 54.12Z" fill="var(--cs-verified-solid)"/><circle cx="60" cy="60" r="48" fill="none" stroke="var(--cs-surface)" stroke-width="1.6" stroke-dasharray="3.2 2.6"/><text font-family="JetBrains Mono, monospace" font-size="10" font-weight="700" fill="var(--cs-surface)"><textPath href="#lp-seal-ring" textLength="236" lengthAdjust="spacing">VERIFIED · GEOMETRY · PLAN ·</textPath></text><circle cx="60" cy="60" r="27" fill="var(--cs-surface)"/><path d="M47.5 61l8.5 8.5 17.5-18.5" fill="none" stroke="var(--cs-verified-solid)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></g></svg></div>
+          <figcaption class="cs-caption">Every number on this screen is measured from the final shapes.</figcaption>
+        </figure>
+      </li>
+      <li class="lp-step">
+        <span class="lp-step__dot" aria-hidden="true">5</span>
+        <div class="lp-step__text">
+          <span class="cs-pill cs-pill--human">You decide</span>
+          <h3 class="cs-h3">Export it and cut.</h3>
+          <p class="lp-body">Save the plan as SVG or PNG, print it at 1:1 across A4 or Letter sheets, or export SVG in centimetres and DXF for a cutter. Then plan the next product on what is left.</p>
+        </div>
+        <figure class="lp-shot">
+          <div class="lp-shot__frame" style="--lp-pos: 100% 50%">
+            <img class="lp-img-light" src="../ux/screenshots/f8-1280-light.png" width="1152" height="803" loading="lazy" decoding="async" alt="CutSense export menu: SVG, PNG, print at real scale, SVG in centimetres and DXF for machines.">
+            <img class="lp-img-dark" src="../ux/screenshots/f8-1280-dark.png" width="1152" height="803" loading="lazy" decoding="async" alt="CutSense export menu: SVG, PNG, print at real scale, SVG in centimetres and DXF for machines.">
+          </div>
+          <figcaption class="cs-caption">Exports are made in your browser from the verified plan.</figcaption>
+        </figure>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- ================= 3 · THE LEFTOVER LOOP (signature) ================= -->
+<section class="lp-sec lp-mat cs-grid-paper" id="leftover" aria-labelledby="lp-loop-h">
+  <div class="cs-container">
+    <header class="lp-head">
+      <p class="cs-eyebrow"><span class="lp-num">02</span> The leftover loop</p>
+      <h2 class="cs-h2" id="lp-loop-h">What is left is your next piece of material.</h2>
+      <p class="cs-lead">A plan is not the end of an offcut. Plan another product on what is left, or photograph the real remnant after cutting, and start again. A second life for every offcut, and sometimes a third.</p>
+    </header>
+
+    <figure style="margin:0" aria-labelledby="lp-loop-cap">
+      <p class="lp-sr" id="lp-loop-desc">Illustration in three stages. First life: a leather offcut with the seven pieces of a bifold wallet; the largest free area on the right is outlined in green. Second life: that area, turned on its side, becomes the material for four coasters; the free area at one end is outlined. Third life: that last area becomes the material for four keychains. All three are drawn at the same scale, so each generation is visibly smaller.</p>
+      <ol class="lp-loop" aria-describedby="lp-loop-desc">
+        <li class="lp-gen" style="--g:0; --w:1">
+          <div class="lp-gen__art"><svg class="lp-art" viewBox="-3 -6 345 258" aria-hidden="true" focusable="false">
+<path class="lp-art__material" d="M18,24L84,9L168,15L240,6L300,21L324,66L318,126L330,180L300,216L216,213L132,222L60,213L21,186L9,120L15,66Z"/><path class="lp-art__leftover" d="M18,24L84,9L168,15L240,6L300,21L324,66L318,126L330,180L300,216L216,213L132,222L60,213L21,186L9,120L15,66Z"/>
+<circle class="lp-art__defect" cx="165" cy="177" r="13.2"/>
+<g class="cs-anim-settle" style="--i:0"><rect class="lp-art__piece" fill="url(#cs-pat-a)" x="27" y="30" width="111" height="57" rx="3"/><text class="lp-art__label" x="82.5" y="58.5">A</text></g><g class="cs-anim-settle" style="--i:1"><rect class="lp-art__piece" fill="url(#cs-pat-b)" x="27" y="89.4" width="102" height="48" rx="3"/><text class="lp-art__label" x="78" y="113.4">B</text></g><g class="cs-anim-settle" style="--i:2"><rect class="lp-art__piece" fill="url(#cs-pat-c)" x="140.4" y="30" width="51" height="33" rx="3"/><text class="lp-art__label" x="165.9" y="46.5">C</text></g><g class="cs-anim-settle" style="--i:3"><rect class="lp-art__piece" fill="url(#cs-pat-c)" x="140.4" y="65.4" width="51" height="33" rx="3"/><text class="lp-art__label" x="165.9" y="81.9">C</text></g><g class="cs-anim-settle" style="--i:4"><rect class="lp-art__piece" fill="url(#cs-pat-c)" x="140.4" y="100.8" width="51" height="33" rx="3"/><text class="lp-art__label" x="165.9" y="117.3">C</text></g><g class="cs-anim-settle" style="--i:5"><rect class="lp-art__piece" fill="url(#cs-pat-c)" x="78.6" y="139.8" width="51" height="33" rx="3"/><text class="lp-art__label" x="104.1" y="156.3">C</text></g><g class="cs-anim-settle" style="--i:6"><path class="lp-art__piece" fill="url(#cs-pat-d)" d="M27,181.8L75,181.8L65.4,139.8L36.6,139.8Z"/><text class="lp-art__label" x="51" y="160.8">D</text></g>
+<path class="lp-art__frag" pathLength="100" d="M201,10.9L240,6L300,21L324,66L318,126L330,180L300,216L216,213L201,214.6Z"/>
+<g class="lp-art__ruler" aria-hidden="true"><path d="M9,235.2H69"/><path d="M9,235.2v-6"/><path d="M15,235.2v-3"/><path d="M21,235.2v-3"/><path d="M27,235.2v-3"/><path d="M33,235.2v-3"/><path d="M39,235.2v-6"/><path d="M45,235.2v-3"/><path d="M51,235.2v-3"/><path d="M57,235.2v-3"/><path d="M63,235.2v-3"/><path d="M69,235.2v-6"/><text x="72.6" y="236.2">10 cm</text></g></svg></div>
+          <div class="lp-ticket lp-ticket--flat">
+            <span class="lp-ticket__k">1st life</span>
+            <span class="lp-ticket__v">Bifold wallet × 1</span>
+            <span class="lp-ticket__m">7 pieces · leather offcut</span>
+          </div>
+        </li>
+        <li class="lp-hop" style="--g:.6" aria-hidden="true">
+          <svg class="lp-hop__v" viewBox="0 0 22 44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 2v36" stroke-dasharray="4 4"/><path d="M5 33l6 8 6-8"/></svg>
+          <svg class="lp-hop__h" viewBox="0 0 64 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 11h56" stroke-dasharray="4 4"/><path d="M53 5l8 6-8 6"/></svg>
+          <span>largest free fragment becomes the material</span>
+        </li>
+        <li class="lp-gen" style="--g:1; --w:.68">
+          <div class="lp-gen__art"><svg class="lp-art" viewBox="-12 -12 234 171" aria-hidden="true" focusable="false">
+<path class="lp-art__material" d="M4.9,129L0,90L15,30L60,6L120,12L174,0L210,30L207,114L208.6,129Z"/><path class="lp-art__leftover" d="M4.9,129L0,90L15,30L60,6L120,12L174,0L210,30L207,114L208.6,129Z"/>
+<g class="cs-anim-settle" style="--i:0"><circle class="lp-art__piece" fill="url(#cs-pat-e)" cx="30" cy="90" r="27"/><text class="lp-art__label" x="30" y="90">E</text></g><g class="cs-anim-settle" style="--i:1"><circle class="lp-art__piece" fill="url(#cs-pat-e)" cx="57" cy="40.5" r="27"/><text class="lp-art__label" x="57" y="40.5">E</text></g><g class="cs-anim-settle" style="--i:2"><circle class="lp-art__piece" fill="url(#cs-pat-e)" cx="85.5" cy="96" r="27"/><text class="lp-art__label" x="85.5" y="96">E</text></g><g class="cs-anim-settle" style="--i:3"><circle class="lp-art__piece" fill="url(#cs-pat-e)" cx="112.5" cy="46.5" r="27"/><text class="lp-art__label" x="112.5" y="46.5">E</text></g>
+<path class="lp-art__frag" pathLength="100" d="M143.1,6.9L174,0L210,30L207,114L208.6,129L143.1,129Z"/>
+<g class="lp-art__ruler" aria-hidden="true"><path d="M0,142.2H60"/><path d="M0,142.2v-6"/><path d="M6,142.2v-3"/><path d="M12,142.2v-3"/><path d="M18,142.2v-3"/><path d="M24,142.2v-3"/><path d="M30,142.2v-6"/><path d="M36,142.2v-3"/><path d="M42,142.2v-3"/><path d="M48,142.2v-3"/><path d="M54,142.2v-3"/><path d="M60,142.2v-6"/><text x="63.6" y="143.2">10 cm</text></g></svg></div>
+          <div class="lp-ticket lp-ticket--flat">
+            <span class="lp-ticket__k">2nd life</span>
+            <span class="lp-ticket__v">Coasters × 4</span>
+            <span class="lp-ticket__m">quantity you chose · 9 cm</span>
+          </div>
+        </li>
+        <li class="lp-hop" style="--g:1.6" aria-hidden="true">
+          <svg class="lp-hop__v" viewBox="0 0 22 44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 2v36" stroke-dasharray="4 4"/><path d="M5 33l6 8 6-8"/></svg>
+          <svg class="lp-hop__h" viewBox="0 0 64 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 11h56" stroke-dasharray="4 4"/><path d="M53 5l8 6-8 6"/></svg>
+          <span>and again</span>
+        </li>
+        <li class="lp-gen" style="--g:2; --w:.44">
+          <div class="lp-gen__art"><svg class="lp-art" viewBox="-12 -12 153 108.9" aria-hidden="true" focusable="false">
+<path class="lp-art__material" d="M6.9,66.9L0,36L30,0L114,3L129,1.4L129,66.9Z"/><path class="lp-art__leftover" d="M6.9,66.9L0,36L30,0L114,3L129,1.4L129,66.9Z"/>
+<g class="cs-anim-settle" style="--i:0"><rect class="lp-art__piece" fill="url(#cs-pat-f)" x="30" y="3.6" width="42" height="18" rx="3"/><text class="lp-art__label" x="51" y="12.6">F</text></g><g class="cs-anim-settle" style="--i:1"><rect class="lp-art__piece" fill="url(#cs-pat-f)" x="74.4" y="4.8" width="42" height="18" rx="3"/><text class="lp-art__label" x="95.4" y="13.8">F</text></g><g class="cs-anim-settle" style="--i:2"><rect class="lp-art__piece" fill="url(#cs-pat-f)" x="13.2" y="24" width="42" height="18" rx="3"/><text class="lp-art__label" x="34.2" y="33">F</text></g><g class="cs-anim-settle" style="--i:3"><rect class="lp-art__piece" fill="url(#cs-pat-f)" x="57.6" y="25.2" width="42" height="18" rx="3"/><text class="lp-art__label" x="78.6" y="34.2">F</text></g>
+<g class="lp-art__ruler" aria-hidden="true"><path d="M0,80.1H60"/><path d="M0,80.1v-6"/><path d="M6,80.1v-3"/><path d="M12,80.1v-3"/><path d="M18,80.1v-3"/><path d="M24,80.1v-3"/><path d="M30,80.1v-6"/><path d="M36,80.1v-3"/><path d="M42,80.1v-3"/><path d="M48,80.1v-3"/><path d="M54,80.1v-3"/><path d="M60,80.1v-6"/><text x="63.6" y="81.1">10 cm</text></g></svg></div>
+          <div class="lp-ticket lp-ticket--flat">
+            <span class="lp-ticket__k">3rd life</span>
+            <span class="lp-ticket__v">Keychains × 4</span>
+            <span class="lp-ticket__m">7 × 3 cm each</span>
+          </div>
+        </li>
+      </ol>
+      <figcaption class="cs-caption lp-loop__note" id="lp-loop-cap">Illustration, not a computed plan. All three stages are drawn at the same scale; green hatching is the leftover.</figcaption>
+    </figure>
+
+    <div class="lp-ways">
+      <article class="cs-card cs-card--stitched">
+        <span class="cs-pill cs-pill--computed">Leftover-aware</span>
+        <h3 class="cs-h3">It keeps the leftover in one piece.</h3>
+        <p class="cs-body-sm lp-body">When two layouts place the same pieces just as well, CutSense picks the one that leaves the largest single free fragment. Less confetti, more material.</p>
+      </article>
+      <article class="cs-card">
+        <span class="cs-pill cs-pill--human">You choose how many</span>
+        <h3 class="cs-h3">Make another product on what is left.</h3>
+        <p class="cs-body-sm lp-body">Pick a kit or a single piece and the quantity you want. It is planned around the pieces already placed, and the combined plan is verified again as a whole.</p>
+      </article>
+      <article class="cs-card">
+        <span class="cs-pill cs-pill--ai">New photo</span>
+        <h3 class="cs-h3">Photograph the real remnant.</h3>
+        <p class="cs-body-sm lp-body">After cutting, take a photo of what is really left. A new project starts from it and keeps your pieces, so the next plan follows the real edge.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 4 · WHY YOU CAN TRUST THE PLAN ================= -->
+<section class="lp-sec" id="trust" aria-labelledby="lp-trust-h">
+  <div class="cs-container lp-trust">
+    <div class="lp-trust__lead">
+      <header class="lp-head" style="margin-bottom:0">
+        <p class="cs-eyebrow"><span class="lp-num">03</span> Why you can trust the plan</p>
+        <h2 class="cs-h2" id="lp-trust-h">AI helps you start. Geometry has the last word.</h2>
+        <p class="cs-lead">AI proposes, deterministic code places and verifies, and you decide. Before a plan reaches your screen, a second, independent check measures it again.</p>
+      </header>
+      <div class="cs-seal" aria-hidden="true"><svg viewBox="0 0 120 120" role="img" aria-label="Verified seal"><g transform="rotate(-10 60 60)"><path d="M117.00 60.00L112.17 65.88L115.57 72.68L109.55 77.34L111.36 84.73L104.45 87.93L104.56 95.54L97.12 97.12L95.54 104.56L87.93 104.45L84.73 111.36L77.34 109.55L72.68 115.57L65.88 112.17L60.00 117.00L54.12 112.17L47.32 115.57L42.66 109.55L35.27 111.36L32.07 104.45L24.46 104.56L22.88 97.12L15.44 95.54L15.55 87.93L8.64 84.73L10.45 77.34L4.43 72.68L7.83 65.88L3.00 60.00L7.83 54.12L4.43 47.32L10.45 42.66L8.64 35.27L15.55 32.07L15.44 24.46L22.88 22.88L24.46 15.44L32.07 15.55L35.27 8.64L42.66 10.45L47.32 4.43L54.12 7.83L60.00 3.00L65.88 7.83L72.68 4.43L77.34 10.45L84.73 8.64L87.93 15.55L95.54 15.44L97.12 22.88L104.56 24.46L104.45 32.07L111.36 35.27L109.55 42.66L115.57 47.32L112.17 54.12Z" fill="var(--cs-verified-solid)"/><circle cx="60" cy="60" r="48" fill="none" stroke="var(--cs-surface)" stroke-width="1.6" stroke-dasharray="3.2 2.6"/><text font-family="JetBrains Mono, monospace" font-size="10" font-weight="700" fill="var(--cs-surface)"><textPath href="#lp-seal-ring" textLength="236" lengthAdjust="spacing">VERIFIED · GEOMETRY · PLAN ·</textPath></text><circle cx="60" cy="60" r="27" fill="var(--cs-surface)"/><path d="M47.5 61l8.5 8.5 17.5-18.5" fill="none" stroke="var(--cs-verified-solid)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></g></svg></div>
+    </div>
+    <div class="cs-card cs-card--stitched cs-card--notched">
+      <h3 class="cs-card__title" style="padding:var(--cs-space-3) var(--cs-space-5) 0">The verifier checks every plan for</h3>
+      <ul class="lp-checks">
+        <li class="lp-check">
+          <svg viewBox="0 0 64 48" aria-hidden="true"><rect class="lp-glyph__piece" x="6" y="12" width="22" height="24" rx="2"/><rect class="lp-glyph__piece" x="34" y="12" width="22" height="24" rx="2"/><path class="lp-glyph__ok" d="M24 41l4 4 8-8" transform="translate(4 -2)"/></svg>
+          <div><p class="cs-h4">No overlaps</p><p class="cs-caption">No two pieces share any material.</p></div>
+        </li>
+        <li class="lp-check">
+          <svg viewBox="0 0 64 48" aria-hidden="true"><path class="lp-glyph__ink" d="M6 14C14 4 40 6 54 8 61 12 60 26 58 36 52 44 22 44 10 40 3 34 2 22 6 14Z"/><rect class="lp-glyph__piece" x="18" y="16" width="26" height="16" rx="2"/></svg>
+          <div><p class="cs-h4">Nothing outside the material</p><p class="cs-caption">Every piece sits fully inside the outline you approved.</p></div>
+        </li>
+        <li class="lp-check">
+          <svg viewBox="0 0 64 48" aria-hidden="true"><circle class="lp-glyph__defect" cx="18" cy="24" r="11"/><rect class="lp-glyph__piece" x="36" y="12" width="22" height="24" rx="2"/></svg>
+          <div><p class="cs-h4">Nothing on a defect</p><p class="cs-caption">No piece touches a zone you marked as excluded.</p></div>
+        </li>
+        <li class="lp-check">
+          <svg viewBox="0 0 64 48" aria-hidden="true"><rect class="lp-glyph__piece" x="4" y="12" width="22" height="24" rx="2"/><rect class="lp-glyph__piece" x="38" y="12" width="22" height="24" rx="2"/><path class="lp-glyph__dim" d="M26 24h12M29 21l-3 3 3 3M35 21l3 3-3 3M26 6v4M38 6v4"/></svg>
+          <div><p class="cs-h4">The spacing you asked for</p><p class="cs-caption">Measured edge to edge, between pieces and to the edge of the material.</p></div>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <div class="cs-container">
+    <div class="lp-facts">
+      <article class="cs-card">
+        <h3 class="cs-h4">Numbers from the geometry</h3>
+        <p class="cs-body-sm lp-body">Occupied area, usable area, pieces placed and what did not fit are recomputed from the final shapes, not copied from the search.</p>
+      </article>
+      <article class="cs-card">
+        <h3 class="cs-h4">Reproducible</h3>
+        <p class="cs-body-sm lp-body">Every plan carries its seed and optimizer version (<span class="cs-mono">cs-nest-1.1</span>). Download the problem and solution as JSON: the same input and seed give the same plan.</p>
+      </article>
+      <article class="cs-card">
+        <h3 class="cs-h4">Honest about limits</h3>
+        <p class="cs-body-sm lp-body">The search is fast and bounded. Its plan is checked, not proven to be the optimum, and the screen says so. Change anything afterwards and the plan is marked out of date.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 5 · HILO + 3D ================= -->
+<section class="lp-sec cs-grid-paper" id="hilo" aria-labelledby="lp-hilo-h">
+  <div class="cs-container lp-hilo">
+    <div class="lp-stack" style="gap:var(--cs-space-6)">
+      <header class="lp-head" style="margin-bottom:0">
+        <p class="cs-eyebrow"><span class="lp-num">04</span> Hilo, the AI pattern maker</p>
+        <h2 class="cs-h2" id="lp-hilo-h">Not sure what to cut? Ask Hilo.</h2>
+        <p class="cs-lead">Describe what you want to make, in words or with a sketch. Hilo asks one question at a time and proposes flat pieces with sizes in centimetres. Nothing is applied until you approve it, and then the pieces are placed and verified like any kit.</p>
+      </header>
+      <div class="lp-chat" role="group" aria-label="Example conversation with Hilo">
+        <p class="lp-msg lp-msg--you">I want a small bifold wallet for cards and a few notes.</p>
+        <p class="lp-msg lp-msg--hilo"><span class="lp-msg__who">Hilo</span>A bifold wallet, then. How many card slots do you need?</p>
+        <div class="cs-chip-group" aria-label="Quick replies">
+          <button class="cs-chip" type="button" tabindex="-1">2 slots</button><button class="cs-chip cs-chip--on" type="button" tabindex="-1">4 slots</button><button class="cs-chip" type="button" tabindex="-1">6 slots</button>
+        </div>
+        <div class="cs-card lp-proposal">
+          <div class="cs-section__head"><span class="cs-pill cs-pill--ai">AI proposal · Hilo</span><span class="cs-caption">7 pieces per set</span></div>
+          <ul class="lp-proposal__rows">
+            <li><span class="cs-swatch cs-swatch--a" data-letter="A"></span><span>Outer</span><span class="cs-measure">18.5 × 9.5 <small>cm</small> ×1</span></li>
+            <li><span class="cs-swatch cs-swatch--b" data-letter="B"></span><span>Bill pocket</span><span class="cs-measure">17 × 8 <small>cm</small> ×1</span></li>
+            <li><span class="cs-swatch cs-swatch--c" data-letter="C"></span><span>Card pocket</span><span class="cs-measure">8.5 × 5.5 <small>cm</small> ×4</span></li>
+            <li><span class="cs-swatch cs-swatch--d" data-letter="D"></span><span>Coin pocket</span><span class="cs-measure">8 × 7 <small>cm</small> ×1</span></li>
+          </ul>
+          <div class="cs-btn-row"><button class="cs-btn cs-btn--primary cs-btn--sm" type="button" tabindex="-1">Approve pieces</button><button class="cs-btn cs-btn--ghost cs-btn--sm" type="button" tabindex="-1">Make it bigger</button></div>
+        </div>
+      </div>
+      <p class="cs-caption">Approving needs a photo calibrated in cm. Your messages and sketches are sent to the AI model through our server, which keeps nothing.</p>
+    </div>
+
+    <figure class="lp-render">
+      <div class="lp-render__stage">
+      <div class="lp-quad lp-render__main" style="--qx:1; --qy:0">
+        <span class="cs-stage__tag">Approximate assembled view</span>
+        <img class="lp-img-light" src="../../docs/3d-preview/billetera.webp" width="1280" height="962" loading="lazy" decoding="async" alt="3D preview of the bifold wallet, opened, built from the proposed piece sizes.">
+        <img class="lp-img-dark" src="../../docs/3d-preview/billetera-dark.webp" width="1280" height="962" loading="lazy" decoding="async" alt="3D preview of the bifold wallet, opened, built from the proposed piece sizes.">
+      </div>
+      <div class="lp-quad lp-render__inset" style="--qx:0; --qy:0">
+        <img class="lp-img-light" src="../../docs/3d-preview/billetera.webp" width="1280" height="962" loading="lazy" decoding="async" alt="The same seven pieces laid out flat.">
+        <img class="lp-img-dark" src="../../docs/3d-preview/billetera-dark.webp" width="1280" height="962" loading="lazy" decoding="async" alt="The same seven pieces laid out flat.">
+      </div>
+      </div>
+      <figcaption class="cs-caption">Each proposal comes with a 3D assembly preview, checked before it is shown. It is an approximate view (uniform thickness, ideal folds) to see how the pieces go together, not a photo of the finished piece.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= 6 · EXPORTS ================= -->
+<section class="lp-sec" id="exports" aria-labelledby="lp-exp-h">
+  <div class="cs-container">
+    <header class="lp-head">
+      <p class="cs-eyebrow"><span class="lp-num">05</span> Exports</p>
+      <h2 class="cs-h2" id="lp-exp-h">Ready for the bench, or the machine.</h2>
+      <p class="cs-lead">Print the pieces at real size on the paper you already have, or send a DXF to a cutter. Every file is made in your browser from the verified plan.</p>
+    </header>
+    <div class="lp-exports">
+      <figure class="lp-tiling cs-card" style="margin:0">
+        <svg viewBox="0 0 430 226" role="img" aria-labelledby="lp-til-t"><title id="lp-til-t">Illustration of a 1:1 print: a cover page with a 5 by 5 cm check square and a 10 cm ruler, then the plan tiled across four sheets that overlap by 1 cm.</title><g transform="translate(18,40) rotate(-3 48 68)"><rect class="lp-tile__sheet" width="96" height="136" rx="2"/><rect class="lp-tile__bar" x="10" y="12" width="60" height="6"/><rect class="lp-tile__bar" x="10" y="24" width="44" height="4"/><rect class="lp-tile__check" x="10" y="40" width="30" height="30"/><text class="lp-tile__text" x="44" y="58">5 × 5 cm</text><path class="lp-tile__mark" d="M10,88h60M10,88v-6M16,88v-3M22,88v-3M28,88v-3M34,88v-3M40,88v-6M46,88v-3M52,88v-3M58,88v-3M64,88v-3M70,88v-6"/><text class="lp-tile__text" x="10" y="100">10 cm</text><rect class="lp-tile__bar" x="10" y="110" width="70" height="4"/><rect class="lp-tile__bar" x="10" y="119" width="52" height="4"/><text class="lp-tile__text" x="10" y="8" dy="-2">PRINT AT 100 %</text></g><rect class="lp-tile__sheet" x="150" y="26" width="136" height="96" rx="1.5"/><rect class="lp-tile__sheet" x="276" y="26" width="136" height="96" rx="1.5"/><rect class="lp-tile__sheet" x="150" y="112" width="136" height="96" rx="1.5"/><rect class="lp-tile__sheet" x="276" y="112" width="136" height="96" rx="1.5"/><rect class="lp-tile__overlap" x="276" y="26" width="10" height="182"/><rect class="lp-tile__overlap" x="150" y="112" width="262" height="10"/><path class="lp-tile__plan" d="M170,52 C200,34 280,40 330,40 C380,42 398,60 398,96 C398,130 404,160 390,180 C370,198 300,194 250,196 C200,198 168,194 162,170 C156,140 166,120 160,96 C156,74 158,62 170,52Z"/><path class="lp-tile__piece" d="M178,56h70v40h-70z" fill="url(#cs-pat-a)"/><path class="lp-tile__piece" d="M256,52h44v30h-44z" fill="url(#cs-pat-b)"/><path class="lp-tile__piece" d="M306,50h44v30h-44z" fill="url(#cs-pat-b)"/><path class="lp-tile__piece" d="M356,58h30v52h-30z" fill="url(#cs-pat-c)"/><path class="lp-tile__piece" d="M178,104h70v40h-70z" fill="url(#cs-pat-a)"/><path class="lp-tile__piece" d="M258,134h70l-10,40h-50z" fill="url(#cs-pat-d)"/><path class="lp-tile__piece" d="M178,152h56v30h-56z" fill="url(#cs-pat-e)"/><path class="lp-tile__piece" d="M336,124h44v48h-44z" fill="url(#cs-pat-f)"/><path class="lp-tile__mark" d="M154,36v-6h6M282,36v-6h-6M154,112v6h6M282,112v6h-6"/><path class="lp-tile__mark" d="M280,36v-6h6M408,36v-6h-6M280,112v6h6M408,112v6h-6"/><path class="lp-tile__mark" d="M154,122v-6h6M282,122v-6h-6M154,198v6h6M282,198v6h-6"/><path class="lp-tile__mark" d="M280,122v-6h6M408,122v-6h-6M280,198v6h6M408,198v6h-6"/><text class="lp-tile__text" x="156" y="116" dy="-1">1·1</text><text class="lp-tile__text" x="282" y="116" dy="-1">1·2</text><text class="lp-tile__text" x="156" y="202" dy="-1">2·1</text><text class="lp-tile__text" x="282" y="202" dy="-1">2·2</text></svg>
+        <figcaption class="cs-caption">1:1 print: a cover page with a <span class="cs-measure">5 × 5 cm</span> check square, the plan tiled across sheets with <span class="cs-measure">1 cm</span> overlap and corner marks, and a template for each piece.</figcaption>
+      </figure>
+      <div>
+        <ul class="lp-files">
+          <li class="lp-file"><span class="cs-badge cs-badge--ink">SVG</span><span class="lp-file__name">Plan image</span><span class="cs-caption">With or without the photo. Legend, seed and optimizer version included.</span></li>
+          <li class="lp-file"><span class="cs-badge cs-badge--ink">PNG</span><span class="lp-file__name">To share</span><span class="cs-caption">The same plan, rendered at twice the resolution.</span></li>
+          <li class="lp-file"><span class="cs-badge cs-badge--ink">Print</span><span class="lp-file__name">At 1:1 <span class="cs-unit cs-unit--calibrated">cm</span></span><span class="cs-caption">Across A4 or Letter sheets, with a scale check you can measure.</span></li>
+          <li class="lp-file"><span class="cs-badge cs-badge--ink">SVG cm</span><span class="lp-file__name">Real scale <span class="cs-unit cs-unit--calibrated">cm</span></span><span class="cs-caption">One unit is one centimetre, so it opens at 1:1 in a vector editor.</span></li>
+          <li class="lp-file"><span class="cs-badge cs-badge--ink">DXF</span><span class="lp-file__name">For machines <span class="cs-unit cs-unit--calibrated">cm</span></span><span class="cs-caption">R12, millimetres, pieces on the CUT layer. Outline and zones as optional reference layers.</span></li>
+          <li class="lp-file"><span class="cs-badge">JSON</span><span class="lp-file__name">Project and problem</span><span class="cs-caption">Save the project to reopen it later, or download the exact problem and solution.</span></li>
+        </ul>
+        <p class="cs-caption lp-exports__note">Marked <span class="cs-unit cs-unit--calibrated" style="height:20px;font-size:var(--cs-text-2xs)">cm</span> exports need a photo calibrated in cm or mm.</p>
+        <div class="cs-alert cs-alert--warn lp-exports__note">
+          <svg class="cs-alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></svg>
+          <p><span class="cs-alert__title">Reference drawings.</span> Check one measurement before cutting. Accuracy depends on the calibration and a photo taken from straight above; your machine decides kerf, speed and power.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 7 · EXAMPLES ================= -->
+<section class="lp-sec cs-grid-paper" id="examples" aria-labelledby="lp-ex-h">
+  <div class="cs-container">
+    <header class="lp-head">
+      <p class="cs-eyebrow"><span class="lp-num">06</span> Examples</p>
+      <h2 class="cs-h2" id="lp-ex-h">No offcut at hand? Start with ours.</h2>
+      <p class="cs-lead">Two sample offcuts, labelled as examples. They go through the same steps as your own photo.</p>
+    </header>
+    <div class="lp-examples">
+      <article class="cs-card cs-card--notched lp-example">
+        <div class="lp-example__art"><svg viewBox="0 0 800 600" role="img" aria-label="Example photo: a teal felt offcut with a concave edge, a round hole and a dark stain, on a light background."><rect width="800" height="600" fill="#e3dccb"/><rect width="800" height="600" filter="url(#lp-noise)"/><polygon points="110,120 300,70 520,95 700,160 730,330 650,480 470,520 380,450 250,505 120,430 90,280" fill="#2f7f86" stroke="#1f5c62" stroke-width="3" stroke-linejoin="round"/><circle cx="520" cy="300" r="38" fill="#e3dccb"/><ellipse cx="235" cy="215" rx="42" ry="26" fill="#1c4a4f" opacity=".75"/></svg><span class="cs-stage__tag">Example</span></div>
+        <div class="lp-example__body">
+          <h3 class="cs-h3">Felt offcut</h3>
+          <p class="cs-body-sm lp-body">A concave edge, a hole and a stain, all visible. A good first run: outline, mark the flaws, then choose your pieces.</p>
+          <p class="cs-caption cs-mono">Saved outline · relative units until you calibrate</p>
+          <button class="cs-btn cs-btn--secondary" type="button" data-example="fieltro">Start with the felt offcut</button>
+        </div>
+      </article>
+      <article class="cs-card cs-card--notched lp-example">
+        <div class="lp-example__art"><svg viewBox="0 0 800 600" role="img" aria-label="Example photo: a brown leather scrap with a dark mark near the middle, on a light background."><rect width="800" height="600" fill="#e3dccb"/><rect width="800" height="600" filter="url(#lp-noise)"/><polygon points="150,160 330,90 470,150 640,100 720,230 690,400 560,500 400,470 260,540 130,430 100,300" fill="#a8602f" stroke="#7a4219" stroke-width="3" stroke-linejoin="round"/><ellipse cx="420" cy="300" rx="48" ry="30" fill="#6a3715" opacity=".8"/></svg><span class="cs-stage__tag">Example</span></div>
+        <div class="lp-example__body">
+          <h3 class="cs-h3">Leather scrap</h3>
+          <p class="cs-body-sm lp-body">Set up for a bifold wallet, so you can go straight to a verified plan and see how many complete wallets fit.</p>
+          <p class="cs-caption cs-mono">Assumed scale · 14 px = 1 cm · bifold wallet kit</p>
+          <button class="cs-btn cs-btn--secondary" type="button" data-example="cuero">Start with the leather scrap</button>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 8 · GOOD TO KNOW ================= -->
+<section class="lp-sec" id="faq" aria-labelledby="lp-faq-h">
+  <div class="cs-container lp-faq-wrap">
+    <header class="lp-head">
+      <p class="cs-eyebrow"><span class="lp-num">07</span> Good to know</p>
+      <h2 class="cs-h2" id="lp-faq-h">Straight answers.</h2>
+      <p class="cs-body-sm lp-body">What CutSense does, what it does not, and where your photo goes.</p>
+    </header>
+    <div class="lp-faq">
+      <details open><summary>Is the plan the mathematical optimum?</summary>
+        <p>No, and we do not pretend it is. A bounded search finds a good layout in a few seconds, and the verifier checks that it is valid. Every plan carries its seed and optimizer version, so you can reproduce it.</p></details>
+      <details><summary>Are the measurements real?</summary>
+        <p>Only after you calibrate, with the material's real width or two points on a known length. Until then sizes are relative units, and both the screen and the exported files say so. A photo taken from straight above gives the most accurate scale.</p></details>
+      <details><summary>What happens to my photo?</summary>
+        <p>When you use the AI outline, the photo is sent through our server to the segmentation service (SAM 3.1). The CutSense server stores nothing. Projects stay in your browser and in files you choose to save. A saved project contains your photo, so treat it as private.</p></details>
+      <details><summary>Do I need an account, or AI at all?</summary>
+        <p>No account. Without AI you can still outline by contrast or trace by hand, mark zones yourself, use the built-in kits and try the examples. The app tells you plainly when AI did not run.</p></details>
+      <details><summary>Which materials work best?</summary>
+        <p>Flat sheets you cut by hand or by machine, such as leather, felt, foam and cardboard. Photograph one sheet at a time, flat, on a background that contrasts with it, in even light. Pieces turn in steps of 90°.</p></details>
+      <details><summary>Does it find the flaws for me?</summary>
+        <p>It can help. Ask SAM to look for short phrases such as "scar, stain, hole": it proposes zones, and nothing becomes an excluded zone until you accept it. You can always draw zones by hand.</p></details>
+      <details><summary>What if I change something after optimizing?</summary>
+        <p>The plan is marked out of date and cannot be exported until you optimize again, so you never cut from a layout that no longer matches your material.</p></details>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ================= 9 · FOOTER ================= -->
+<footer class="lp-foot">
+  <div class="cs-container">
+    <div class="lp-foot__grid">
+      <div class="lp-foot__brand">
+        <span class="lp-logo"><svg viewBox="0 0 274 56" role="img" aria-label="CutSense"><g transform="scale(1.17)"><path d="M9.2 5.4L29.6 4.2Q33.4 4 33.6 7.6L33.8 10.4Q34 13.4 31 13.4L17.6 13.4L17.6 34.6L39.8 34.6Q43.6 34.6 43 38.2L42.5 41.2Q42 44.2 38.9 44.3L12.2 44.9Q7.9 45 6.7 40.9L4.2 32.4Q3.6 30.3 4.3 28.3L5.6 24.4Q6.2 22.6 5.8 20.8L4.9 12.1Q4.4 6 9.2 5.4Z" fill="var(--lp-logo-offcut)"/><rect x="24.6" y="16.4" width="15.6" height="15.6" rx="1.6" transform="rotate(-10 32.4 24.2)" fill="var(--lp-logo-piece)"/></g><g fill="none" stroke="currentColor" stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round"><path d="M99.51 15.22A17.2 17.2 0 1 0 99.51 40.78M108.61 24.8V37.7A7.5 7.5 0 0 0 123.61 37.7V24.8M123.61 37.7V45.2M135.71 15.8V39.2A6 6 0 0 0 141.71 45.2H143.71M169.59 14.47A9.5 8.6 0 1 0 161.81 28A9.5 8.6 0 1 1 154.03 41.53M180.41 35H196.41A8 10.2 0 1 0 194.71 41.28M205.51 24.8V45.2M205.51 32.3A7.5 7.5 0 0 1 220.51 32.3V45.2M241.89 26.97A6.75 5.1 0 1 0 236.36 35A6.75 5.1 0 1 1 230.83 43.03M252.21 35H268.21A8 10.2 0 1 0 266.51 41.28"/></g><path d="M132.21 24.8H144.21" fill="none" stroke="var(--lp-logo-piece)" stroke-width="5.6" stroke-linecap="round"/></svg></span>
+        <p class="cs-body-sm lp-body">Make sense of every offcut.</p>
+      </div>
+      <div class="lp-foot__notes">
+        <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg><span><b>Reference plans.</b> Exported plans are reference drawings: check one measurement before cutting.</span></p>
+        <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span><b>Private by design.</b> No accounts and no cloud storage: projects live in your browser and in files you save. When you use the AI outline, your photo is sent to the segmentation service through our server.</span></p>
+      </div>
+    </div>
+    <div class="lp-foot__base">
+      <span class="cs-caption cs-mono">Optimizer cs-nest-1.1 · light and dark · keyboard accessible</span>
+      <a class="cs-link cs-body-sm" href="#top">Back to top</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ---- mockup behaviour only ---- */
+(function () {
+  var root = document.documentElement, btn = document.querySelector('[data-theme-toggle]');
+  function sync() { var d = root.getAttribute('data-theme') === 'dark'; btn.setAttribute('aria-pressed', String(d)); }
+  btn.addEventListener('click', function () { root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); sync(); });
+  sync();
+  document.querySelectorAll('[data-upload]').forEach(function (b) { b.addEventListener('click', function () { document.getElementById('lp-file').click(); }); });
+  document.querySelector('[data-open-project]').addEventListener('click', function () { document.getElementById('lp-project').click(); });
+  /* ?error=1 shows the alert slot as the app would */
+  if (new URLSearchParams(location.search).get('error')) {
+    document.querySelector('[data-error-slot]').innerHTML = '<div class="cs-alert cs-alert--danger"><svg class="cs-alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg><span class="cs-alert__title">We could not open that file</span><span class="cs-alert__body">That image is larger than 10 MB. Try a smaller JPG, PNG or WebP; your phone\'s "medium" size is plenty.</span></div>';
+  }
+  /* leftover loop plays once when it enters the viewport (motion allowed only) */
+  var loop = document.querySelector('.lp-loop');
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window && !new URLSearchParams(location.search).get('static')) {
+    root.classList.add('lp-motion');
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { loop.classList.add('is-in'); io.disconnect(); } }); }, { threshold: .3 });
+    io.observe(loop);
+  }
+})();
+</script>
+</body>
+</html>

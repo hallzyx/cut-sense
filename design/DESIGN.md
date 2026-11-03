@@ -13,7 +13,8 @@ Files in this folder:
 | `tokens.css` | All design tokens (`--cs-*`), light + dark, Google Fonts import |
 | `components.css` | Framework-agnostic components (`.cs-*`) + signature keyframes |
 | `preview.html` | Living style guide: open in a browser, toggle Light/Dark (`?theme=dark` also works) |
-| `screenshots/` | Full-page captures at 390 px and 1280 px in both themes, plus close-ups |
+| `screenshots/` | Full-page captures at 390 px and 1280 px in both themes, plus close-ups; `hero-*.png` capture the live landing page |
+| `landing/` | The landing page spec (`LANDING.md`), its `.lp-*` styles and a static mockup |
 
 ---
 
@@ -144,8 +145,8 @@ Scale (`--cs-text-*`): 11 · 12 · 14 · 16 · 18 · 22 · 26→36 (fluid) · 36
 ## 6. Screen-by-screen spec
 
 ### Landing
-Grid-paper hero. Eyebrow *SENSE OF THE CUT* (mono, dashed lead line). H1 **"Make sense of every offcut."** with a chalk underline under *offcut*. Lead: *"Photograph your offcut. AI proposes the outline, you correct it, and geometry verifies every plan before you see it."* Primary CTA **"Upload a photo of your offcut"** (camera icon), secondary **"Try an example"**. Below: the four provenance pills as the "how it works" in one glance, then a ruler. Right (desktop) / below (mobile): a real verified plan on a dark photo, rotated 1.2°, with the seal overlapping its corner. Then: example cards, honest FAQ, footer note *"Exported plans are reference drawings."*
-Caption under CTAs: *"JPG, PNG or WebP · up to 10 MB · photo from above, contrasting background."*
+Specified in full in [`landing/LANDING.md`](landing/LANDING.md) ("The life of an offcut"): a grid-paper hero with **"Make sense of every offcut."**, the primary CTA **Upload a photo of your offcut**, *Try an example* and *Open a saved project (.json)*, and an illustrated verified plan with the seal and a bench ticket labelled *Illustration*. Then: how it works in five steps with real captures of the app, the leftover loop on a cutting-mat band (1st, 2nd and 3rd life, drawn at one scale and captioned as an illustration, plus a real capture of a second product on a leftover), why you can trust the plan, Hilo with the approximate 3D assembly view, exports, the two examples, *Good to know* and the footer note *"Exported plans are reference drawings."*
+Caption under CTAs: *"JPG, PNG or WebP · up to 10 MB · flat material, contrasting background, even light, overhead camera"*.
 
 ### Step 1 · Digitize
 - **Processing:** pill *AI analysing* (with live dot), chalk-blue scan band sweeping the photo, indeterminate chalk progress. Copy: *"Reading the edge of the material…"* / *"SAM 3.1 usually takes a few seconds. Your photo is not stored."* + *Cancel*.
@@ -282,7 +283,6 @@ Live regions: announce *"Outline proposed by AI"*, *"Plan verified: 11 of 11 pie
 ---
 
 ## 11. Described but not mocked
-- The FAQ and example-card sections of the landing page (only specified here).
 - The verification-failed (violations list) alert: copy specified, uses `.cs-alert--danger`.
 - The calibration two-point interaction states (first point placed, second point placed) beyond the finished ruler.
 - The SVG/PNG export file's own layout (title block with mono logo, unit status and reference-plan warning).
