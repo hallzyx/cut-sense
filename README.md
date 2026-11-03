@@ -129,6 +129,10 @@ npm test            # vitest: engine, verifier, exports, project files, agent sc
 
 `npm run preview` serves the static bundle; for the AI features run the API too (`npm start`) and make sure `/api` reaches it (Vite's preview server uses the same proxy settings, or put both behind your own reverse proxy).
 
+### Docker and Dokploy
+
+The repository includes a `Dockerfile` and a `docker-compose.yml`. One container serves the web app and the API on port 8787 and publishes no host port, so a reverse proxy such as Traefik (Dokploy's default) routes to it. Set your domain in Dokploy's **Domains** tab and the Meta credentials as environment variables. Details in [docs/deployment.md](docs/deployment.md).
+
 ## Architecture
 
 ```mermaid
@@ -235,6 +239,7 @@ On the roadmap:
 | [docs/agent.md](docs/agent.md) | Hilo: conversation rules, quick replies, sketches, schema, guardrails |
 | [docs/3d-preview.md](docs/3d-preview.md) | 3D assembly preview: scene language, review loop, checks, limits |
 | [docs/exports-and-formats.md](docs/exports-and-formats.md) | SVG, PNG, 1:1 printing, DXF, project JSON, problem + solution JSON |
+| [docs/deployment.md](docs/deployment.md) | Docker image, Dokploy and Traefik setup, environment variables |
 | [docs/development.md](docs/development.md) | Setup, scripts, testing, adding kits and archetypes, conventions |
 | [docs/design-system.md](docs/design-system.md) | Pointer to the brand book and design tokens |
 

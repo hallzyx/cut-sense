@@ -1,0 +1,19 @@
+# CutSense for Dokploy (or any Docker host behind a reverse proxy).
+# No `ports:` on purpose: Traefik reaches the container over the Docker network.
+# In Dokploy, open the Domains tab, pick service `cutsense`, container port 8787 and your host;
+# Dokploy adds the Traefik labels and the network at deploy time.
+services:
+  cutsense:
+    build: .
+    init: true
+    restart: unless-stopped
+    expose:
+      - "8787"
+    environment:
+      # Meta Model API credentials (optional: without them the app uses the labelled offline alternatives).
+      SAM_API_URL: ${SAM_API_URL:-}
+      SAM_API_KEY: ${SAM_API_KEY:-}
+      SAM_MODEL: ${SAM_MODEL:-sam-3.1}
+      AGENT_MODEL: ${AGENT_MODEL:-muse-spark-1.3}
+      # One reverse proxy (Traefik) in front: use the real client IP for rate limits.
+      TRUST_PROXY: ${TRUST_PROXY:-1}
