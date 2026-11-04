@@ -2,6 +2,7 @@
   "name": "cutsense",
   "private": true,
   "version": "1.0.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n web,api \"vite\" \"tsx watch --env-file-if-exists=.env server/index.ts\"",

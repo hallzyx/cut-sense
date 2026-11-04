@@ -247,4 +247,4 @@ On the roadmap:
 
 Contributions are welcome. Start with [docs/development.md](docs/development.md): it covers the scripts, the test suite, the determinism rules the engine depends on, and the commit conventions (Conventional Commits, English).
 
-**License:** this repository does not include a license file yet, and `package.json` marks the package as private. Until a license is added, all rights are reserved by the authors; please open an issue before reusing the code.
+**License:** CutSense is open source under the [MIT License](LICENSE). You can use, modify and distribute it, including commercially, as long as the copyright notice is kept. Third-party dependencies keep their own licenses, and use of the Meta Model API is subject to its own terms.
